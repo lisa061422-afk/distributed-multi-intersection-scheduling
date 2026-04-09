@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warehouse AMR Merging Zone Demo — Fullscreen</title>
+  <style>
+    :root {
+      --bg: #08111b;
+      --panel: rgba(12, 24, 38, 0.88);
+      --panel-border: rgba(255,255,255,0.10);
+      --text: #eef4ff;
+      --muted: #b6c3d8;
+      --accent: #79caff;
+      --good: #8be39f;
+      --warn: #ffd36b;
+      --bad: #ff8a78;
+      --road: #949aa3;
+      --road-edge: rgba(255,255,255,0.72);
+      --lane: #f3d466;
+      --merge-fill: rgba(255, 206, 84, 0.15);
+      --merge-border: rgba(255, 222, 127, 0.95);
+      --rack: #475366;
+      --dock: #35445a;
+      --office: #5f7895;
+      --charge: #46735b;
+      --shadow: rgba(0,0,0,0.32);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top, #102133 0%, #08111b 42%, #04090f 100%);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .viewport {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .stage {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1600px;
+      height: 900px;
+      transform-origin: top left;
+      will-change: transform;
+    }
+
+    .scene {
+      position: absolute;
+      inset: 0;
+      border-radius: 26px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      /* Polished epoxy warehouse floor: warm grey with subtle sheen */
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.10) 0%, transparent 45%),
+        radial-gradient(ellipse at 75% 80%, rgba(255,255,255,0.06) 0%, transparent 38%),
+        radial-gradient(ellipse at 60% 45%, rgba(200,210,220,0.04) 0%, transparent 60%),
+        linear-gradient(160deg, #9ca3ab 0%, #878e97 35%, #7e858e 65%, #858c95 100%);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.12);
+    }
+
+    /* Concrete floor panel joints — large grid, very subtle */
+    .scene::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(rgba(0,0,0,0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.055) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+      background-size: 180px 180px, 180px 180px, 36px 36px, 36px 36px;
+      pointer-events: none;
+    }
+
+    /* Wear/tyre marks layer */
+    .scene::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 320px 18px at 355px 285px, rgba(0,0,0,0.07), transparent),
+        radial-gradient(ellipse 320px 18px at 685px 285px, rgba(0,0,0,0.07), transparent),
+        radial-gradient(ellipse 320px 18px at 355px 615px, rgba(0,0,0,0.07), transparent),
+        radial-gradient(ellipse 320px 18px at 685px 615px, rgba(0,0,0,0.07), transparent),
+        radial-gradient(ellipse 18px 280px at 355px 285px, rgba(0,0,0,0.06), transparent),
+        radial-gradient(ellipse 18px 280px at 685px 285px, rgba(0,0,0,0.06), transparent),
+        radial-gradient(ellipse 18px 280px at 355px 615px, rgba(0,0,0,0.06), transparent),
+        radial-gradient(ellipse 18px 280px at 685px 615px, rgba(0,0,0,0.06), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .header {
+      position: absolute;
+      left: 22px;
+      top: 18px;
+      z-index: 20;
+      background: linear-gradient(180deg, rgba(8,17,27,0.58), rgba(8,17,27,0.28));
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 12px 18px;
+      max-width: 560px;
+      display: inline-block;
+    }
+    .title { font-size: 24px; font-weight: 800; letter-spacing: 0.2px; }
+    .subtitle { display: none; }
+
+    /* ── Warehouse aisle corridors ── */
+    .road-h, .road-v {
+      position: absolute;
+      z-index: 1;
+    }
+    /* Aisle surface: slightly lighter polished concrete strip */
+    .road-h {
+      left: 80px; width: 880px; height: 180px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.04) 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.08);
+    }
+    .road-v {
+      top: 10px; width: 180px; height: 880px;
+      background: linear-gradient(90deg,
+        rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.04) 100%);
+      box-shadow: inset 1px 0 0 rgba(255,255,255,0.08), inset -1px 0 0 rgba(0,0,0,0.08);
+    }
+    .h1 { top: 195px; }
+    .h2 { top: 525px; }
+    .v1 { left: 265px; }
+    .v2 { left: 595px; }
+
+    /* AMR lane guide lines — short dashes only in the aisle sections, not crossing zones */
+    .centerline-h, .centerline-v, .edge-h, .edge-v { position: absolute; z-index: 2; }
+
+    /* Horizontal aisle centre guide — short dashes, amber, fades near zones */
+    .centerline-h {
+      height: 2px;
+      background: repeating-linear-gradient(to right,
+        transparent 0 20px, rgba(220,170,40,0.55) 20px 36px);
+    }
+    /* Segment positions: left aisle, right aisle (skip zone widths 265-445, 595-775) */
+    .clh1 { top: 285px; } .clh2 { top: 615px; }
+    /* Left segment: 80→245 */
+    .clh1-L { left: 80px;  width: 165px; }
+    .clh2-L { left: 80px;  width: 165px; }
+    /* Right segment: 475→565 (between zones) */
+    .clh1-M { left: 475px; width: 90px; }
+    .clh2-M { left: 475px; width: 90px; }
+    /* Far right: 805→960 */
+    .clh1-R { left: 805px; width: 155px; }
+    .clh2-R { left: 805px; width: 155px; }
+
+    .centerline-v {
+      width: 2px;
+      background: repeating-linear-gradient(to bottom,
+        transparent 0 20px, rgba(220,170,40,0.55) 20px 36px);
+    }
+    .clv1 { left: 355px; } .clv2 { left: 685px; }
+    /* Top segment: 10→175 */
+    .clv1-T { top: 10px;  height: 165px; }
+    .clv2-T { top: 10px;  height: 165px; }
+    /* Middle: 405→505 */
+    .clv1-M { top: 405px; height: 90px; }
+    .clv2-M { top: 405px; height: 90px; }
+    /* Bottom: 735→890 */
+    .clv1-B { top: 735px; height: 155px; }
+    .clv2-B { top: 735px; height: 155px; }
+
+    /* Aisle edge lines — very subtle, no harsh road feel */
+    .edge-h {
+      left: 80px; width: 880px; height: 1px;
+      background: repeating-linear-gradient(to right,
+        rgba(255,255,255,0.18) 0 18px, transparent 18px 30px);
+    }
+    .edge-v {
+      top: 10px; height: 880px; width: 1px;
+      background: repeating-linear-gradient(to bottom,
+        rgba(255,255,255,0.18) 0 18px, transparent 18px 30px);
+    }
+    .eh1a { top: 195px; } .eh1b { top: 375px; }
+    .eh2a { top: 525px; } .eh2b { top: 705px; }
+    .ev1a { left: 265px; } .ev1b { left: 445px; }
+    .ev2a { left: 595px; } .ev2b { left: 775px; }
+
+    /* ── Merge zone: warehouse keep-clear area ── */
+    .zone {
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      z-index: 3;
+      /* Diagonal hatch + amber fill — clearly visible keep-clear zone */
+      background:
+        repeating-linear-gradient(
+          -45deg,
+          rgba(240,175,20,0.22) 0px, rgba(240,175,20,0.22) 9px,
+          rgba(255,210,60,0.05) 9px, rgba(255,210,60,0.05) 22px
+        ),
+        rgba(250,195,40,0.10);
+      border: 2px solid rgba(240,175,20,0.55);
+      border-radius: 4px;
+      box-shadow: 0 0 0 1px rgba(240,175,20,0.15), inset 0 0 32px rgba(240,175,20,0.08);
+    }
+    .z1 { left: 265px; top: 195px; }
+    .z2 { left: 595px; top: 195px; }
+    .z3 { left: 265px; top: 525px; }
+    .z4 { left: 595px; top: 525px; }
+
+    /* Zone label: centred, large — same as original */
+    .zone-title {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 42px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: rgba(255, 244, 201, 0.92);
+      text-shadow: 0 1px 10px rgba(0,0,0,0.45);
+      pointer-events: none;
+    }
+
+    .labelbox, .beacon, .arrow, .rack, .dock, .office, .charge-pad {
+      position: absolute;
+      z-index: 4;
+    }
+
+    .labelbox {
+      padding: 0 12px;
+      height: 34px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.94);
+      font-size: 15px;
+      background: rgba(28, 38, 52, 0.80);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(6px);
+    }
+
+    .beacon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 34% 34%, #eff8ff, #76cfff 42%, #204d68 100%);
+      box-shadow: 0 0 0 5px rgba(95, 198, 255, 0.14), 0 0 18px rgba(95,198,255,0.42);
+    }
+
+    /* ── Entrance / exit arrows ─────────────────────────────────────────────
+       Pentagon arrow shape via clip-path. 54×34px, always points RIGHT.
+       left/top = centre of the arrow; direction class rotates the element.
+       Number counter-rotates so it always reads upright.
+    ────────────────────────────────────────────────────────────────────── */
+    .io-arrow {
+      position: absolute;
+      z-index: 6;
+      width: 54px;
+      height: 34px;
+      pointer-events: none;
+    }
+    .io-arrow .arr-shape {
+      position: absolute;
+      inset: 0;
+      clip-path: polygon(0% 18%, 62% 18%, 62% 0%, 100% 50%, 62% 100%, 62% 82%, 0% 82%);
+    }
+    .io-ent .arr-shape { background: #2ecc48; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+    .io-ext .arr-shape { background: #f0be00; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+    .io-arrow .arr-num {
+      position: absolute;
+      left: 0; width: 62%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 900; color: #fff;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    }
+    /* direction: rotate whole element; left/top = centre */
+    .a-right { transform: translate(-50%,-50%) rotate(0deg);   }
+    .a-left  { transform: translate(-50%,-50%) rotate(180deg); }
+    .a-down  { transform: translate(-50%,-50%) rotate(90deg);  }
+    .a-up    { transform: translate(-50%,-50%) rotate(-90deg); }
+    /* counter-rotate number back to upright */
+    .a-right .arr-num { transform: rotate(0deg);   }
+    .a-left  .arr-num { transform: rotate(180deg); }
+    .a-down  .arr-num { transform: rotate(-90deg); }
+    .a-up    .arr-num { transform: rotate(90deg);  }
+
+    .rack, .dock, .office, .charge-pad {
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: rgba(255,255,255,0.90);
+      font-size: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 14px 28px rgba(0,0,0,0.16);
+      letter-spacing: 0.2px;
+    }
+    .rack { background: linear-gradient(180deg, rgba(71,83,102,0.96), rgba(53,63,80,0.96)); }
+    .dock { background: linear-gradient(180deg, rgba(53,68,90,0.96), rgba(43,55,72,0.96)); }
+    .office {
+      background: linear-gradient(180deg, rgba(112,139,171,0.24), rgba(95,116,139,0.22));
+      border-color: rgba(164, 205, 255, 0.22);
+      color: #deebff;
+    }
+    .charge-pad {
+      background: linear-gradient(180deg, rgba(70,115,91,0.92), rgba(50,88,68,0.92));
+      border-color: rgba(149, 233, 180, 0.18);
+    }
+
+    .legend {
+      position: absolute;
+      left: 22px;
+      bottom: 90px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      z-index: 15;
+      max-width: 980px;
+    }
+    .legend span {
+      padding: 9px 13px;
+      border-radius: 999px;
+      background: rgba(14, 24, 36, 0.62);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(8px);
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .robot-wrap {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      z-index: 10;
+    }
+    .robot-img {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+      display: block;
+      transform-origin: center center;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+    }
+    .robot-pin {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 900;
+      color: #fff;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.55);
+      letter-spacing: 0.4px;
+      pointer-events: none;
+      z-index: 11;
+    }
+    .robot-wrap.highlight .robot-img {
+      filter: drop-shadow(0 0 6px rgba(255,255,255,0.9)) drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+    }
+
+    .overlay {
+      position: absolute;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(10px);
+      border-radius: 22px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.20);
+      z-index: 25;
+    }
+
+    .local-panel {
+      top: 16px;
+      right: 16px;
+      width: 490px;
+      padding: 18px;
+    }
+    .panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .panel-title h3 {
+      margin: 0;
+      font-size: 22px;
+    }
+    .panel-sub {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .small-pill {
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(121,202,255,0.28);
+      background: rgba(121,202,255,0.10);
+      color: #dcedff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .zoom-card {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      position: relative;
+    }
+    .zoom-svg { width: 100%; height: 100%; display: block; }
+
+    .local-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-left: 4px;
+      flex-wrap: wrap;
+    }
+    .mini-btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .mini-btn.active { background: rgba(121,202,255,0.18); outline: 1px solid rgba(121,202,255,0.34); }
+
+    .cost-panel {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      width: 430px;
+      padding: 18px;
+    }
+    .cost-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .cost-head h3 { margin: 0; font-size: 24px; }
+    .policy-pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(121,202,255,0.12);
+      border: 1px solid rgba(121,202,255,0.26);
+      color: #dcedff;
+      font-weight: 800;
+      font-size: 14px;
+      text-align: right;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+    .progress {
+      height: 28px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .progress > div {
+      width: 0%;
+      height: 100%;
+      transition: width 260ms ease;
+      background: linear-gradient(90deg, var(--good), var(--warn), var(--bad));
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .metric {
+      border-radius: 16px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .metric .label { color: var(--muted); font-size: 14px; }
+    .metric .value { margin-top: 4px; font-size: 28px; font-weight: 900; }
+
+    .controls {
+      position: absolute;
+      left: 22px;
+      bottom: 22px;
+      z-index: 25;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: 1020px;
+    }
+    button.control {
+      border: 0;
+      border-radius: 16px;
+      padding: 13px 18px;
+      background: rgba(15,26,39,0.80);
+      color: var(--text);
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(10px);
+    }
+    button.control.primary {
+      background: linear-gradient(180deg, #8ad3ff, #61befd);
+      color: #061826;
+      border-color: rgba(255,255,255,0.12);
+    }
+    button.control:hover, .mini-btn:hover { transform: translateY(-1px); }
+
+    .status-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .hotkeys {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="viewport">
+    <div class="stage" id="stage">
+      <div class="scene" id="scene">
+        <div class="header">
+          <div class="title">Warehouse AMR Merging Zone Demo</div>
+          <div class="subtitle">Fullscreen demo mode.</div>
+        </div>
+
+        <!-- Aisle corridors -->
+        <div class="road-h h1"></div>
+        <div class="road-h h2"></div>
+        <div class="road-v v1"></div>
+        <div class="road-v v2"></div>
+
+        <!-- AMR lane guide lines (segmented, skip zone areas) -->
+        <div class="centerline-h clh1 clh1-L"></div>
+        <div class="centerline-h clh1 clh1-M"></div>
+        <div class="centerline-h clh1 clh1-R"></div>
+        <div class="centerline-h clh2 clh2-L"></div>
+        <div class="centerline-h clh2 clh2-M"></div>
+        <div class="centerline-h clh2 clh2-R"></div>
+        <div class="centerline-v clv1 clv1-T"></div>
+        <div class="centerline-v clv1 clv1-M"></div>
+        <div class="centerline-v clv1 clv1-B"></div>
+        <div class="centerline-v clv2 clv2-T"></div>
+        <div class="centerline-v clv2 clv2-M"></div>
+        <div class="centerline-v clv2 clv2-B"></div>
+
+        <!-- Aisle edge lines (subtle) -->
+        <div class="edge-h eh1a"></div><div class="edge-h eh1b"></div>
+        <div class="edge-h eh2a"></div><div class="edge-h eh2b"></div>
+        <div class="edge-v ev1a"></div><div class="edge-v ev1b"></div>
+        <div class="edge-v ev2a"></div><div class="edge-v ev2b"></div>
+
+        <!-- Merge zones (keep-clear hatch background) -->
+        <div class="zone z1"><div class="zone-title">P4</div></div>
+        <div class="zone z2"><div class="zone-title">P3</div></div>
+        <div class="zone z3"><div class="zone-title">P1</div></div>
+        <div class="zone z4"><div class="zone-title">P2</div></div>
+
+        <!-- ══ Warehouse safety markings SVG overlay ══════════════════════════ -->
+        <svg style="position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;"
+             viewBox="0 0 1600 900" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Diagonal hatch for caution zones -->
+            <pattern id="hatch" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+              <rect width="14" height="14" fill="none"/>
+              <rect width="7" height="14" fill="rgba(240,180,20,0.28)"/>
+            </pattern>
+            <!-- Stop line dash -->
+            <pattern id="stopline" width="10" height="6" patternUnits="userSpaceOnUse">
+              <rect width="7" height="6" fill="rgba(255,255,255,0.70)"/>
+            </pattern>
+          </defs>
+
+          <!-- ── Zone P4 (left:265 top:195 = svg x:265 y:195, 180×180) ── -->
+          <!-- Corner hatch caution triangles -->
+          <polygon points="265,195 305,195 265,235" fill="url(#hatch)"/>
+          <polygon points="445,195 405,195 445,235" fill="url(#hatch)"/>
+          <polygon points="265,375 305,375 265,335" fill="url(#hatch)"/>
+          <polygon points="445,375 405,375 445,335" fill="url(#hatch)"/>
+          <!-- Keep-clear arc guides (entry sweeps) -->
+          <path d="M265,285 Q265,195 355,195" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M445,285 Q445,195 355,195" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M265,285 Q265,375 355,375" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M445,285 Q445,375 355,375" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <!-- Yield / stop bars at each entry -->
+          <rect x="265" y="278" width="18" height="3" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="409" y="278" width="18" height="3" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="348" y="195" width="3" height="18" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="348" y="359" width="3" height="18" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <!-- Zone border — just corner L-marks, not a full box -->
+          <path d="M265,215 L265,195 L285,195" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M425,195 L445,195 L445,215" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M265,355 L265,375 L285,375" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M425,375 L445,375 L445,355" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- Bollards at zone corners -->
+          <circle cx="265" cy="195" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="445" cy="195" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="265" cy="375" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="445" cy="375" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+
+          <!-- ── Zone P3 (left:595 top:195) ── -->
+          <polygon points="595,195 635,195 595,235" fill="url(#hatch)"/>
+          <polygon points="775,195 735,195 775,235" fill="url(#hatch)"/>
+          <polygon points="595,375 635,375 595,335" fill="url(#hatch)"/>
+          <polygon points="775,375 735,375 775,335" fill="url(#hatch)"/>
+          <path d="M595,285 Q595,195 685,195" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M775,285 Q775,195 685,195" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M595,285 Q595,375 685,375" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M775,285 Q775,375 685,375" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <rect x="595" y="278" width="18" height="3" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="739" y="278" width="18" height="3" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="678" y="195" width="3" height="18" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="678" y="359" width="3" height="18" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <path d="M595,215 L595,195 L615,195" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M755,195 L775,195 L775,215" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M595,355 L595,375 L615,375" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M755,375 L775,375 L775,355" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="595" cy="195" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="775" cy="195" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="595" cy="375" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="775" cy="375" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+
+          <!-- ── Zone P1 (left:265 top:525) ── -->
+          <polygon points="265,525 305,525 265,565" fill="url(#hatch)"/>
+          <polygon points="445,525 405,525 445,565" fill="url(#hatch)"/>
+          <polygon points="265,705 305,705 265,665" fill="url(#hatch)"/>
+          <polygon points="445,705 405,705 445,665" fill="url(#hatch)"/>
+          <path d="M265,615 Q265,525 355,525" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M445,615 Q445,525 355,525" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M265,615 Q265,705 355,705" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M445,615 Q445,705 355,705" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <rect x="265" y="608" width="18" height="3" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="409" y="608" width="18" height="3" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="348" y="525" width="3" height="18" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="348" y="689" width="3" height="18" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <path d="M265,545 L265,525 L285,525" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M425,525 L445,525 L445,545" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M265,685 L265,705 L285,705" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M425,705 L445,705 L445,685" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="265" cy="525" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="445" cy="525" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="265" cy="705" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="445" cy="705" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+
+          <!-- ── Zone P2 (left:595 top:525) ── -->
+          <polygon points="595,525 635,525 595,565" fill="url(#hatch)"/>
+          <polygon points="775,525 735,525 775,565" fill="url(#hatch)"/>
+          <polygon points="595,705 635,705 595,665" fill="url(#hatch)"/>
+          <polygon points="775,705 735,705 775,665" fill="url(#hatch)"/>
+          <path d="M595,615 Q595,525 685,525" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M775,615 Q775,525 685,525" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M595,615 Q595,705 685,705" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <path d="M775,615 Q775,705 685,705" fill="none" stroke="rgba(240,175,20,0.50)" stroke-width="2" stroke-dasharray="6 5"/>
+          <rect x="595" y="608" width="18" height="3" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="739" y="608" width="18" height="3" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="678" y="525" width="3" height="18" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <rect x="678" y="689" width="3" height="18" fill="rgba(255,255,255,0.65)" rx="1"/>
+          <path d="M595,545 L595,525 L615,525" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M755,525 L775,525 L775,545" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M595,685 L595,705 L615,705" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M755,705 L775,705 L775,685" fill="none" stroke="rgba(240,175,20,0.70)" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="595" cy="525" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="775" cy="525" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="595" cy="705" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+          <circle cx="775" cy="705" r="5" fill="#f5c800" stroke="#c89000" stroke-width="1.5"/>
+
+        </svg>
+
+        <img src="images/medium_huojia.png" style="position:absolute;left:8px;top:95px;width:244px;height:auto;z-index:4;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.45));" alt="">
+        <img src="images/chache.png" style="position:absolute;left:462px;top:42px;width:50px;height:auto;z-index:4;transform:rotate(-90deg);transform-origin:center center;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.45));" alt="">
+        <img src="images/small_huojia.png" style="position:absolute;left:782px;top:14px;width:126px;height:auto;z-index:4;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.45));" alt="">
+        <img src="images/chache2.png" style="position:absolute;left:50px;top:396px;width:44px;height:auto;z-index:4;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.45));" alt="">
+        <img src="images/small_huojia2.png" style="position:absolute;left:108px;top:408px;width:144px;height:auto;z-index:4;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.45));" alt="">
+        <img src="images/yunhuoche.png" style="position:absolute;left:782px;top:395px;width:68px;height:auto;z-index:4;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.45));" alt="">
+        <img src="images/jingjie.png" style="position:absolute;left:450px;top:150px;width:136px;height:auto;z-index:4;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4));" alt="">
+        <img src="images/medium_huojia.png" style="position:absolute;left:8px;top:720px;width:244px;height:auto;z-index:4;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.45));" alt="">
+        <img src="images/small_huojia2.png" style="position:absolute;left:451px;top:734px;width:138px;height:auto;z-index:4;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.45));" alt="">
+        <img src="images/small_huojia.png" style="position:absolute;left:782px;top:720px;width:126px;height:auto;z-index:4;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.45));" alt="">
+
+        <!-- ══ ENTRANCE/EXIT ARROWS (flush at scene edge, number embedded) ══
+             Green = entrance (pointing inward), Yellow = exit (pointing outward)
+             Arrow total size along travel axis: 62px (46 body + 16 head)
+             Perpendicular size: 22px → offset = lane_centre - 11
+             Positions: V1 x=310(SB)/400(NB)  V2 x=640(SB)/730(NB)
+                        H1 y=240(WB)/330(EB)   H2 y=570(WB)/660(EB)
+        ════════════════════════════════════════════════════════════════════ -->
+
+        <!-- Arrows placed 20px outside the intersection zone edge (close to entrance).
+             Zone edges: P4/P1 left=265 right=445 | P3/P2 left=595 right=775
+                         P4/P3 top=195  | P1/P2 top=525, bottom=705
+             Lane centres: NB/EB x=400,730 y=330,660 | SB/WB x=310,640 y=240,570 -->
+
+        <!-- SOUTH — 45px below P1/P2 bottom edge (y=705+45=750) -->
+        <div class="io-arrow io-ent a-up"   style="left:400px;top:750px;"><div class="arr-shape"></div><span class="arr-num">1</span></div>
+        <div class="io-arrow io-ext a-down" style="left:310px;top:750px;"><div class="arr-shape"></div><span class="arr-num">1</span></div>
+        <div class="io-arrow io-ent a-up"   style="left:730px;top:750px;"><div class="arr-shape"></div><span class="arr-num">2</span></div>
+        <div class="io-arrow io-ext a-down" style="left:640px;top:750px;"><div class="arr-shape"></div><span class="arr-num">2</span></div>
+
+        <!-- NORTH — 45px above P4/P3 top edge (y=195-45=150) -->
+        <div class="io-arrow io-ent a-down" style="left:310px;top:150px;"><div class="arr-shape"></div><span class="arr-num">6</span></div>
+        <div class="io-arrow io-ext a-up"   style="left:400px;top:150px;"><div class="arr-shape"></div><span class="arr-num">6</span></div>
+        <div class="io-arrow io-ent a-down" style="left:640px;top:150px;"><div class="arr-shape"></div><span class="arr-num">5</span></div>
+        <div class="io-arrow io-ext a-up"   style="left:730px;top:150px;"><div class="arr-shape"></div><span class="arr-num">5</span></div>
+
+        <!-- WEST — 45px left of P4/P1 left edge (x=265-45=220) -->
+        <div class="io-arrow io-ent a-right" style="left:220px;top:330px;"><div class="arr-shape"></div><span class="arr-num">7</span></div>
+        <div class="io-arrow io-ext a-left"  style="left:220px;top:240px;"><div class="arr-shape"></div><span class="arr-num">7</span></div>
+        <div class="io-arrow io-ent a-right" style="left:220px;top:660px;"><div class="arr-shape"></div><span class="arr-num">8</span></div>
+        <div class="io-arrow io-ext a-left"  style="left:220px;top:570px;"><div class="arr-shape"></div><span class="arr-num">8</span></div>
+
+        <!-- EAST — 45px right of P3/P2 right edge (x=775+45=820) -->
+        <div class="io-arrow io-ent a-left"  style="left:820px;top:240px;"><div class="arr-shape"></div><span class="arr-num">4</span></div>
+        <div class="io-arrow io-ext a-right" style="left:820px;top:330px;"><div class="arr-shape"></div><span class="arr-num">4</span></div>
+        <div class="io-arrow io-ent a-left"  style="left:820px;top:570px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
+        <div class="io-arrow io-ext a-right" style="left:820px;top:660px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
+
+        <div class="controls">
+          <button class="control primary" data-scenario="optimal">Conflict-Aware Optimal</button>
+          <button class="control" data-scenario="north">North-South Priority</button>
+          <button class="control" data-scenario="east">East-West Priority</button>
+          <button class="control" data-scenario="fifo">FIFO</button>
+          <button class="control" id="togglePlay">Pause</button>
+          <button class="control" id="restart">Replay</button>
+        </div>
+
+        <div class="overlay local-panel">
+          <div class="panel-title">
+            <div>
+              <h3 style="margin:0;">Local Zoom</h3>
+              <div class="panel-sub" id="localSubtitle">Showing local view for P1</div>
+            </div>
+            <div class="small-pill" id="localName">P1</div>
+          </div>
+          <div class="zoom-card">
+            <svg class="zoom-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <clipPath id="zoomClip"><rect x="0" y="0" width="280" height="280" rx="18" ry="18"/></clipPath>
+                <!-- Diagonal hatch for M1-M4 keep-clear sub-zones -->
+                <pattern id="zh1" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+                  <rect width="10" height="10" fill="rgba(210,195,160,0.18)"/>
+                  <rect width="5"  height="10" fill="rgba(200,185,140,0.28)"/>
+                </pattern>
+                <!-- Diagonal hatch for M5 central caution -->
+                <pattern id="zh5" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+                  <rect width="8" height="8" fill="rgba(240,175,20,0.10)"/>
+                  <rect width="4" height="8" fill="rgba(240,175,20,0.26)"/>
+                </pattern>
+                <!-- Concrete panel grid -->
+                <pattern id="zgrid" width="28" height="28" patternUnits="userSpaceOnUse">
+                  <path d="M28,0 L0,0 L0,28" fill="none" stroke="rgba(0,0,0,0.07)" stroke-width="0.6"/>
+                </pattern>
+              </defs>
+
+              <g clip-path="url(#zoomClip)">
+                <!-- ── Floor: polished epoxy concrete ── -->
+                <rect x="0" y="0" width="280" height="280" fill="#8e959e"/>
+                <!-- Subtle sheen -->
+                <ellipse cx="90" cy="70" rx="90" ry="55" fill="rgba(255,255,255,0.07)"/>
+                <!-- Concrete panel joints -->
+                <rect x="0" y="0" width="280" height="280" fill="url(#zgrid)"/>
+
+                <!-- ── Aisle corridors (darker, worn concrete) ── -->
+                <!-- Horizontal corridor -->
+                <rect x="0" y="50" width="280" height="180" fill="rgba(0,0,0,0.10)"/>
+                <!-- Vertical corridor -->
+                <rect x="50" y="0" width="180" height="280" fill="rgba(0,0,0,0.10)"/>
+                <!-- Corridor intersection centre (slightly lighter — polished by traffic) -->
+                <rect x="50" y="50" width="180" height="180" fill="rgba(255,255,255,0.04)"/>
+
+                <!-- ── M1–M4 sub-zone fills (very subtle tint + hatch) ── -->
+                <!-- M3: top-left quadrant -->
+                <rect id="m3" x="50" y="50"  width="90" height="90" fill="rgba(80,110,155,0.18)"/>
+                <rect x="50" y="50"  width="90" height="90" fill="url(#zh1)"/>
+                <!-- M2: top-right -->
+                <rect id="m2" x="140" y="50" width="90" height="90" fill="rgba(80,110,155,0.18)"/>
+                <rect x="140" y="50" width="90" height="90" fill="url(#zh1)"/>
+                <!-- M4: bottom-left -->
+                <rect id="m4" x="50"  y="140" width="90" height="90" fill="rgba(80,110,155,0.18)"/>
+                <rect x="50"  y="140" width="90" height="90" fill="url(#zh1)"/>
+                <!-- M1: bottom-right -->
+                <rect id="m1" x="140" y="140" width="90" height="90" fill="rgba(80,110,155,0.18)"/>
+                <rect x="140" y="140" width="90" height="90" fill="url(#zh1)"/>
+
+                <!-- ── M5 central keep-clear zone ── -->
+                <circle id="m5" cx="140" cy="140" r="38" fill="rgba(240,175,20,0.14)"/>
+                <circle cx="140" cy="140" r="38" fill="url(#zh5)"/>
+                <circle cx="140" cy="140" r="38" fill="none" stroke="rgba(240,175,20,0.75)" stroke-width="1.8" stroke-dasharray="5 4"/>
+
+                <!-- ── Aisle edge lines (subtle dashed) ── -->
+                <line x1="0"   y1="50"  x2="280" y2="50"  stroke="rgba(255,255,255,0.30)" stroke-width="1" stroke-dasharray="12 7"/>
+                <line x1="0"   y1="230" x2="280" y2="230" stroke="rgba(255,255,255,0.30)" stroke-width="1" stroke-dasharray="12 7"/>
+                <line x1="50"  y1="0"   x2="50"  y2="280" stroke="rgba(255,255,255,0.30)" stroke-width="1" stroke-dasharray="12 7"/>
+                <line x1="230" y1="0"   x2="230" y2="280" stroke="rgba(255,255,255,0.30)" stroke-width="1" stroke-dasharray="12 7"/>
+
+                <!-- ── AMR lane centre guides (short dash, amber, skip over M5 circle) ── -->
+                <!-- Horizontal guide — left half -->
+                <line x1="0"   y1="140" x2="102" y2="140" stroke="rgba(220,165,20,0.55)" stroke-width="1.2" stroke-dasharray="8 6"/>
+                <!-- Horizontal guide — right half -->
+                <line x1="178" y1="140" x2="280" y2="140" stroke="rgba(220,165,20,0.55)" stroke-width="1.2" stroke-dasharray="8 6"/>
+                <!-- Vertical guide — top half -->
+                <line x1="140" y1="0"   x2="140" y2="102" stroke="rgba(220,165,20,0.55)" stroke-width="1.2" stroke-dasharray="8 6"/>
+                <!-- Vertical guide — bottom half -->
+                <line x1="140" y1="178" x2="140" y2="280" stroke="rgba(220,165,20,0.55)" stroke-width="1.2" stroke-dasharray="8 6"/>
+
+                <!-- ── Turning guide arcs at each quadrant corner ── -->
+                <!-- From North into M3 (left turn sweep) -->
+                <path d="M140,50 Q140,80 110,80" fill="none" stroke="rgba(220,165,20,0.45)" stroke-width="1.2" stroke-dasharray="5 4"/>
+                <!-- From West into M3 -->
+                <path d="M50,140 Q80,140 80,110" fill="none" stroke="rgba(220,165,20,0.45)" stroke-width="1.2" stroke-dasharray="5 4"/>
+                <!-- From North into M2 -->
+                <path d="M140,50 Q140,80 170,80" fill="none" stroke="rgba(220,165,20,0.45)" stroke-width="1.2" stroke-dasharray="5 4"/>
+                <!-- From East into M2 -->
+                <path d="M230,140 Q200,140 200,110" fill="none" stroke="rgba(220,165,20,0.45)" stroke-width="1.2" stroke-dasharray="5 4"/>
+                <!-- From West into M4 -->
+                <path d="M50,140 Q80,140 80,170" fill="none" stroke="rgba(220,165,20,0.45)" stroke-width="1.2" stroke-dasharray="5 4"/>
+                <!-- From South into M4 -->
+                <path d="M140,230 Q140,200 110,200" fill="none" stroke="rgba(220,165,20,0.45)" stroke-width="1.2" stroke-dasharray="5 4"/>
+                <!-- From East into M1 -->
+                <path d="M230,140 Q200,140 200,170" fill="none" stroke="rgba(220,165,20,0.45)" stroke-width="1.2" stroke-dasharray="5 4"/>
+                <!-- From South into M1 -->
+                <path d="M140,230 Q140,200 170,200" fill="none" stroke="rgba(220,165,20,0.45)" stroke-width="1.2" stroke-dasharray="5 4"/>
+
+                <!-- ── Stop / yield bars at each aisle entry ── -->
+                <!-- North entry -->
+                <rect x="127" y="52" width="26" height="3" rx="1" fill="rgba(255,255,255,0.70)"/>
+                <!-- South entry -->
+                <rect x="127" y="225" width="26" height="3" rx="1" fill="rgba(255,255,255,0.70)"/>
+                <!-- West entry -->
+                <rect x="52" y="127" width="3" height="26" rx="1" fill="rgba(255,255,255,0.70)"/>
+                <!-- East entry -->
+                <rect x="225" y="127" width="3" height="26" rx="1" fill="rgba(255,255,255,0.70)"/>
+
+                <!-- ── Bollards at zone corners ── -->
+                <circle cx="50"  cy="50"  r="4" fill="#f5c800" stroke="#9a7800" stroke-width="1.2"/>
+                <circle cx="230" cy="50"  r="4" fill="#f5c800" stroke="#9a7800" stroke-width="1.2"/>
+                <circle cx="50"  cy="230" r="4" fill="#f5c800" stroke="#9a7800" stroke-width="1.2"/>
+                <circle cx="230" cy="230" r="4" fill="#f5c800" stroke="#9a7800" stroke-width="1.2"/>
+
+                <!-- ── M1–M5 technical overlay labels ── -->
+                <text x="95"  y="88"  text-anchor="middle" dominant-baseline="central"
+                      fill="rgba(220,235,255,0.75)" font-size="13" font-weight="700"
+                      font-family="monospace" letter-spacing="1">M3</text>
+                <text x="185" y="88"  text-anchor="middle" dominant-baseline="central"
+                      fill="rgba(220,235,255,0.75)" font-size="13" font-weight="700"
+                      font-family="monospace" letter-spacing="1">M2</text>
+                <text x="95"  y="192" text-anchor="middle" dominant-baseline="central"
+                      fill="rgba(220,235,255,0.75)" font-size="13" font-weight="700"
+                      font-family="monospace" letter-spacing="1">M4</text>
+                <text x="185" y="192" text-anchor="middle" dominant-baseline="central"
+                      fill="rgba(220,235,255,0.75)" font-size="13" font-weight="700"
+                      font-family="monospace" letter-spacing="1">M1</text>
+                <!-- M5 label inside caution circle -->
+                <text x="140" y="140" text-anchor="middle" dominant-baseline="central"
+                      fill="rgba(255,220,80,0.90)" font-size="13" font-weight="900"
+                      font-family="monospace" letter-spacing="1">M5</text>
+
+                <!-- ── Dynamic robot layer (injected by JS) ── -->
+                <g id="zoomRobots"></g>
+              </g>
+            </svg>
+          </div>
+          <div class="local-controls" id="localControls">
+            <button class="mini-btn active" data-local="P1">P1</button>
+            <button class="mini-btn" data-local="P2">P2</button>
+            <button class="mini-btn" data-local="P3">P3</button>
+            <button class="mini-btn" data-local="P4">P4</button>
+          </div>
+        </div>
+
+        <div class="overlay cost-panel">
+          <div class="cost-head">
+            <h3>Total Delay Cost</h3>
+            <div class="policy-pill" id="policyLabel">Conflict-Aware Optimal</div>
+          </div>
+          <div class="progress-label">
+            <span>Accumulated cost during playback</span>
+            <span id="totalCostLabel">0.0 / 12.0</span>
+          </div>
+          <div class="progress"><div id="totalBarFill"></div></div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="label">Current Total Cost</div>
+              <div class="value" id="totalCost">0.0</div>
+            </div>
+            <div class="metric">
+              <div class="label">Finished Robots</div>
+              <div class="value" id="finishedCount">0/6</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CB = '?v=' + Date.now(); // cache-bust: forces fresh load of modified PNGs
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  VEHICLE CONFIG  — edit this section to define vehicles
+    //
+    //  Network layout (green circle = entrance, yellow square = exit):
+    //
+    //        ⑥↓  ⑤↓
+    //    ⑦→ ┌──────────┐ ←④
+    //    [7]←│ P4    P3 │→[4]
+    //        │          │
+    //    ⑧→ │ P1    P2 │ ←③
+    //    [8]←└──────────┘→[3]
+    //        ↑⑤   ↑②
+    //       [1]↓  [2]↓
+    //
+    //  Intersections: 1=P1(bottom-left), 2=P2(bottom-right),
+    //                 3=P3(top-right),   4=P4(top-left)
+    //
+    //  Each vehicle: { id, color, entrance (1-8), exit (1-8),
+    //                  intersections: ordered list of intersections traversed }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // routeId encodes direction & turn: dir=ceil(id/3)∈{1..4}, turn=(id-1)%3 → 0=L 1=S 2=R
+    // Directions: 1=from-S→N  2=from-E→W  3=from-N→S  4=from-W→E
+    const VEHICLE_CONFIG = [
+      { id:'R1', color:'#ff7b7b', entrance:1, exit:7, intersections:[1,4],   routeIds:[2,1]   },
+      { id:'R2', color:'#7fd29a', entrance:1, exit:3, intersections:[1,2],   routeIds:[3,11]  },
+      { id:'R3', color:'#72b7ff', entrance:4, exit:1, intersections:[3,4,1], routeIds:[5,4,8] },
+      { id:'R4', color:'#ffd66d', entrance:4, exit:3, intersections:[3,2],   routeIds:[4,7]   },
+      { id:'R5', color:'#c8a2ff', entrance:6, exit:1, intersections:[4,1],   routeIds:[8,8]   },
+      { id:'R6', color:'#ffad76', entrance:7, exit:4, intersections:[4,3],   routeIds:[11,11] },
+    ];
+
+    // ─── NETWORK GEOMETRY ENGINE ──────────────────────────────────────────────────
+    // Zone top-left [x,y] for each intersection id
+    const ZONE_POS = { 1:[265,525], 2:[595,525], 3:[595,195], 4:[265,195] };
+    const ZW = 180; // zone pixel width/height
+
+    // Entrance: world position [x,y] and travel heading (deg, 0=E 90=S 180=W -90=N)
+    const ENT_DATA = {
+      1:{pos:[400,890],h:-90}, 2:{pos:[730,890],h:-90},  // south border →N
+      3:{pos:[960,570],h:180}, 4:{pos:[960,240],h:180},  // east border  →W
+      5:{pos:[640,10], h:90},  6:{pos:[310,10], h:90},   // north border →S
+      7:{pos:[80,330], h:0},   8:{pos:[80,660], h:0},    // west border  →E
+    };
+    // Exit world positions
+    const EXIT_DATA = {
+      1:[310,890], 2:[640,890], 3:[960,660], 4:[960,330],
+      5:[730,10],  6:[400,10],  7:[80,240],  8:[80,570],
+    };
+
+    // Entry point into zone (zone-local coords) by direction
+    const DIR_ENTRY = { 1:[135,180], 2:[180,45], 3:[45,0], 4:[0,135] };
+    // Exit point (zone-local) by direction × turn (S/R/L)
+    const DIR_EXIT = {
+      1:{S:[135,0],  R:[180,135], L:[0,45]   },
+      2:{S:[0,45],   R:[135,0],   L:[45,180] },
+      3:{S:[45,180], R:[0,45],    L:[180,135]},
+      4:{S:[180,135],R:[45,180],  L:[135,0]  },
+    };
+    // Straight-travel heading by direction
+    const DIR_H = { 1:-90, 2:180, 3:90, 4:0 };
+
+    // Arc params [cx,cy,r,a0,adir]: adir +1=screen-CW, -1=screen-CCW
+    // Right turns: r=ZW/4=45, sweep +π/2 (CW)
+    // Left  turns: r=3ZW/4=135, sweep −π/2 (CCW)
+    const ARC_P = {
+      R:{ 1:[180,180,45, Math.PI,     +1],
+          2:[180,0,  45, Math.PI/2,   +1],
+          3:[0,  0,  45, 0,           +1],
+          4:[0,  180,45,-Math.PI/2,   +1] },
+      L:{ 1:[0,  180,135, 0,          -1],
+          2:[180,180,135,-Math.PI/2,  -1],
+          3:[180,0,  135, Math.PI,    -1],
+          4:[0,  0,  135, Math.PI/2,  -1] },
+    };
+
+    function parseRI(ri) { return { dir:Math.ceil(ri/3), turn:['L','S','R'][(ri-1)%3] }; }
+
+    // Sample waypoints through one intersection zone
+    function intWaypoints(zx, zy, dir, turn, N=14) {
+      const [ex,ey]=DIR_ENTRY[dir], h=DIR_H[dir];
+      if (turn==='S') {
+        const [xx,xy]=DIR_EXIT[dir].S, pts=[];
+        for(let i=0;i<=N;i++){const t=i/N; pts.push({x:zx+ex+(xx-ex)*t,y:zy+ey+(xy-ey)*t,angle:h});}
+        return pts;
+      }
+      const [cx,cy,r,a0,adir]=ARC_P[turn][dir], sweep=adir*Math.PI/2, pts=[];
+      for(let i=0;i<=N;i++){
+        const a=a0+sweep*(i/N);
+        const hRad=adir>0?a+Math.PI/2:a-Math.PI/2;
+        pts.push({x:zx+cx+r*Math.cos(a),y:zy+cy+r*Math.sin(a),angle:hRad*180/Math.PI});
+      }
+      return pts;
+    }
+
+    // Build full waypoint list for a vehicle
+    function buildVehiclePath(vc) {
+      const {entrance,exit,intersections,routeIds}=vc;
+      const pts=[];
+      let [curX,curY]=ENT_DATA[entrance].pos;
+      for(let k=0;k<intersections.length;k++){
+        const [zx,zy]=ZONE_POS[intersections[k]];
+        const {dir,turn}=parseRI(routeIds[k]);
+        const [ex,ey]=DIR_ENTRY[dir], h=DIR_H[dir];
+        pts.push({x:curX,y:curY,angle:h}, {x:zx+ex,y:zy+ey,angle:h}); // approach
+        pts.push(...intWaypoints(zx,zy,dir,turn));                       // arc/straight
+        const [xl,yl]=DIR_EXIT[dir][turn]; curX=zx+xl; curY=zy+yl;
+      }
+      const lastH=pts.length?pts[pts.length-1].angle:ENT_DATA[entrance].h;
+      const [extX,extY]=EXIT_DATA[exit];
+      pts.push({x:curX,y:curY,angle:lastH},{x:extX,y:extY,angle:lastH});
+      return pts;
+    }
+
+    // Cumulative arc-length distances along a path
+    function pathDists(pts){
+      const d=[0];
+      for(let i=1;i<pts.length;i++){const dx=pts[i].x-pts[i-1].x,dy=pts[i].y-pts[i-1].y;d.push(d[i-1]+Math.hypot(dx,dy));}
+      return d;
+    }
+
+    // Position at normalised t∈[0,1] along path
+    function posAtT(pts,dists,t){
+      const total=dists[dists.length-1]; if(!total)return{...pts[0]};
+      const td=Math.max(0,Math.min(1,t))*total;
+      let lo=0,hi=dists.length-2;
+      while(lo<hi){const m=(lo+hi+1)>>1;if(dists[m]<=td)lo=m;else hi=m-1;}
+      const frac=(dists[lo+1]-dists[lo])>0?(td-dists[lo])/(dists[lo+1]-dists[lo]):0;
+      const p0=pts[lo],p1=pts[lo+1];
+      let da=p1.angle-p0.angle; if(da>180)da-=360; if(da<-180)da+=360;
+      return{x:p0.x+(p1.x-p0.x)*frac,y:p0.y+(p1.y-p0.y)*frac,angle:p0.angle+da*frac};
+    }
+
+    // Pre-build all vehicle paths
+    const vPaths={}, vDists={};
+    for(const vc of VEHICLE_CONFIG){ vPaths[vc.id]=buildVehiclePath(vc); vDists[vc.id]=pathDists(vPaths[vc.id]); }
+
+    const BASE_W = 1600;
+    const BASE_H = 900;
+    const stage = document.getElementById('stage');
+    const scene = document.getElementById('scene');
+    const totalCostEl = document.getElementById('totalCost');
+    const finishedCountEl = document.getElementById('finishedCount');
+    const totalBarFill = document.getElementById('totalBarFill');
+    const totalCostLabel = document.getElementById('totalCostLabel');
+    const policyLabel = document.getElementById('policyLabel');
+    const localSubtitle = document.getElementById('localSubtitle');
+    const localName = document.getElementById('localName');
+    const zoomRobotsGroup = document.getElementById('zoomRobots');
+
+    function fitStage() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scale = Math.min(vw / BASE_W, vh / BASE_H);
+      const left = (vw - BASE_W * scale) / 2;
+      const top = (vh - BASE_H * scale) / 2;
+      stage.style.transform = `translate(${left}px, ${top}px) scale(${scale})`;
+    }
+    window.addEventListener('resize', fitStage);
+    fitStage();
+
+    // Vehicles are now defined by VEHICLE_CONFIG above; paths computed geometrically.
+    const robots = VEHICLE_CONFIG; // alias so existing loops still work
+
+    const localZones = {
+      P1: { x: 265, y: 525, cx: 355, cy: 615 },
+      P2: { x: 595, y: 525, cx: 685, cy: 615 },
+      P3: { x: 595, y: 195, cx: 685, cy: 285 },
+      P4: { x: 265, y: 195, cx: 355, cy: 285 }
+    };
+
+    let robotState = {};
+
+    const scenarios = {
+      optimal: {
+        name: 'Conflict-Aware Optimal', highlight: null,
+        delays:     {R1:0.10,R3:0.18,R5:0.32,R6:0.48,R2:0.60,R4:0.75},
+        finishCost: {R1:0.8, R3:1.0, R5:1.4, R6:1.7, R2:2.0, R4:2.2},
+        maxTotal: 12.0,
+      },
+      north: {
+        name: 'North-South Priority', highlight: null,
+        delays:     {R3:0.08,R6:0.20,R1:0.34,R5:0.48,R2:0.66,R4:0.80},
+        finishCost: {R3:0.4, R6:0.7, R1:1.6, R5:1.9, R2:2.3, R4:2.7},
+        maxTotal: 12.0,
+      },
+      east: {
+        name: 'East-West Priority', highlight: 'R2',
+        delays:     {R1:0.08,R2:0.20,R5:0.30,R3:0.50,R6:0.67,R4:0.82},
+        finishCost: {R1:0.5, R2:0.7, R5:1.0, R3:1.9, R6:2.3, R4:2.6},
+        maxTotal: 12.0,
+      },
+      fifo: {
+        name: 'FIFO', highlight: 'R1',
+        delays:     {R1:0.12,R2:0.26,R3:0.40,R4:0.56,R5:0.70,R6:0.84},
+        finishCost: {R1:1.0, R2:1.3, R3:1.7, R4:2.1, R5:2.4, R6:2.8},
+        maxTotal: 12.0,
+      },
+    };
+
+    let currentScenario = 'optimal';
+    let playing = true;
+    let progress = 0;
+    let lastTs = null;
+    let robotEls = {};
+    let recorded = new Set();
+    let totalCost = 0;
+    let finished = 0;
+    let currentLocal = 'P1';
+
+    // Image cycling: 4 robot images for 6 vehicles
+    const imgCycle = ['images/robot1.png','images/robot2.png','images/robot3.png','images/robot4.png'];
+    const robotImageMap = {};
+    VEHICLE_CONFIG.forEach((vc,i)=>{ robotImageMap[vc.id]=imgCycle[i%imgCycle.length]; });
+
+    function createRobots() {
+      for (const r of VEHICLE_CONFIG) {
+        const wrap = document.createElement('div');
+        wrap.className = 'robot-wrap';
+        const pin = document.createElement('div');
+        pin.className = 'robot-pin';
+        pin.textContent = r.id;
+        pin.style.background = r.color;
+        const img = document.createElement('img');
+        img.className = 'robot-img';
+        img.src = robotImageMap[r.id] + CB;
+        img.draggable = false;
+        wrap.appendChild(pin);
+        wrap.appendChild(img);
+        scene.appendChild(wrap);
+        robotEls[r.id] = wrap;
+      }
+    }
+
+    function easeInOut(t) {
+      if (t < 0.5) return 2*t*t;
+      return 1 - Math.pow(-2*t+2,2)/2;
+    }
+
+    // Map global progress p → path fraction t (same delay model as before)
+    function normalizedTravelFor(id, p) {
+      const order = scenarios[currentScenario].delays[id] ?? 0.5;
+      const moveStart = order * 0.55, waitEnd = order, end = 0.96;
+      if (p < moveStart) return easeInOut((p/moveStart)*0.36);
+      if (p < waitEnd)   return 0.36;
+      return 0.36 + easeInOut((p-waitEnd)/(end-waitEnd)) * 0.64;
+    }
+
+    function updateFrame() {
+      const sc = scenarios[currentScenario];
+      for (const r of VEHICLE_CONFIG) {
+        const t = Math.max(0, Math.min(1, normalizedTravelFor(r.id, progress)));
+        const pos = posAtT(vPaths[r.id], vDists[r.id], t);
+        robotState[r.id] = { x:pos.x, y:pos.y, angle:pos.angle, color:r.color, imgSrc:robotImageMap[r.id] };
+
+        const el = robotEls[r.id];
+        el.style.left = `${pos.x - 17}px`;  // center → top-left (div is 34px)
+        el.style.top  = `${pos.y - 17}px`;
+        el.querySelector('.robot-img').style.transform = `rotate(${pos.angle}deg)`;
+        el.classList.toggle('highlight', sc.highlight === r.id);
+
+        if (t >= 0.99 && !recorded.has(r.id)) {
+          recorded.add(r.id);
+          finished += 1;
+          const c = sc.finishCost[r.id] ?? 0;
+          totalCost += c;
+          totalCostEl.textContent = totalCost.toFixed(1);
+          finishedCountEl.textContent = `${finished}/6`;
+          const pct = Math.min(100, totalCost / sc.maxTotal * 100);
+          totalBarFill.style.width = `${pct}%`;
+          totalCostLabel.textContent = `${totalCost.toFixed(1)} / ${sc.maxTotal.toFixed(1)}`;
+        }
+      }
+      renderLocalZoom();
+    }
+
+    function renderLocalZoom() {
+      const zone = localZones[currentLocal];
+      const scale = 1.0; // 1 world-px = 1 SVG-px → robot positions match M1-M5 block boundaries
+      const centerX = 140, centerY = 140;
+      const size = 34 * scale;
+      const margin = 20;
+      const groups = [];
+
+      for (const r of VEHICLE_CONFIG) {
+        const s = robotState[r.id];
+        if (!s) continue;
+        const cx = centerX + (s.x - zone.cx) * scale;
+        const cy = centerY + (s.y - zone.cy) * scale;
+        if (cx < -margin || cx > 280+margin || cy < -margin || cy > 280+margin) continue;
+        const imgX = (cx - size/2).toFixed(1);
+        const imgY = (cy - size/2).toFixed(1);
+        groups.push(`
+          <image href="${s.imgSrc+CB}" x="${imgX}" y="${imgY}" width="${size}" height="${size}"
+            transform="rotate(${s.angle.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})"
+            style="filter:drop-shadow(0 2px 5px rgba(0,0,0,0.55))"/>
+          <text x="${cx.toFixed(1)}" y="${(parseFloat(imgY)-3).toFixed(1)}"
+            text-anchor="middle" font-size="8" font-weight="900" fill="${s.color}"
+            paint-order="stroke" stroke="rgba(0,0,0,0.75)" stroke-width="2.5"
+            stroke-linejoin="round">${r.id}</text>`);
+      }
+      zoomRobotsGroup.innerHTML = groups.join('');
+    }
+
+    function resetPlayback() {
+      progress = 0;
+      lastTs = null;
+      recorded = new Set();
+      totalCost = 0;
+      finished = 0;
+      totalCostEl.textContent = '0.0';
+      finishedCountEl.textContent = '0/6';
+      totalBarFill.style.width = '0%';
+      totalCostLabel.textContent = `0.0 / ${scenarios[currentScenario].maxTotal.toFixed(1)}`;
+      updateFrame();
+    }
+
+    function setScenario(name) {
+      currentScenario = name;
+      policyLabel.textContent = scenarios[name].name;
+      document.querySelectorAll('[data-scenario]').forEach(btn => {
+        btn.classList.toggle('primary', btn.dataset.scenario === name);
+      });
+      resetPlayback();
+    }
+
+    function loop(ts) {
+      if (!lastTs) lastTs = ts;
+      const delta = ts - lastTs;
+      lastTs = ts;
+      if (playing) {
+        progress += delta / 12000;
+        if (progress > 1.02) resetPlayback();
+        updateFrame();
+      }
+      requestAnimationFrame(loop);
+    }
+
+    function setLocalView(name) {
+      currentLocal = name;
+      localName.textContent = name;
+      localSubtitle.textContent = `Showing local view for ${name}`;
+      document.querySelectorAll('[data-local]').forEach(btn => btn.classList.toggle('active', btn.dataset.local === name));
+      renderLocalZoom();
+    }
+
+    document.querySelectorAll('[data-scenario]').forEach(btn => {
+      btn.addEventListener('click', () => setScenario(btn.dataset.scenario));
+    });
+    document.querySelectorAll('[data-local]').forEach(btn => {
+      btn.addEventListener('click', () => setLocalView(btn.dataset.local));
+    });
+
+    document.getElementById('togglePlay').addEventListener('click', () => {
+      playing = !playing;
+      document.getElementById('togglePlay').textContent = playing ? 'Pause' : 'Play';
+    });
+
+    document.getElementById('restart').addEventListener('click', () => {
+      resetPlayback();
+      playing = true;
+      document.getElementById('togglePlay').textContent = 'Pause';
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '1') setScenario('optimal');
+      if (e.key === '2') setScenario('east');
+      if (e.key === '3') setScenario('fifo');
+      if (e.key.toLowerCase() === 'n') setScenario('north');
+      if (e.code === 'Space') {
+        e.preventDefault();
+        document.getElementById('togglePlay').click();
+      }
+      if (e.key.toLowerCase() === 'r') document.getElementById('restart').click();
+    });
+
+    // Bust cache for all static warehouse decoration images
+    document.querySelectorAll('.scene img[src^="images/"]').forEach(img => {
+      img.src = img.getAttribute('src') + CB;
+    });
+
+    createRobots();
+    setScenario('optimal');
+    setLocalView('P1');
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

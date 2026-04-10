@@ -954,12 +954,10 @@
     // routeId encodes direction & turn: dir=ceil(id/3)∈{1..4}, turn=(id-1)%3 → 0=L 1=S 2=R
     // Directions: 1=from-S→N  2=from-E→W  3=from-N→S  4=from-W→E
     const VEHICLE_CONFIG = [
-      { id:'R1', color:'#ff7b7b', entrance:1, exit:7, intersections:[1,4],   routeIds:[2,1]   },
-      { id:'R2', color:'#7fd29a', entrance:1, exit:3, intersections:[1,2],   routeIds:[3,11]  },
-      { id:'R3', color:'#72b7ff', entrance:4, exit:1, intersections:[3,4,1], routeIds:[5,4,8] },
-      { id:'R4', color:'#ffd66d', entrance:4, exit:3, intersections:[3,2],   routeIds:[4,7]   },
-      { id:'R5', color:'#c8a2ff', entrance:6, exit:1, intersections:[4,1],   routeIds:[8,8]   },
-      { id:'R6', color:'#ffad76', entrance:7, exit:4, intersections:[4,3],   routeIds:[11,11] },
+      { id:'R1', matlab_n:1, color:'#ff7b7b', entrance:1, exit:7, intersections:[1,4],   routeIds:[2,1]   },
+      { id:'R2', matlab_n:2, color:'#72b7ff', entrance:4, exit:1, intersections:[3,4,1], routeIds:[5,4,8] },
+      { id:'R3', matlab_n:3, color:'#ffd66d', entrance:4, exit:3, intersections:[3,2],   routeIds:[4,7]   },
+      { id:'R4', matlab_n:4, color:'#c8a2ff', entrance:6, exit:1, intersections:[4,1],   routeIds:[8,8]   },
     ];
 
     // ─── NETWORK GEOMETRY ENGINE ──────────────────────────────────────────────────
@@ -1029,19 +1027,23 @@
     function buildVehiclePath(vc) {
       const {entrance,exit,intersections,routeIds}=vc;
       const pts=[];
+      const milestones=[];  // [{intId, enterIdx, exitIdx}]
       let [curX,curY]=ENT_DATA[entrance].pos;
       for(let k=0;k<intersections.length;k++){
         const [zx,zy]=ZONE_POS[intersections[k]];
         const {dir,turn}=parseRI(routeIds[k]);
         const [ex,ey]=DIR_ENTRY[dir], h=DIR_H[dir];
         pts.push({x:curX,y:curY,angle:h}, {x:zx+ex,y:zy+ey,angle:h}); // approach
+        const enterIdx=pts.length-1;                                     // intersection entry
         pts.push(...intWaypoints(zx,zy,dir,turn));                       // arc/straight
+        const exitIdx=pts.length-1;                                      // intersection exit
+        milestones.push({intId:intersections[k], enterIdx, exitIdx});
         const [xl,yl]=DIR_EXIT[dir][turn]; curX=zx+xl; curY=zy+yl;
       }
       const lastH=pts.length?pts[pts.length-1].angle:ENT_DATA[entrance].h;
       const [extX,extY]=EXIT_DATA[exit];
       pts.push({x:curX,y:curY,angle:lastH},{x:extX,y:extY,angle:lastH});
-      return pts;
+      return {pts, milestones};
     }
 
     // Cumulative arc-length distances along a path
@@ -1063,9 +1065,19 @@
       return{x:p0.x+(p1.x-p0.x)*frac,y:p0.y+(p1.y-p0.y)*frac,angle:p0.angle+da*frac};
     }
 
-    // Pre-build all vehicle paths
-    const vPaths={}, vDists={};
-    for(const vc of VEHICLE_CONFIG){ vPaths[vc.id]=buildVehiclePath(vc); vDists[vc.id]=pathDists(vPaths[vc.id]); }
+    // Pre-build all vehicle paths + milestones (intersection entry/exit arc-lengths)
+    const vPaths={}, vDists={}, vMilestones={};
+    for(const vc of VEHICLE_CONFIG){
+      const {pts, milestones} = buildVehiclePath(vc);
+      vPaths[vc.id]  = pts;
+      vDists[vc.id]  = pathDists(pts);
+      const dists    = vDists[vc.id];
+      vMilestones[vc.id] = milestones.map(m => ({
+        intId:     m.intId,
+        enterDist: dists[m.enterIdx],
+        exitDist:  dists[m.exitIdx]
+      }));
+    }
 
     const BASE_W = 1600;
     const BASE_H = 900;
@@ -1164,44 +1176,96 @@
       }
     }
 
-    function easeInOut(t) {
-      if (t < 0.5) return 2*t*t;
-      return 1 - Math.pow(-2*t+2,2)/2;
+    // ── Schedule-driven animation ────────────────────────────────────────────
+    let scheduleData = null;   // parsed JSON from MATLAB export
+    let vKeyframes   = {};     // {id: [{t, dist}, ...]}  t in seconds since t_cut
+
+    function buildAllKeyframes() {
+      if (!scheduleData) return;
+      const t_cut = scheduleData.t_cut;
+      vKeyframes = {};
+
+      for (let i = 0; i < VEHICLE_CONFIG.length; i++) {
+        const vc  = VEHICLE_CONFIG[i];
+        const vj  = scheduleData.vehicles[i];         // matched by index (matlab_n order)
+        const miles    = vMilestones[vc.id];
+        const totalDist= vDists[vc.id][vDists[vc.id].length - 1];
+        const alpha0   = vj.alpha0;                   // earliest arrival at first intersection
+
+        const kf = [];
+        // Keyframe 0: robot at screen entrance (dist=0) at MATLAB t=0
+        //   → HTML elapsed = 0 - t_cut (negative, handled by interpolation)
+        kf.push({t: -t_cut, dist: 0});
+
+        // Approach: reach first intersection entry at alpha0
+        kf.push({t: alpha0 - t_cut, dist: miles[0].enterDist});
+
+        // Per-intersection keyframes from JSON
+        for (let k = 0; k < vj.keyframes.length; k++) {
+          const [, beta, gamma] = vj.keyframes[k];
+          // Wait at entry if beta > alpha0 (only for k=0); for k>0 always push entry
+          if (k === 0 && beta > alpha0 + 0.01) {
+            kf.push({t: beta  - t_cut, dist: miles[k].enterDist}); // wait
+          } else if (k > 0) {
+            kf.push({t: beta  - t_cut, dist: miles[k].enterDist}); // arrive at next int
+          }
+          kf.push({t: gamma - t_cut, dist: miles[k].exitDist});    // exit intersection
+        }
+
+        // Final road: travel from last exit to screen border
+        // Use same pixel speed as approach (enterDist[0] / alpha0)
+        const approachSpeed = miles[0].enterDist / alpha0;  // px/s
+        const lastGamma     = vj.keyframes[vj.keyframes.length - 1][2];
+        const lastExitDist  = miles[miles.length - 1].exitDist;
+        const tExit = lastGamma - t_cut + (totalDist - lastExitDist) / Math.max(approachSpeed, 1);
+        kf.push({t: tExit, dist: totalDist});
+
+        vKeyframes[vc.id] = kf;
+      }
     }
 
-    // Map global progress p → path fraction t (same delay model as before)
-    function normalizedTravelFor(id, p) {
-      const order = scenarios[currentScenario].delays[id] ?? 0.5;
-      const moveStart = order * 0.55, waitEnd = order, end = 0.96;
-      if (p < moveStart) return easeInOut((p/moveStart)*0.36);
-      if (p < waitEnd)   return 0.36;
-      return 0.36 + easeInOut((p-waitEnd)/(end-waitEnd)) * 0.64;
+    // Given elapsed seconds since t_cut, return normalised path fraction [0,1]
+    function posForTime(id, elapsed) {
+      const kf = vKeyframes[id];
+      if (!kf || kf.length === 0) return 0;
+      const total = vDists[id][vDists[id].length - 1];
+      if (elapsed <= kf[0].t) return kf[0].dist / total;
+      if (elapsed >= kf[kf.length-1].t) return 1;
+      for (let i = 1; i < kf.length; i++) {
+        if (elapsed <= kf[i].t) {
+          const seg  = kf[i-1];
+          const dt   = kf[i].t - seg.t;
+          const frac = dt > 0 ? (elapsed - seg.t) / dt : 1;
+          return (seg.dist + (kf[i].dist - seg.dist) * frac) / total;
+        }
+      }
+      return 1;
+    }
+
+    // Load JSON from file then build keyframes
+    function loadSchedule(url) {
+      fetch(url)
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => {
+          scheduleData = data;
+          buildAllKeyframes();
+          policyLabel.textContent = data.scenario;
+          animDuration = data.t_final - data.t_cut + 3; // +3s tail buffer
+          resetPlayback();
+        })
+        .catch(err => console.error('Schedule load failed:', err));
     }
 
     function updateFrame() {
-      const sc = scenarios[currentScenario];
       for (const r of VEHICLE_CONFIG) {
-        const t = Math.max(0, Math.min(1, normalizedTravelFor(r.id, progress)));
+        const t   = Math.max(0, Math.min(1, posForTime(r.id, elapsedSec)));
         const pos = posAtT(vPaths[r.id], vDists[r.id], t);
         robotState[r.id] = { x:pos.x, y:pos.y, angle:pos.angle, color:r.color, imgSrc:robotImageMap[r.id] };
 
         const el = robotEls[r.id];
-        el.style.left = `${pos.x - 17}px`;  // center → top-left (div is 34px)
+        el.style.left = `${pos.x - 17}px`;
         el.style.top  = `${pos.y - 17}px`;
         el.querySelector('.robot-img').style.transform = `rotate(${pos.angle}deg)`;
-        el.classList.toggle('highlight', sc.highlight === r.id);
-
-        if (t >= 0.99 && !recorded.has(r.id)) {
-          recorded.add(r.id);
-          finished += 1;
-          const c = sc.finishCost[r.id] ?? 0;
-          totalCost += c;
-          totalCostEl.textContent = totalCost.toFixed(1);
-          finishedCountEl.textContent = `${finished}/6`;
-          const pct = Math.min(100, totalCost / sc.maxTotal * 100);
-          totalBarFill.style.width = `${pct}%`;
-          totalCostLabel.textContent = `${totalCost.toFixed(1)} / ${sc.maxTotal.toFixed(1)}`;
-        }
       }
       renderLocalZoom();
     }

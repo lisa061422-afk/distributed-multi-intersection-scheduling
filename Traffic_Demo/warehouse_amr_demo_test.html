@@ -909,18 +909,18 @@
             <div class="policy-pill" id="policyLabel">Conflict-Aware Optimal</div>
           </div>
           <div class="progress-label">
-            <span>Accumulated cost during playback</span>
-            <span id="totalCostLabel">0.0 / 12.0</span>
+            <span>Total delay penalty (accumulated)</span>
+            <span id="totalCostLabel">0.00 s</span>
           </div>
           <div class="progress"><div id="totalBarFill"></div></div>
           <div class="metrics">
             <div class="metric">
-              <div class="label">Current Total Cost</div>
-              <div class="value" id="totalCost">0.0</div>
+              <div class="label">Total Delay Penalty</div>
+              <div class="value" id="totalCost">0.00 s</div>
             </div>
             <div class="metric">
               <div class="label">Finished Robots</div>
-              <div class="value" id="finishedCount">0/6</div>
+              <div class="value" id="finishedCount">0/4</div>
             </div>
           </div>
         </div>
@@ -928,11 +928,16 @@
     </div>
   </div>
 
+  <!-- MATLAB export writes schedule_CR-MPC.js next to this HTML.
+       <script src> works with file:// (no CORS), unlike fetch().
+       The file declares: var SCHEDULE_DATA = { ... }; -->
+  <script src="schedule_CR-MPC.js"></script>
+
   <script>
     const CB = '?v=' + Date.now(); // cache-bust: forces fresh load of modified PNGs
 
     // ═══════════════════════════════════════════════════════════════════════════
-    //  VEHICLE CONFIG  — edit this section to define vehicles
+    //  VEHICLE CONFIG — auto-generated from SCHEDULE_DATA (written by MATLAB export)
     //
     //  Network layout (green circle = entrance, yellow square = exit):
     //
@@ -942,23 +947,118 @@
     //        │          │
     //    ⑧→ │ P1    P2 │ ←③
     //    [8]←└──────────┘→[3]
-    //        ↑⑤   ↑②
+    //        ↑①   ↑②
     //       [1]↓  [2]↓
     //
     //  Intersections: 1=P1(bottom-left), 2=P2(bottom-right),
     //                 3=P3(top-right),   4=P4(top-left)
     //
-    //  Each vehicle: { id, color, entrance (1-8), exit (1-8),
-    //                  intersections: ordered list of intersections traversed }
-    // ═══════════════════════════════════════════════════════════════════════════
     // routeId encodes direction & turn: dir=ceil(id/3)∈{1..4}, turn=(id-1)%3 → 0=L 1=S 2=R
     // Directions: 1=from-S→N  2=from-E→W  3=from-N→S  4=from-W→E
-    const VEHICLE_CONFIG = [
-      { id:'R1', matlab_n:1, color:'#ff7b7b', entrance:1, exit:7, intersections:[1,4],   routeIds:[2,1]   },
-      { id:'R2', matlab_n:2, color:'#72b7ff', entrance:4, exit:1, intersections:[3,4,1], routeIds:[5,4,8] },
-      { id:'R3', matlab_n:3, color:'#ffd66d', entrance:4, exit:3, intersections:[3,2],   routeIds:[4,7]   },
-      { id:'R4', matlab_n:4, color:'#c8a2ff', entrance:6, exit:1, intersections:[4,1],   routeIds:[8,8]   },
-    ];
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // Heading (deg) → travel direction index
+    function headingToDir(h) {
+      if (h === -90) return 1; // S→N
+      if (h === 180) return 2; // E→W
+      if (h === 90)  return 3; // N→S
+      if (h === 0)   return 4; // W→E
+      // Nearest match for floating-point headings
+      const hmod = ((h % 360) + 360) % 360;
+      if (hmod > 315 || hmod <= 45)  return 4;
+      if (hmod > 45  && hmod <= 135) return 3;
+      if (hmod > 135 && hmod <= 225) return 2;
+      return 1;
+    }
+
+    // Given entry dir + exit dir → turn type ('L','S','R')
+    // exitDirOf[entryDir][turn] = exitDir
+    const EXIT_DIR_OF = {
+      1:{S:1,L:2,R:4},
+      2:{S:2,L:3,R:1},
+      3:{S:3,L:4,R:2},
+      4:{S:4,L:1,R:3},
+    };
+    function deriveTurn(entryDir, exitDir) {
+      for (const t of ['S','L','R']) {
+        if (EXIT_DIR_OF[entryDir][t] === exitDir) return t;
+      }
+      return 'S'; // fallback
+    }
+
+    // Determine exit direction needed to reach 'toPos' from zone center 'fromCenter'
+    function neededExitDir(fromCenter, toPos) {
+      const dx = toPos[0] - fromCenter[0];
+      const dy = toPos[1] - fromCenter[1];
+      if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? 4 : 2; // E or W
+      return dy > 0 ? 3 : 1;                                    // S or N
+    }
+
+    // routeId from dir + turn string
+    function makeRouteId(dir, turn) {
+      return (dir - 1) * 3 + {L:1, S:2, R:3}[turn];
+    }
+
+    // Vehicle color palette (cycles if more than palette length)
+    const V_COLORS = ['#ff7b7b','#72b7ff','#ffd66d','#c8a2ff','#7bffc8','#ffb07b'];
+
+    // Zone centres (for direction geometry)
+    const ZONE_POS_PRE = { 1:[265,525], 2:[595,525], 3:[595,195], 4:[265,195] };
+    function zoneCentre(id) { const [x,y]=ZONE_POS_PRE[id]; return [x+90, y+90]; }
+
+    // Exit world positions (for last-road direction)
+    const EXIT_POS_PRE = {
+      1:[310,890], 2:[640,890], 3:[960,660], 4:[960,330],
+      5:[730,10],  6:[400,10],  7:[80,240],  8:[80,570],
+    };
+
+    // Entrance headings
+    const ENT_H_PRE = {
+      1:-90, 2:-90,   // south border →N
+      3:180, 4:180,   // east border  →W
+      5:90,  6:90,    // north border →S
+      7:0,   8:0,     // west border  →E
+    };
+
+    // Build VEHICLE_CONFIG automatically from SCHEDULE_DATA
+    function buildVehicleConfig(sched) {
+      return sched.vehicles.map((vj, i) => {
+        // Normalize: MATLAB may encode single-intersection keyframes as flat [id,β,γ]
+        const kfs = Array.isArray(vj.keyframes[0]) ? vj.keyframes : [vj.keyframes];
+        const ints = kfs.map(kf => kf[0]);  // intersection id sequence
+        // Derive routeIds from geometry
+        const routeIds = [];
+        let entryDir = headingToDir(ENT_H_PRE[vj.entrance]);
+        for (let k = 0; k < ints.length; k++) {
+          const intId = ints[k];
+          const fc = zoneCentre(intId);
+          // Where does this vehicle go after this intersection?
+          let toPos;
+          if (k + 1 < ints.length) {
+            toPos = zoneCentre(ints[k + 1]);
+          } else {
+            toPos = EXIT_POS_PRE[vj.exit];
+          }
+          const exitDir = neededExitDir(fc, toPos);
+          const turn    = deriveTurn(entryDir, exitDir);
+          routeIds.push(makeRouteId(entryDir, turn));
+          entryDir = exitDir; // next intersection entry direction = this exit direction
+        }
+        return {
+          id:            'R' + vj.id,
+          matlab_n:      vj.id,
+          color:         V_COLORS[(i) % V_COLORS.length],
+          entrance:      vj.entrance,
+          exit:          vj.exit,
+          intersections: ints,
+          routeIds,
+        };
+      });
+    }
+
+    // Use SCHEDULE_DATA if loaded via <script src>, otherwise fall back to empty
+    const _rawSched = (typeof SCHEDULE_DATA !== 'undefined') ? SCHEDULE_DATA : null;
+    const VEHICLE_CONFIG = _rawSched ? buildVehicleConfig(_rawSched) : [];
 
     // ─── NETWORK GEOMETRY ENGINE ──────────────────────────────────────────────────
     // Zone top-left [x,y] for each intersection id
@@ -1143,12 +1243,13 @@
     };
 
     let currentScenario = 'optimal';
-    let playing = true;
-    let progress = 0;
+    let playing      = true;
+    let elapsedSec   = 0;
+    let animDuration = 30;
     let lastTs = null;
     let robotEls = {};
-    let recorded = new Set();
-    let totalCost = 0;
+    let recorded = new Set();   // ids of robots whose delay has been revealed
+    let totalDelay = 0;         // accumulated delay penalty (seconds)
     let finished = 0;
     let currentLocal = 'P1';
 
@@ -1179,6 +1280,9 @@
     // ── Schedule-driven animation ────────────────────────────────────────────
     let scheduleData = null;   // parsed JSON from MATLAB export
     let vKeyframes   = {};     // {id: [{t, dist}, ...]}  t in seconds since t_cut
+    let vFinishTime  = {};     // {id: finish elapsed-time}  populated after buildAllKeyframes
+    let vDelayPenalty = {};    // {id: delay in seconds}  gamma_last - deadline
+    let vRevealTime  = {};     // {id: elapsed-time when penalty is revealed}
 
     function buildAllKeyframes() {
       if (!scheduleData) return;
@@ -1200,9 +1304,12 @@
         // Approach: reach first intersection entry at alpha0
         kf.push({t: alpha0 - t_cut, dist: miles[0].enterDist});
 
+        // Normalize keyframes (MATLAB 1-intersection case may be flat [id,β,γ])
+        const vjKfs = Array.isArray(vj.keyframes[0]) ? vj.keyframes : [vj.keyframes];
+
         // Per-intersection keyframes from JSON
-        for (let k = 0; k < vj.keyframes.length; k++) {
-          const [, beta, gamma] = vj.keyframes[k];
+        for (let k = 0; k < vjKfs.length; k++) {
+          const [, beta, gamma] = vjKfs[k];
           // Wait at entry if beta > alpha0 (only for k=0); for k>0 always push entry
           if (k === 0 && beta > alpha0 + 0.01) {
             kf.push({t: beta  - t_cut, dist: miles[k].enterDist}); // wait
@@ -1212,15 +1319,48 @@
           kf.push({t: gamma - t_cut, dist: miles[k].exitDist});    // exit intersection
         }
 
-        // Final road: travel from last exit to screen border
-        // Use same pixel speed as approach (enterDist[0] / alpha0)
-        const approachSpeed = miles[0].enterDist / alpha0;  // px/s
-        const lastGamma     = vj.keyframes[vj.keyframes.length - 1][2];
-        const lastExitDist  = miles[miles.length - 1].exitDist;
-        const tExit = lastGamma - t_cut + (totalDist - lastExitDist) / Math.max(approachSpeed, 1);
+        // Final road: travel from last intersection exit to screen border at v_int speed.
+        // v_int_px is derived from the last intersection's pixel arc-length ÷ traversal time,
+        // matching the physical v_int used inside intersections.
+        const lastKf       = vjKfs[vjKfs.length - 1];
+        const lastGamma    = lastKf[2];
+        const lastBeta     = lastKf[1];
+        const lastExitDist = miles[miles.length - 1].exitDist;
+        const lastIntPx    = lastExitDist - miles[miles.length - 1].enterDist;  // arc-length of last intersection
+        const vInt_px      = lastIntPx / Math.max(lastGamma - lastBeta, 0.1);  // px/s
+        const tExit = lastGamma - t_cut + (totalDist - lastExitDist) / Math.max(vInt_px, 1);
         kf.push({t: tExit, dist: totalDist});
 
         vKeyframes[vc.id] = kf;
+      }
+
+      // Precompute finish time, delay penalty, and reveal time for each robot
+      vFinishTime   = {};
+      vDelayPenalty = {};
+      vRevealTime   = {};
+      const Dt = scheduleData.Dt;
+
+      for (let i = 0; i < VEHICLE_CONFIG.length; i++) {
+        const vc  = VEHICLE_CONFIG[i];
+        const vj  = scheduleData.vehicles[i];
+        const kfs = vKeyframes[vc.id];
+        vFinishTime[vc.id] = kfs ? kfs[kfs.length - 1].t : Infinity;
+
+        // Normalize keyframes (same as above)
+        const vjKfs = Array.isArray(vj.keyframes[0]) ? vj.keyframes : [vj.keyframes];
+        const K = vjKfs.length;
+
+        // Traversal duration at each intersection = gamma_k - beta_k (fixed by v_int)
+        const totalTraversal = vjKfs.reduce((sum, kf) => sum + (kf[2] - kf[1]), 0);
+
+        // Deadline: earliest possible last gamma with no waiting
+        //   = alpha0 + Σ(traversal_k) + (K-1)*Dt
+        const deadline   = vj.alpha0 + totalTraversal + (K - 1) * Dt;
+        const gammaLast  = vjKfs[K - 1][2];
+        vDelayPenalty[vc.id] = Math.max(0, gammaLast - deadline);
+
+        // Reveal when robot leaves its last intersection (gammaLast - t_cut in elapsed time)
+        vRevealTime[vc.id]   = gammaLast - t_cut;
       }
     }
 
@@ -1242,31 +1382,94 @@
       return 1;
     }
 
-    // Load JSON from file then build keyframes
-    function loadSchedule(url) {
-      fetch(url)
-        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(data => {
-          scheduleData = data;
-          buildAllKeyframes();
-          policyLabel.textContent = data.scenario;
-          animDuration = data.t_final - data.t_cut + 3; // +3s tail buffer
-          resetPlayback();
-        })
-        .catch(err => console.error('Schedule load failed:', err));
-    }
+
+    const ROBOT_PX = 36; // robot visual size in px (slightly larger than 34 for margin)
 
     function updateFrame() {
+      // ── Pass 1: compute raw path positions ──────────────────────────────────
+      const rawPos = {};
       for (const r of VEHICLE_CONFIG) {
         const t   = Math.max(0, Math.min(1, posForTime(r.id, elapsedSec)));
         const pos = posAtT(vPaths[r.id], vDists[r.id], t);
-        robotState[r.id] = { x:pos.x, y:pos.y, angle:pos.angle, color:r.color, imgSrc:robotImageMap[r.id] };
+        const total = vDists[r.id][vDists[r.id].length - 1];
+        rawPos[r.id] = { t, pos, remaining: (1 - t) * total };
+      }
+
+      // ── Pass 2: compute push-forward offsets for finished robots ─────────────
+      // Push = permanent part + smooth part, so the total is continuous:
+      //   permanent: each already-finished follower (same exit, later finish time) adds ROBOT_PX
+      //   smooth:    approaching (not-yet-finished) closest follower adds 0→ROBOT_PX as it nears
+      // At the exact moment follower arrives: smooth drops 0, permanent rises ROBOT_PX → no jump.
+      const pushPx = {};
+      for (const r of VEHICLE_CONFIG) pushPx[r.id] = 0;
+
+      for (const leader of VEHICLE_CONFIG) {
+        if (rawPos[leader.id].t < 1) continue;  // not finished, nothing to push
+
+        const lft = vFinishTime[leader.id];
+        let permanentPush = 0;
+        let minRemaining  = Infinity;
+
+        for (const other of VEHICLE_CONFIG) {
+          if (other.id === leader.id) continue;
+          if (other.exit !== leader.exit) continue;
+          if (vFinishTime[other.id] <= lft) continue;  // other arrived before leader, ignore
+
+          if (rawPos[other.id].t >= 1) {
+            // Follower already finished → permanent push
+            permanentPush += ROBOT_PX;
+          } else {
+            // Follower still approaching → track closest for smooth push
+            if (rawPos[other.id].remaining < minRemaining)
+              minRemaining = rawPos[other.id].remaining;
+          }
+        }
+
+        // Smooth push: ramps 0→ROBOT_PX as closest approaching follower closes in
+        const trigger = ROBOT_PX * 2.5;
+        const smoothPush = minRemaining < trigger
+          ? (1 - minRemaining / trigger) * ROBOT_PX
+          : 0;
+
+        pushPx[leader.id] = permanentPush + smoothPush;
+      }
+
+      // ── Pass 3: apply positions + push offset ───────────────────────────────
+      for (const r of VEHICLE_CONFIG) {
+        const {pos} = rawPos[r.id];
+        const offset = pushPx[r.id];
+        const rad = pos.angle * Math.PI / 180;
+        const rx = pos.x + offset * Math.cos(rad);
+        const ry = pos.y + offset * Math.sin(rad);
+
+        robotState[r.id] = { x:rx, y:ry, angle:pos.angle, color:r.color, imgSrc:robotImageMap[r.id] };
 
         const el = robotEls[r.id];
-        el.style.left = `${pos.x - 17}px`;
-        el.style.top  = `${pos.y - 17}px`;
+        el.style.left = `${rx - 17}px`;
+        el.style.top  = `${ry - 17}px`;
         el.querySelector('.robot-img').style.transform = `rotate(${pos.angle}deg)`;
       }
+
+      // ── Pass 4: reveal delay penalty when robot leaves its last intersection ──
+      for (const r of VEHICLE_CONFIG) {
+        if (recorded.has(r.id)) continue;
+        if (vRevealTime[r.id] === undefined) continue;
+        if (elapsedSec >= vRevealTime[r.id]) {
+          totalDelay += vDelayPenalty[r.id];
+          finished   += 1;
+          recorded.add(r.id);
+
+          // Update display
+          totalCostEl.textContent    = totalDelay.toFixed(2) + ' s';
+          totalCostLabel.textContent = totalDelay.toFixed(2) + ' s';
+          finishedCountEl.textContent = finished + '/' + VEHICLE_CONFIG.length;
+
+          // Progress bar: fraction of max possible delay (N * some reference)
+          const maxDelay = VEHICLE_CONFIG.length * 10;  // 10s per robot as visual max
+          totalBarFill.style.width = Math.min(100, totalDelay / maxDelay * 100).toFixed(1) + '%';
+        }
+      }
+
       renderLocalZoom();
     }
 
@@ -1299,16 +1502,16 @@
     }
 
     function resetPlayback() {
-      progress = 0;
-      lastTs = null;
-      recorded = new Set();
-      totalCost = 0;
-      finished = 0;
-      totalCostEl.textContent = '0.0';
-      finishedCountEl.textContent = '0/6';
-      totalBarFill.style.width = '0%';
-      totalCostLabel.textContent = `0.0 / ${scenarios[currentScenario].maxTotal.toFixed(1)}`;
-      updateFrame();
+      elapsedSec = 0;
+      lastTs     = null;
+      recorded   = new Set();
+      totalDelay = 0;
+      finished   = 0;
+      totalCostEl.textContent    = '0.00 s';
+      totalCostLabel.textContent = '0.00 s';
+      totalBarFill.style.width   = '0%';
+      finishedCountEl.textContent = '0/' + VEHICLE_CONFIG.length;
+      try { updateFrame(); } catch(e) { console.error('resetPlayback error:', e); }
     }
 
     function setScenario(name) {
@@ -1325,9 +1528,9 @@
       const delta = ts - lastTs;
       lastTs = ts;
       if (playing) {
-        progress += delta / 12000;
-        if (progress > 1.02) resetPlayback();
-        updateFrame();
+        elapsedSec += delta / 1000;
+        if (elapsedSec > animDuration) resetPlayback();
+        try { updateFrame(); } catch(e) { console.error('updateFrame error:', e); }
       }
       requestAnimationFrame(loop);
     }
@@ -1355,7 +1558,9 @@
     document.getElementById('restart').addEventListener('click', () => {
       resetPlayback();
       playing = true;
+      lastTs = null;
       document.getElementById('togglePlay').textContent = 'Pause';
+      requestAnimationFrame(loop);   // 重新启动loop以防之前因错误停止
     });
 
     document.addEventListener('keydown', (e) => {
@@ -1376,8 +1581,23 @@
     });
 
     createRobots();
-    setScenario('optimal');
     setLocalView('P1');
+
+    // ── 调度数据由 MATLAB export_demo_json 写出的 schedule_CR-MPC.js 提供 ──
+    // schedule_CR-MPC.js 声明: var SCHEDULE_DATA = { ... };
+    // HTML通过 <script src="schedule_CR-MPC.js"> 加载，file://下无CORS问题
+    if (_rawSched) {
+      scheduleData = _rawSched;
+      buildAllKeyframes();
+      policyLabel.textContent = scheduleData.scenario;
+      animDuration = scheduleData.t_final - scheduleData.t_cut + 3;
+      finishedCountEl.textContent = '0/' + VEHICLE_CONFIG.length;
+      resetPlayback();
+    } else {
+      console.warn('SCHEDULE_DATA not found. Make sure schedule_CR-MPC.js is in the same folder.');
+      policyLabel.textContent = 'No schedule loaded';
+    }
+
     requestAnimationFrame(loop);
   </script>
 </body>

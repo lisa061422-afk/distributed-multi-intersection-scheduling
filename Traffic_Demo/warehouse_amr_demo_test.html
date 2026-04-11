@@ -451,6 +451,7 @@
       bottom: 18px;
       width: 430px;
       padding: 18px;
+      z-index: 35;
     }
     .cost-head {
       display: flex;
@@ -543,11 +544,288 @@
       line-height: 1.45;
     }
 
-    .hotkeys {
-      margin-top: 10px;
-      font-size: 13px;
-      color: var(--muted);
+    /* ══ Bottom Control Bar ══════════════════════════════════════════════════ */
+    .ctrl-bar {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 76px;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 0;
+      background: linear-gradient(180deg, rgba(6,14,22,0.70) 0%, rgba(4,9,15,0.94) 100%);
+      border-top: 1px solid rgba(255,255,255,0.09);
+      backdrop-filter: blur(18px);
     }
+    .ctrl-sep {
+      width: 1px; height: 42px;
+      background: rgba(255,255,255,0.08);
+      margin: 0 18px;
+      flex-shrink: 0;
+    }
+    .ctrl-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .ctrl-label {
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 5px;
+    }
+    .ctrl-btn {
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 12px;
+      padding: 8px 14px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      font-size: 14px; font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 7px;
+      white-space: nowrap;
+      transition: background 0.14s, border-color 0.14s;
+    }
+    .ctrl-btn:hover, .ctrl-btn:focus {
+      background: rgba(121,202,255,0.13);
+      border-color: rgba(121,202,255,0.40);
+      outline: none;
+    }
+    .ctrl-chevron { font-size: 9px; opacity: 0.55; transition: transform 0.2s; }
+    .ctrl-btn[aria-expanded="true"] .ctrl-chevron { transform: rotate(180deg); }
+
+    /* Dropdown panels */
+    .ctrl-drop {
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 0;
+      min-width: 180px;
+      background: rgba(8,18,30,0.97);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 16px;
+      padding: 8px;
+      z-index: 50;
+      display: none;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.60);
+    }
+    .ctrl-drop.open { display: block; }
+    .drop-section { display: flex; flex-direction: column; gap: 2px; }
+
+    .drop-item {
+      border: 0; border-radius: 10px;
+      padding: 9px 13px;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; text-align: left; width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .drop-item:hover, .drop-item:focus {
+      background: rgba(121,202,255,0.13);
+      outline: none;
+    }
+    .drop-item.selected { color: #79caff; }
+    .drop-item.selected::before {
+      content: '✓ '; font-size: 11px;
+    }
+    .drop-divider {
+      height: 1px; background: rgba(255,255,255,0.08);
+      margin: 5px 4px;
+    }
+
+    /* Two-level scenario dropdown */
+    .scenario-2col {
+      display: flex; gap: 0;
+    }
+    .scenario-lvl1 { display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
+    .scenario-lvl2 {
+      display: flex; flex-direction: column; gap: 2px; min-width: 130px;
+      border-left: 1px solid rgba(255,255,255,0.09);
+      padding-left: 8px; margin-left: 4px;
+    }
+    .scene-header {
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted);
+      padding: 4px 13px 6px; pointer-events: none;
+    }
+
+    /* Priority sub-list (inline expansion inside policy drop) */
+    .priority-sub {
+      display: none;
+      flex-direction: column; gap: 2px;
+      padding-left: 12px; margin-top: 2px;
+    }
+    .priority-sub.open { display: flex; }
+    .priority-sub .drop-item { font-size: 12px; padding: 7px 10px; color: var(--muted); }
+    .priority-sub .drop-item:hover { color: var(--text); }
+    .priority-sub .drop-item.selected { color: #79caff; }
+
+    /* Speed group */
+    .speed-group { display: flex; gap: 4px; }
+    .speed-btn {
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 10px; padding: 7px 13px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text); font-size: 13px; font-weight: 700;
+      cursor: pointer;
+    }
+    .speed-btn:hover, .speed-btn:focus {
+      background: rgba(121,202,255,0.13);
+      border-color: rgba(121,202,255,0.40); outline: none;
+    }
+    .speed-btn.active {
+      background: rgba(121,202,255,0.20);
+      border-color: rgba(121,202,255,0.55); color: #79caff;
+    }
+
+    /* Direction group */
+    .dir-group {
+      display: flex;
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 12px; overflow: hidden;
+    }
+    .dir-btn {
+      border: 0; padding: 8px 14px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text); font-size: 13px; font-weight: 700;
+      cursor: pointer;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    .dir-btn:last-child { border-right: 0; }
+    .dir-btn:hover, .dir-btn:focus { background: rgba(121,202,255,0.13); outline: none; }
+    .dir-btn.active { background: rgba(121,202,255,0.20); color: #79caff; }
+
+    /* Action buttons */
+    .ctrl-action {
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 12px; padding: 8px 18px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text); font-size: 14px; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+    }
+    .ctrl-action:hover, .ctrl-action:focus {
+      background: rgba(121,202,255,0.13);
+      border-color: rgba(121,202,255,0.40); outline: none;
+    }
+    .ctrl-action.primary {
+      background: linear-gradient(180deg,#8ad3ff,#61befd);
+      color: #061826; border-color: transparent;
+    }
+    .ctrl-action-row { display: flex; gap: 8px; }
+
+    /* ══ Current Setup Card ══════════════════════════════════════════════════ */
+    .setup-card {
+      position: absolute;
+      top: 16px;
+      right: 526px;   /* just left of local-panel (16 + 490 + 20) */
+      width: 250px;
+      padding: 13px 16px;
+      z-index: 25;
+    }
+    .setup-title {
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 9px;
+    }
+    .setup-row {
+      display: flex; justify-content: space-between;
+      align-items: baseline; padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px;
+    }
+    .setup-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .setup-lbl { color: var(--muted); }
+    .setup-val { font-weight: 700; color: var(--accent); }
+    .view-sched-btn {
+      margin-top: 10px; width: 100%;
+      padding: 7px 0; border-radius: 10px;
+      background: rgba(121,202,255,0.12);
+      border: 1px solid rgba(121,202,255,0.25);
+      color: var(--accent); font-size: 12px; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.5px;
+      transition: background 0.15s;
+    }
+    .view-sched-btn:hover { background: rgba(121,202,255,0.22); }
+
+    /* ── Schedule Image Viewer ─────────────────────────────────────────────── */
+    .sched-viewer {
+      position: absolute; inset: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sched-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.80); backdrop-filter: blur(6px);
+      cursor: pointer;
+    }
+    .sched-box {
+      position: relative; z-index: 1;
+      width: 92vw; max-width: 1400px;
+      height: 88vh;
+      background: rgba(10,20,32,0.97);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 22px;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    }
+    .sched-header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    #schedViewerTitle { font-size: 15px; font-weight: 700; color: #e8f4ff; flex: 1; }
+    .sched-tabs { display: flex; gap: 8px; }
+    .sched-tab {
+      padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.15); cursor: pointer;
+      background: transparent; color: var(--muted);
+      transition: all 0.15s;
+    }
+    .sched-tab.active { background: rgba(121,202,255,0.18); border-color: rgba(121,202,255,0.4); color: var(--accent); }
+    .sched-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); border: none;
+      color: #fff; font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sched-close:hover { background: rgba(255,80,80,0.3); }
+    .sched-slides { flex: 1; position: relative; overflow: hidden; }
+    .sched-slide {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.25s; pointer-events: none;
+    }
+    .sched-slide.active { opacity: 1; pointer-events: auto; }
+    .sched-slide img {
+      max-width: 100%; max-height: 100%;
+      object-fit: contain; border-radius: 8px;
+    }
+    .sched-hint {
+      position: absolute; color: var(--muted); font-size: 13px;
+      text-align: center; padding: 20px; display: none;
+    }
+    .sched-hint code { color: var(--accent); font-size: 11px; }
+    .sched-nav {
+      display: flex; align-items: center; justify-content: center; gap: 20px;
+      padding: 12px; flex-shrink: 0;
+    }
+    .sched-arrow {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      color: #fff; font-size: 24px; cursor: pointer; line-height: 1;
+      transition: background 0.15s;
+    }
+    .sched-arrow:hover { background: rgba(121,202,255,0.2); }
+    .sched-dots { display: flex; gap: 8px; align-items: center; }
+    .sched-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255,255,255,0.25); cursor: pointer; transition: background 0.15s;
+    }
+    .sched-dot.active { background: var(--accent); }
+    .sched-footer-hint { text-align: center; font-size: 11px; color: var(--muted); padding-bottom: 10px; }
 
   </style>
 </head>
@@ -750,13 +1028,147 @@
         <div class="io-arrow io-ent a-left"  style="left:820px;top:570px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
         <div class="io-arrow io-ext a-right" style="left:820px;top:660px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
 
-        <div class="controls">
-          <button class="control primary" data-scenario="optimal">Conflict-Aware Optimal</button>
-          <button class="control" data-scenario="north">North-South Priority</button>
-          <button class="control" data-scenario="east">East-West Priority</button>
-          <button class="control" data-scenario="fifo">FIFO</button>
-          <button class="control" id="togglePlay">Pause</button>
-          <button class="control" id="restart">Replay</button>
+        <!-- ══ Current Setup status card ══════════════════════════════════ -->
+        <div class="overlay setup-card">
+          <div class="setup-title">Current Setup</div>
+          <div class="setup-row">
+            <span class="setup-lbl">Scenario</span>
+            <span class="setup-val" id="setupScenario">5r · S1</span>
+          </div>
+          <div class="setup-row">
+            <span class="setup-lbl">Policy</span>
+            <span class="setup-val" id="setupPolicy">Optimal</span>
+          </div>
+          <div class="setup-row">
+            <span class="setup-lbl">Playback</span>
+            <span class="setup-val" id="setupPlayback">Forward · 1×</span>
+          </div>
+          <button class="view-sched-btn" id="viewSchedBtn" title="View schedule diagrams">
+            ▦ View Schedule
+          </button>
+        </div>
+
+        <!-- ══ Schedule Image Viewer (fullscreen lightbox) ═════════════════════ -->
+        <div id="schedViewer" class="sched-viewer" style="display:none;">
+          <div class="sched-backdrop" id="schedBackdrop"></div>
+          <div class="sched-box">
+            <div class="sched-header">
+              <span id="schedViewerTitle">Schedule — 10r · S1 · Optimal</span>
+              <div class="sched-tabs">
+                <button class="sched-tab active" data-slide="0">Macro View</button>
+                <button class="sched-tab" data-slide="1">Local View</button>
+              </div>
+              <button class="sched-close" id="schedClose">✕</button>
+            </div>
+            <div class="sched-slides">
+              <div class="sched-slide active" id="schedSlide0">
+                <img id="schedImgMacro" src="" alt="Macro schedule" draggable="false"/>
+                <div class="sched-hint" id="schedHintMacro">No image found —
+                  save MATLAB figure as <code>schedules/images/{group}_{scene}_{policy}_macro.png</code></div>
+              </div>
+              <div class="sched-slide" id="schedSlide1">
+                <img id="schedImgLocal" src="" alt="Local schedule" draggable="false"/>
+                <div class="sched-hint" id="schedHintLocal">No image found —
+                  save MATLAB figure as <code>schedules/images/{group}_{scene}_{policy}_local.png</code></div>
+              </div>
+            </div>
+            <div class="sched-nav">
+              <button class="sched-arrow" id="schedPrev">‹</button>
+              <span class="sched-dots">
+                <span class="sched-dot active" data-slide="0"></span>
+                <span class="sched-dot" data-slide="1"></span>
+              </span>
+              <button class="sched-arrow" id="schedNext">›</button>
+            </div>
+            <div class="sched-footer-hint">← → / LB RB / Left stick &nbsp;·&nbsp; navigate &nbsp;|&nbsp; B / Esc / Select &nbsp;·&nbsp; close</div>
+          </div>
+        </div>
+
+        <!-- ══ Bottom Control Bar ════════════════════════════════════════════ -->
+        <div class="ctrl-bar" id="ctrlBar">
+
+          <!-- Scenario (two-level dropdown) -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">Scenario</div>
+            <div style="position:relative;">
+              <button class="ctrl-btn" id="scenarioBtn" aria-haspopup="true" aria-expanded="false">
+                <span id="scenarioLabel">5r · S1</span>
+                <span class="ctrl-chevron">▲</span>
+              </button>
+              <div class="ctrl-drop" id="scenarioMenu">
+                <div class="scenario-2col">
+                  <div class="scenario-lvl1" id="scenarioLvl1">
+                    <!-- robot-count items injected by JS -->
+                  </div>
+                  <div class="scenario-lvl2" id="scenarioLvl2">
+                    <div class="scene-header" id="sceneLvl2Header">Scenes</div>
+                    <!-- scene items injected by JS -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ctrl-sep"></div>
+
+          <!-- Policy -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">Policy</div>
+            <div style="position:relative;">
+              <button class="ctrl-btn" id="policyBtn" aria-haspopup="true" aria-expanded="false">
+                <span id="policyBtnLabel">Optimal</span>
+                <span class="ctrl-chevron">▲</span>
+              </button>
+              <div class="ctrl-drop" id="policyMenu">
+                <div class="drop-section">
+                  <button class="drop-item selected" data-policy="optimal">Optimal</button>
+                  <button class="drop-item" data-policy="fcfs">FCFS</button>
+                  <div class="drop-divider"></div>
+                  <button class="drop-item" id="priorityToggle" data-policy="priority">
+                    Priority Override <span id="priorityChevron">›</span>
+                  </button>
+                  <div class="priority-sub" id="prioritySub">
+                    <!-- robot items injected by JS -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ctrl-sep"></div>
+
+          <!-- Pause/Play + Replay -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">Control</div>
+            <div class="ctrl-action-row">
+              <button class="ctrl-action primary" id="togglePlay">⏸ Pause</button>
+              <button class="ctrl-action" id="restart">↺ Replay</button>
+            </div>
+          </div>
+
+          <div class="ctrl-sep"></div>
+
+          <!-- Playback Direction -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">Playback</div>
+            <div class="dir-group">
+              <button class="dir-btn active" id="dirFwd">▶ Forward</button>
+              <button class="dir-btn" id="dirBwd">◀ Backward</button>
+            </div>
+          </div>
+
+          <div class="ctrl-sep"></div>
+
+          <!-- Speed -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">Speed</div>
+            <div class="speed-group">
+              <button class="speed-btn" data-speed="0.5">0.5×</button>
+              <button class="speed-btn active" data-speed="1">1×</button>
+              <button class="speed-btn" data-speed="2">2×</button>
+            </div>
+          </div>
+
         </div>
 
         <div class="overlay local-panel">
@@ -906,7 +1318,6 @@
         <div class="overlay cost-panel">
           <div class="cost-head">
             <h3>Total Delay Cost</h3>
-            <div class="policy-pill" id="policyLabel">Conflict-Aware Optimal</div>
           </div>
           <div class="progress-label">
             <span>Total delay penalty (accumulated)</span>
@@ -928,10 +1339,10 @@
     </div>
   </div>
 
-  <!-- MATLAB export writes schedule_CR-MPC.js next to this HTML.
-       <script src> works with file:// (no CORS), unlike fetch().
-       The file declares: var SCHEDULE_DATA = { ... }; -->
-  <script src="schedule_CR-MPC.js"></script>
+  <!-- Default schedule loaded on page open (must match robotGroup/sceneName below).
+       <script src> works with file:// — no CORS, unlike fetch().
+       Each file declares: var SCHEDULE_DATA = { ... }; -->
+  <script src="schedules/10r_S1_optimal.js"></script>
 
   <script>
     const CB = '?v=' + Date.now(); // cache-bust: forces fresh load of modified PNGs
@@ -1187,7 +1598,6 @@
     const finishedCountEl = document.getElementById('finishedCount');
     const totalBarFill = document.getElementById('totalBarFill');
     const totalCostLabel = document.getElementById('totalCostLabel');
-    const policyLabel = document.getElementById('policyLabel');
     const localSubtitle = document.getElementById('localSubtitle');
     const localName = document.getElementById('localName');
     const zoomRobotsGroup = document.getElementById('zoomRobots');
@@ -1242,11 +1652,86 @@
       },
     };
 
-    let currentScenario = 'optimal';
-    let playing      = true;
-    let elapsedSec   = 0;
-    let animDuration = 30;
-    let lastTs = null;
+    let currentScenario = 'optimal';  // legacy, kept for compat
+    let playing        = true;
+    let elapsedSec     = 0;
+    let animDuration   = 30;
+    let lastTs         = null;
+    let playbackDir    = 'forward';   // 'forward' | 'backward'
+    let playbackSpeed  = 1;           // 0.5 | 1 | 2
+    let robotGroup     = '10r';       // current scenario group
+    let sceneName      = 'S1';        // current scene id
+    let currentPolicy  = 'optimal';   // 'optimal' | 'fcfs' | 'r1'..'rN'
+
+    // ── Scenario catalog ─────────────────────────────────────────────────────
+    // Files live at: schedules/{group}_{scene}_{policy}.js
+    // Add entries to AVAILABLE as MATLAB results become ready.
+    // Policy keys: 'optimal', 'fcfs', 'r1', 'r2', ... (robot priority override)
+    const SCENARIO_GROUPS = {
+      '8r':  { label:'8 Robots',  scenes:['S1','S2','S3'] },
+      '10r': { label:'10 Robots', scenes:['S1','S2','S3'] },
+      '15r': { label:'15 Robots', scenes:['S1','S2','S3','S4'] },
+      '20r': { label:'20 Robots', scenes:['S1','S2','S3','S4','S5'] },
+      '25r': { label:'25 Robots', scenes:['S1','S2','S3'] },
+    };
+
+    // Availability map — keys: '{group}_{scene}_{policy}'
+    // Uncomment a line once the corresponding .js file has been exported from MATLAB.
+    // To export: run export_to_demo.m (optimal) / export_to_demo_fcfs.m (fcfs)
+    const AVAILABLE = {
+      // ── 8 Robots ──────────────────────────────────
+      '8r_S1_optimal': true,   // seed_4123_N_8  balanced
+      '8r_S1_fcfs':    true,
+      '8r_S2_optimal': true,   // seed_4125_N_8  balanced
+      '8r_S2_fcfs':    true,
+      '8r_S3_optimal': true,   // seed_4127_N_8  skewed I1
+      '8r_S3_fcfs':    true,
+
+      // ── 10 Robots ─────────────────────────────────
+      '10r_S1_optimal': true,  // fixed CR-MPC demo (original, keep)
+      '10r_S1_fcfs': true,
+      '10r_S2_optimal': true,  // seed_4120_N_10 balanced
+      '10r_S2_fcfs':    true,
+      '10r_S3_optimal': true,  // seed_4122_N_10 balanced
+      '10r_S3_fcfs':    true,
+
+      // ── 15 Robots ─────────────────────────────────
+      '15r_S1_optimal': true,  // seed_4112_N_15 balanced
+      '15r_S1_fcfs':    true,
+      '15r_S2_optimal': true,  // seed_4113_N_15 balanced
+      '15r_S2_fcfs':    true,
+      '15r_S3_optimal': true,  // seed_4114_N_15 balanced
+      '15r_S3_fcfs':    true,
+      '15r_S4_optimal': true,  // seed_4115_N_15 balanced
+      '15r_S4_fcfs':    true,
+
+      // ── 20 Robots ─────────────────────────────────
+      '20r_S1_optimal': true,  // seed_4101_N_20 balanced
+      '20r_S1_fcfs':    true,
+      '20r_S2_optimal': true,  // seed_4102_N_20 balanced
+      '20r_S2_fcfs':    true,
+      '20r_S3_optimal': true,  // seed_4103_N_20 balanced
+      '20r_S3_fcfs':    true,
+      '20r_S4_optimal': true,  // seed_4110_N_20 balanced
+      '20r_S4_fcfs':    true,
+      '20r_S5_optimal': true,  // seed_4111_N_20 balanced
+      '20r_S5_fcfs':    true,
+
+      // ── 25 Robots ─────────────────────────────────
+      '25r_S1_optimal': true,  // seed_4104_N_25 balanced
+      '25r_S1_fcfs':    true,
+      '25r_S2_optimal': true,  // seed_4108_N_25 balanced
+      '25r_S2_fcfs':    true,
+      '25r_S3_optimal': true,  // seed_4109_N_25 balanced
+      '25r_S3_fcfs':    true,
+    };
+
+    function schedKey(group, scene, policy) {
+      return group + '_' + scene + '_' + policy;
+    }
+    function schedPath(group, scene, policy) {
+      return 'schedules/' + schedKey(group, scene, policy) + '.js';
+    }
     let robotEls = {};
     let recorded = new Set();   // ids of robots whose delay has been revealed
     let totalDelay = 0;         // accumulated delay penalty (seconds)
@@ -1289,6 +1774,21 @@
       const t_cut = scheduleData.t_cut;
       vKeyframes = {};
 
+      // Compute reference v_int in px/s from the first vehicle's first intersection keyframe.
+      // v_int = (exitDist - enterDist) / traversal_time.
+      // Approach speed is set to 1.5 × v_int: faster than v_int, slightly below v_max
+      // (theory: v_max ≈ 2–3 × v_int). This gives physically meaningful visual pacing.
+      let v_approach_px = 30; // fallback default
+      if (VEHICLE_CONFIG.length > 0 && scheduleData.vehicles.length > 0) {
+        const vj0    = scheduleData.vehicles[0];
+        const miles0 = vMilestones[VEHICLE_CONFIG[0].id];
+        const kfs0   = Array.isArray(vj0.keyframes[0]) ? vj0.keyframes : [vj0.keyframes];
+        const [, b0, g0] = kfs0[0];
+        const v_int_px = (miles0[0].exitDist - miles0[0].enterDist) / Math.max(g0 - b0, 0.1);
+        v_approach_px  = 1.5 * v_int_px;
+      }
+
+
       for (let i = 0; i < VEHICLE_CONFIG.length; i++) {
         const vc  = VEHICLE_CONFIG[i];
         const vj  = scheduleData.vehicles[i];         // matched by index (matlab_n order)
@@ -1297,25 +1797,33 @@
         const alpha0   = vj.alpha0;                   // earliest arrival at first intersection
 
         const kf = [];
-        // Keyframe 0: robot at screen entrance (dist=0) at MATLAB t=0
-        //   → HTML elapsed = 0 - t_cut (negative, handled by interpolation)
-        kf.push({t: -t_cut, dist: 0});
-
-        // Approach: reach first intersection entry at alpha0
-        kf.push({t: alpha0 - t_cut, dist: miles[0].enterDist});
+        // Approach road: vehicle travels at v_approach_px (between v_int and v_max).
+        // t_approach_dur = enterDist / v_approach_px (same for all vehicles at this entrance).
+        // Vehicle n appears at dist=0 at MATLAB time = alpha0_n - t_approach_dur,
+        // so consecutive vehicles maintain spatial gap = T_val × v_approach_px.
+        // Vehicles are hidden (display:none) before this time — they come from off-screen.
+        // Vehicle appears at dist=0 exactly t_approach_dur seconds before reaching the intersection.
+        // Consecutive vehicles at the same entrance appear T_val seconds apart (= their alpha0 gap),
+        // so spatial gap = T_val × v_approach_px — no overlap as long as T_val × v_approach_px > robot size.
+        const enterDist = miles[0].enterDist;
 
         // Normalize keyframes (MATLAB 1-intersection case may be flat [id,β,γ])
         const vjKfs = Array.isArray(vj.keyframes[0]) ? vj.keyframes : [vj.keyframes];
 
+        // No-waiting drive: robot adjusts approach speed so it arrives at
+        // intersection entry exactly at beta_0 (no stopping/waiting at entrance).
+        // Approach duration = enterDist / v_approach_px (fixed visual speed).
+        // Robot appears at dist=0 at (beta_0 - t_approach_dur), traveling at v_approach_px.
+        const beta0          = vjKfs[0][1];
+        const t_approach_dur = enterDist / v_approach_px;
+        const t_road_start   = (beta0 - t_approach_dur) - t_cut;
+        kf.push({t: t_road_start, dist: 0});
+
         // Per-intersection keyframes from JSON
         for (let k = 0; k < vjKfs.length; k++) {
           const [, beta, gamma] = vjKfs[k];
-          // Wait at entry if beta > alpha0 (only for k=0); for k>0 always push entry
-          if (k === 0 && beta > alpha0 + 0.01) {
-            kf.push({t: beta  - t_cut, dist: miles[k].enterDist}); // wait
-          } else if (k > 0) {
-            kf.push({t: beta  - t_cut, dist: miles[k].enterDist}); // arrive at next int
-          }
+          // Arrive at intersection entry at beta (no waiting — approach speed adjusted)
+          kf.push({t: beta  - t_cut, dist: miles[k].enterDist});
           kf.push({t: gamma - t_cut, dist: miles[k].exitDist});    // exit intersection
         }
 
@@ -1340,6 +1848,9 @@
       vRevealTime   = {};
       const Dt = scheduleData.Dt;
 
+      // v_int in px/s (same reference used for approach speed above)
+      const v_int_px = v_approach_px / 1.5;
+
       for (let i = 0; i < VEHICLE_CONFIG.length; i++) {
         const vc  = VEHICLE_CONFIG[i];
         const vj  = scheduleData.vehicles[i];
@@ -1349,14 +1860,22 @@
         // Normalize keyframes (same as above)
         const vjKfs = Array.isArray(vj.keyframes[0]) ? vj.keyframes : [vj.keyframes];
         const K = vjKfs.length;
+        const miles = vMilestones[vc.id];
 
-        // Traversal duration at each intersection = gamma_k - beta_k (fixed by v_int)
-        const totalTraversal = vjKfs.reduce((sum, kf) => sum + (kf[2] - kf[1]), 0);
-
-        // Deadline: earliest possible last gamma with no waiting
-        //   = alpha0 + Σ(traversal_k) + (K-1)*Dt
-        const deadline   = vj.alpha0 + totalTraversal + (K - 1) * Dt;
-        const gammaLast  = vjKfs[K - 1][2];
+        // Deadline: use MATLAB-exported theoretical value (alpha0 + Σc_k + (K-1)*Dt).
+        // Both optimal and FCFS export this field, ensuring a consistent reference.
+        // Fallback to pixel-based estimate if field is missing (legacy JS files).
+        const gammaLast = vjKfs[K - 1][2];
+        let deadline;
+        if (vj.deadline !== undefined) {
+          deadline = vj.deadline;   // MATLAB time, same frame as gammaLast
+        } else {
+          const minTraversal = vjKfs.reduce((sum, kf, k) => {
+            const arcPx = miles[k].exitDist - miles[k].enterDist;
+            return sum + arcPx / Math.max(v_int_px, 0.1);
+          }, 0);
+          deadline = vj.alpha0 + minTraversal + (K - 1) * Dt;
+        }
         vDelayPenalty[vc.id] = Math.max(0, gammaLast - deadline);
 
         // Reveal when robot leaves its last intersection (gammaLast - t_cut in elapsed time)
@@ -1369,7 +1888,7 @@
       const kf = vKeyframes[id];
       if (!kf || kf.length === 0) return 0;
       const total = vDists[id][vDists[id].length - 1];
-      if (elapsed <= kf[0].t) return kf[0].dist / total;
+      if (elapsed < kf[0].t) return -1;  // not yet on screen — hide vehicle
       if (elapsed >= kf[kf.length-1].t) return 1;
       for (let i = 1; i < kf.length; i++) {
         if (elapsed <= kf[i].t) {
@@ -1389,7 +1908,13 @@
       // ── Pass 1: compute raw path positions ──────────────────────────────────
       const rawPos = {};
       for (const r of VEHICLE_CONFIG) {
-        const t   = Math.max(0, Math.min(1, posForTime(r.id, elapsedSec)));
+        const raw = posForTime(r.id, elapsedSec);
+        if (raw < 0) {
+          // Vehicle not yet on screen
+          rawPos[r.id] = { t: -1, pos: null, remaining: Infinity };
+          continue;
+        }
+        const t   = Math.min(1, raw);
         const pos = posAtT(vPaths[r.id], vDists[r.id], t);
         const total = vDists[r.id][vDists[r.id].length - 1];
         rawPos[r.id] = { t, pos, remaining: (1 - t) * total };
@@ -1436,15 +1961,24 @@
 
       // ── Pass 3: apply positions + push offset ───────────────────────────────
       for (const r of VEHICLE_CONFIG) {
+        const el = robotEls[r.id];
+
+        // Hide vehicle if not yet on screen
+        if (rawPos[r.id].t < 0) {
+          el.style.display = 'none';
+          continue;
+        }
+        el.style.display = '';
+
         const {pos} = rawPos[r.id];
         const offset = pushPx[r.id];
         const rad = pos.angle * Math.PI / 180;
         const rx = pos.x + offset * Math.cos(rad);
         const ry = pos.y + offset * Math.sin(rad);
 
-        robotState[r.id] = { x:rx, y:ry, angle:pos.angle, color:r.color, imgSrc:robotImageMap[r.id] };
+        const done = rawPos[r.id].t >= 1;
+        robotState[r.id] = { x:rx, y:ry, angle:pos.angle, color:r.color, imgSrc:robotImageMap[r.id], done };
 
-        const el = robotEls[r.id];
         el.style.left = `${rx - 17}px`;
         el.style.top  = `${ry - 17}px`;
         el.querySelector('.robot-img').style.transform = `rotate(${pos.angle}deg)`;
@@ -1465,7 +1999,7 @@
           finishedCountEl.textContent = finished + '/' + VEHICLE_CONFIG.length;
 
           // Progress bar: fraction of max possible delay (N * some reference)
-          const maxDelay = VEHICLE_CONFIG.length * 10;  // 10s per robot as visual max
+          const maxDelay = 20;   // fixed visual max (s)
           totalBarFill.style.width = Math.min(100, totalDelay / maxDelay * 100).toFixed(1) + '%';
         }
       }
@@ -1483,7 +2017,7 @@
 
       for (const r of VEHICLE_CONFIG) {
         const s = robotState[r.id];
-        if (!s) continue;
+        if (!s || s.done) continue;   // skip robots that have exited the network
         const cx = centerX + (s.x - zone.cx) * scale;
         const cy = centerY + (s.y - zone.cy) * scale;
         if (cx < -margin || cx > 280+margin || cy < -margin || cy > 280+margin) continue;
@@ -1514,13 +2048,153 @@
       try { updateFrame(); } catch(e) { console.error('resetPlayback error:', e); }
     }
 
-    function setScenario(name) {
-      currentScenario = name;
-      policyLabel.textContent = scenarios[name].name;
-      document.querySelectorAll('[data-scenario]').forEach(btn => {
-        btn.classList.toggle('primary', btn.dataset.scenario === name);
-      });
-      resetPlayback();
+    // ── Setup card + UI sync ─────────────────────────────────────────────────
+    // ── Schedule Image Viewer ─────────────────────────────────────────────────
+    let schedViewerOpen = false;
+    let schedSlideIdx   = 0;
+    const SCHED_SLIDES  = 2;
+
+    function schedImgPath(slide) {
+      const g = robotGroup.replace(' ', '').toLowerCase();   // "10r"
+      const s = sceneName;                                    // "S1"
+      const p = currentPolicy;                               // "optimal" | "fcfs"
+      const tag = slide === 0 ? 'macro' : 'local';
+      return `schedules/images/${g}_${s}_${p}_${tag}.png`;
+    }
+
+    function openSchedViewer() {
+      schedViewerOpen = true;
+      schedSlideIdx   = 0;
+      document.getElementById('schedViewer').style.display = 'flex';
+      document.getElementById('schedViewerTitle').textContent =
+        `Schedule — ${robotGroup} · ${sceneName} · ${currentPolicy === 'optimal' ? 'Optimal' : 'FCFS'}`;
+      schedGoTo(0);
+    }
+
+    function closeSchedViewer() {
+      schedViewerOpen = false;
+      document.getElementById('schedViewer').style.display = 'none';
+    }
+
+    function schedGoTo(idx) {
+      schedSlideIdx = (idx + SCHED_SLIDES) % SCHED_SLIDES;
+      // slides + tabs + dots
+      document.querySelectorAll('.sched-slide').forEach((el, i) =>
+        el.classList.toggle('active', i === schedSlideIdx));
+      document.querySelectorAll('.sched-tab').forEach((el, i) =>
+        el.classList.toggle('active', i === schedSlideIdx));
+      document.querySelectorAll('.sched-dot').forEach((el, i) =>
+        el.classList.toggle('active', i === schedSlideIdx));
+      // load image
+      const imgId  = schedSlideIdx === 0 ? 'schedImgMacro' : 'schedImgLocal';
+      const hintId = schedSlideIdx === 0 ? 'schedHintMacro' : 'schedHintLocal';
+      const imgEl  = document.getElementById(imgId);
+      const hint   = document.getElementById(hintId);
+      const path   = schedImgPath(schedSlideIdx);
+      imgEl.style.display = 'none';
+      hint.style.display  = 'none';
+      imgEl.onload  = () => { imgEl.style.display = ''; hint.style.display = 'none'; };
+      imgEl.onerror = () => { imgEl.style.display = 'none'; hint.style.display = 'block'; };
+      imgEl.src = path + '?v=' + Date.now();
+    }
+
+    // Button
+    document.getElementById('viewSchedBtn').addEventListener('click', openSchedViewer);
+    document.getElementById('schedClose').addEventListener('click', closeSchedViewer);
+    document.getElementById('schedBackdrop').addEventListener('click', closeSchedViewer);
+    document.getElementById('schedPrev').addEventListener('click', () => schedGoTo(schedSlideIdx - 1));
+    document.getElementById('schedNext').addEventListener('click', () => schedGoTo(schedSlideIdx + 1));
+    document.querySelectorAll('.sched-tab').forEach((btn, i) =>
+      btn.addEventListener('click', () => schedGoTo(i)));
+    document.querySelectorAll('.sched-dot').forEach((dot, i) =>
+      dot.addEventListener('click', () => schedGoTo(i)));
+
+    // Keyboard
+    window.addEventListener('keydown', e => {
+      if (!schedViewerOpen) return;
+      if (e.key === 'Escape' || e.key === 'b' || e.key === 'B') closeSchedViewer();
+      if (e.key === 'ArrowLeft')  schedGoTo(schedSlideIdx - 1);
+      if (e.key === 'ArrowRight') schedGoTo(schedSlideIdx + 1);
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
+    function updateSetupCard() {
+      const policyStr =
+        currentPolicy === 'optimal' ? 'Optimal' :
+        currentPolicy === 'fcfs'    ? 'FCFS'    :
+        'Priority: ' + currentPolicy.toUpperCase();
+      document.getElementById('setupScenario').textContent = robotGroup + ' · ' + sceneName;
+      document.getElementById('setupPolicy').textContent   = policyStr;
+      document.getElementById('setupPlayback').textContent =
+        (playbackDir === 'forward' ? 'Forward' : 'Backward') + ' · ' + playbackSpeed + '×';
+      document.getElementById('scenarioLabel').textContent = robotGroup + ' · ' + sceneName;
+      document.getElementById('policyBtnLabel').textContent =
+        currentPolicy === 'optimal' ? 'Optimal' :
+        currentPolicy === 'fcfs'    ? 'FCFS'    : 'Priority Override';
+    }
+
+    function applySetup(group, scene, policy) {
+      const key = schedKey(group, scene, policy);
+      if (!AVAILABLE[key]) {
+        // No data yet — show placeholder message, don't change animation
+        robotGroup    = group;
+        sceneName     = scene;
+        currentPolicy = policy;
+        updateSetupCard();
+        document.getElementById('setupPolicy').textContent =
+          document.getElementById('setupPolicy').textContent + '  (no data)';
+        return;
+      }
+      robotGroup    = group;
+      sceneName     = scene;
+      currentPolicy = policy;
+      // Dynamically load the schedule JS file.
+      // <script src> works with file:// — the file sets window.SCHEDULE_DATA.
+      const old = document.getElementById('dynSched');
+      if (old) old.remove();
+      window.SCHEDULE_DATA = undefined;
+      const s = document.createElement('script');
+      s.id  = 'dynSched';
+      s.src = schedPath(group, scene, policy) + '?v=' + Date.now();
+      s.onload = () => {
+        if (window.SCHEDULE_DATA) {
+          scheduleData = window.SCHEDULE_DATA;
+          // Rebuild VEHICLE_CONFIG from new schedule
+          const newCfg = buildVehicleConfig(scheduleData);
+          VEHICLE_CONFIG.length = 0;
+          newCfg.forEach(v => VEHICLE_CONFIG.push(v));
+          // Rebuild paths
+          for (const vc of VEHICLE_CONFIG) {
+            const {pts, milestones} = buildVehiclePath(vc);
+            vPaths[vc.id]  = pts;
+            vDists[vc.id]  = pathDists(pts);
+            vMilestones[vc.id] = milestones.map(m => ({
+              intId:     m.intId,
+              enterDist: pathDists(pts)[m.enterIdx],
+              exitDist:  pathDists(pts)[m.exitIdx]
+            }));
+            robotImageMap[vc.id] = imgCycle[VEHICLE_CONFIG.indexOf(vc) % imgCycle.length];
+          }
+          // Recreate robot DOM elements
+          document.querySelectorAll('.robot-wrap').forEach(el => el.remove());
+          robotEls = {};
+          createRobots();
+          buildAllKeyframes();
+          animDuration = scheduleData.t_final - scheduleData.t_cut + 3;
+          finishedCountEl.textContent = '0/' + VEHICLE_CONFIG.length;
+          updateSetupCard();
+          resetPlayback();
+          // Auto-play when a new scenario/policy is selected
+          playing = true;
+          lastTs  = null;
+          const playBtn = document.getElementById('togglePlay');
+          playBtn.textContent = '⏸ Pause';
+          playBtn.classList.add('primary');
+        }
+      };
+      s.onerror = () => console.warn('Failed to load:', s.src);
+      document.head.appendChild(s);
+      updateSetupCard();
     }
 
     function loop(ts) {
@@ -1528,8 +2202,14 @@
       const delta = ts - lastTs;
       lastTs = ts;
       if (playing) {
-        elapsedSec += delta / 1000;
-        if (elapsedSec > animDuration) resetPlayback();
+        const step = (playbackDir === 'forward' ? 1 : -1) * (delta / 1000) * playbackSpeed;
+        elapsedSec = Math.max(0, Math.min(animDuration, elapsedSec + step));
+        if ((playbackDir === 'forward'  && elapsedSec >= animDuration) ||
+            (playbackDir === 'backward' && elapsedSec <= 0)) {
+          playing = false;
+          document.getElementById('togglePlay').textContent = '▶ Play';
+          document.getElementById('togglePlay').classList.remove('primary');
+        }
         try { updateFrame(); } catch(e) { console.error('updateFrame error:', e); }
       }
       requestAnimationFrame(loop);
@@ -1543,36 +2223,191 @@
       renderLocalZoom();
     }
 
-    document.querySelectorAll('[data-scenario]').forEach(btn => {
-      btn.addEventListener('click', () => setScenario(btn.dataset.scenario));
-    });
+    // ── Local zoom buttons ───────────────────────────────────────────────────
     document.querySelectorAll('[data-local]').forEach(btn => {
       btn.addEventListener('click', () => setLocalView(btn.dataset.local));
     });
 
+    // ── Pause / Play ─────────────────────────────────────────────────────────
     document.getElementById('togglePlay').addEventListener('click', () => {
       playing = !playing;
-      document.getElementById('togglePlay').textContent = playing ? 'Pause' : 'Play';
+      lastTs = null;   // reset timestamp so first resumed frame has delta≈0
+      const btn = document.getElementById('togglePlay');
+      btn.textContent = playing ? '⏸ Pause' : '▶ Play';
+      btn.classList.toggle('primary', playing);
+      // Do NOT call requestAnimationFrame here — loop() already runs perpetually
     });
 
+    // ── Replay ───────────────────────────────────────────────────────────────
     document.getElementById('restart').addEventListener('click', () => {
       resetPlayback();
       playing = true;
       lastTs = null;
-      document.getElementById('togglePlay').textContent = 'Pause';
-      requestAnimationFrame(loop);   // 重新启动loop以防之前因错误停止
+      const btn = document.getElementById('togglePlay');
+      btn.textContent = '⏸ Pause';
+      btn.classList.add('primary');
+      // Do NOT call requestAnimationFrame here — loop() already runs perpetually
     });
 
+    // ── Speed buttons ────────────────────────────────────────────────────────
+    document.querySelectorAll('.speed-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        playbackSpeed = parseFloat(btn.dataset.speed);
+        document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateSetupCard();
+      });
+    });
+
+    // ── Direction buttons ────────────────────────────────────────────────────
+    document.getElementById('dirFwd').addEventListener('click', () => {
+      playbackDir = 'forward';
+      document.getElementById('dirFwd').classList.add('active');
+      document.getElementById('dirBwd').classList.remove('active');
+      updateSetupCard();
+    });
+    document.getElementById('dirBwd').addEventListener('click', () => {
+      playbackDir = 'backward';
+      document.getElementById('dirBwd').classList.add('active');
+      document.getElementById('dirFwd').classList.remove('active');
+      updateSetupCard();
+    });
+
+    // ── Dropdown helpers ─────────────────────────────────────────────────────
+    function closeAllDrops() {
+      document.querySelectorAll('.ctrl-drop').forEach(d => {
+        d.classList.remove('open');
+        d.previousElementSibling?.setAttribute('aria-expanded','false');
+      });
+    }
+    function toggleDrop(menuId, btnId) {
+      const menu = document.getElementById(menuId);
+      const btn  = document.getElementById(btnId);
+      const wasOpen = menu.classList.contains('open');
+      closeAllDrops();
+      if (!wasOpen) {
+        menu.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+    document.addEventListener('click', closeAllDrops);
+    document.getElementById('ctrlBar').addEventListener('click', e => e.stopPropagation());
+
+    // ── Scenario dropdown ────────────────────────────────────────────────────
+    function buildScenarioMenu(selectedGroup) {
+      const lvl1 = document.getElementById('scenarioLvl1');
+      const lvl2 = document.getElementById('scenarioLvl2');
+      lvl1.innerHTML = '';
+      Object.entries(SCENARIO_GROUPS).forEach(([gid, g]) => {
+        const btn = document.createElement('button');
+        btn.className = 'drop-item' + (gid === selectedGroup ? ' selected' : '');
+        btn.textContent = g.label;
+        btn.addEventListener('mouseenter', () => populateSceneLvl2(gid));
+        btn.addEventListener('focus',      () => populateSceneLvl2(gid));
+        btn.addEventListener('click',      () => populateSceneLvl2(gid));
+        lvl1.appendChild(btn);
+      });
+      populateSceneLvl2(selectedGroup);
+    }
+    function populateSceneLvl2(gid) {
+      const lvl2   = document.getElementById('scenarioLvl2');
+      const header = document.getElementById('sceneLvl2Header');
+      const g      = SCENARIO_GROUPS[gid];
+      header.textContent = g.label + ' — Scenes';
+      // Keep only the header, rebuild scene buttons
+      const oldBtns = lvl2.querySelectorAll('.drop-item');
+      oldBtns.forEach(b => b.remove());
+      g.scenes.forEach(sid => {
+        const btn = document.createElement('button');
+        btn.className = 'drop-item' + (gid === robotGroup && sid === sceneName ? ' selected' : '');
+        btn.textContent = sid;
+        btn.addEventListener('click', () => {
+          applySetup(gid, sid, 'optimal');  // reset policy to Optimal on scene change
+          closeAllDrops();
+          buildScenarioMenu(gid);
+          buildPolicyMenu();
+        });
+        lvl2.appendChild(btn);
+      });
+      // Highlight the active group item in lvl1
+      document.querySelectorAll('#scenarioLvl1 .drop-item').forEach(b => {
+        b.classList.toggle('selected', b.textContent === g.label);
+      });
+    }
+    document.getElementById('scenarioBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleDrop('scenarioMenu', 'scenarioBtn');
+      buildScenarioMenu(robotGroup);
+    });
+
+    // ── Policy dropdown ──────────────────────────────────────────────────────
+    function buildPolicyMenu() {
+      // Update selected state on fixed items
+      document.querySelectorAll('#policyMenu .drop-item[data-policy]').forEach(btn => {
+        btn.classList.toggle('selected',
+          btn.dataset.policy === (currentPolicy === 'optimal' || currentPolicy === 'fcfs'
+            ? currentPolicy : 'priority'));
+      });
+      // Rebuild priority sub-list from current VEHICLE_CONFIG
+      const sub = document.getElementById('prioritySub');
+      sub.innerHTML = '';
+      VEHICLE_CONFIG.forEach(vc => {
+        const btn = document.createElement('button');
+        btn.className = 'drop-item' + (currentPolicy === vc.id.toLowerCase() ? ' selected' : '');
+        btn.style.cssText = '';
+        btn.textContent = vc.id;
+        btn.addEventListener('click', () => {
+          applySetup(robotGroup, sceneName, vc.id.toLowerCase());
+          closeAllDrops();
+          buildPolicyMenu();
+        });
+        sub.appendChild(btn);
+      });
+    }
+    document.getElementById('policyBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleDrop('policyMenu', 'policyBtn');
+      buildPolicyMenu();
+    });
+    document.getElementById('policyMenu').addEventListener('click', e => e.stopPropagation());
+    // Fixed policy items
+    document.querySelectorAll('#policyMenu .drop-item[data-policy="optimal"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        applySetup(robotGroup, sceneName, 'optimal');
+        closeAllDrops(); buildPolicyMenu();
+      });
+    });
+    document.querySelectorAll('#policyMenu .drop-item[data-policy="fcfs"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        applySetup(robotGroup, sceneName, 'fcfs');
+        closeAllDrops(); buildPolicyMenu();
+      });
+    });
+    // Priority toggle (inline expansion)
+    document.getElementById('priorityToggle').addEventListener('click', () => {
+      const sub = document.getElementById('prioritySub');
+      const chev = document.getElementById('priorityChevron');
+      const isOpen = sub.classList.toggle('open');
+      chev.textContent = isOpen ? '▾' : '›';
+      buildPolicyMenu();
+    });
+
+    // ── Keyboard shortcuts ───────────────────────────────────────────────────
     document.addEventListener('keydown', (e) => {
-      if (e.key === '1') setScenario('optimal');
-      if (e.key === '2') setScenario('east');
-      if (e.key === '3') setScenario('fifo');
-      if (e.key.toLowerCase() === 'n') setScenario('north');
       if (e.code === 'Space') {
         e.preventDefault();
         document.getElementById('togglePlay').click();
       }
       if (e.key.toLowerCase() === 'r') document.getElementById('restart').click();
+      if (e.key === 'ArrowRight') {
+        playbackDir = 'forward';
+        document.getElementById('dirFwd').click();
+      }
+      if (e.key === 'ArrowLeft') {
+        playbackDir = 'backward';
+        document.getElementById('dirBwd').click();
+      }
+      if (e.key === 'Escape') closeAllDrops();
     });
 
     // Bust cache for all static warehouse decoration images
@@ -1589,16 +2424,420 @@
     if (_rawSched) {
       scheduleData = _rawSched;
       buildAllKeyframes();
-      policyLabel.textContent = scheduleData.scenario;
       animDuration = scheduleData.t_final - scheduleData.t_cut + 3;
       finishedCountEl.textContent = '0/' + VEHICLE_CONFIG.length;
+      updateSetupCard();
       resetPlayback();
     } else {
       console.warn('SCHEDULE_DATA not found. Make sure schedule_CR-MPC.js is in the same folder.');
-      policyLabel.textContent = 'No schedule loaded';
+      document.getElementById('setupPolicy').textContent = 'No schedule';
     }
 
     requestAnimationFrame(loop);
+  </script>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       GAMEPAD MODULE — Xbox Wireless Core support
+       Depends on: playbackSpeed, playbackDir, Actions defined above
+       Exposes nothing to global scope (IIFE).
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <script>
+  (function GamepadModule() {
+
+    // ── Inject gamepad focus CSS ────────────────────────────────────────────
+    const gpStyle = document.createElement('style');
+    gpStyle.textContent = `
+      .gp-focus {
+        outline: none !important;
+        box-shadow: 0 0 0 2.5px #79caff,
+                    0 0 14px rgba(121,202,255,0.50) !important;
+        transform: scale(1.055);
+        z-index: 2;
+        position: relative;
+        transition: box-shadow 0.12s, transform 0.12s;
+      }
+      .gp-focus.drop-item {
+        background: rgba(121,202,255,0.20) !important;
+        transform: translateX(4px) scale(1.0);
+        box-shadow: none !important;
+        border-radius: 10px;
+      }
+      /* Dim non-focused items when gamepad is active */
+      .gp-active-bar .ctrl-btn:not(.gp-focus),
+      .gp-active-bar .dir-btn:not(.gp-focus),
+      .gp-active-bar .speed-btn:not(.gp-focus),
+      .gp-active-bar .ctrl-action:not(.gp-focus) {
+        opacity: 0.55;
+        transition: opacity 0.15s;
+      }
+    `;
+    document.head.appendChild(gpStyle);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // InputRepeatController
+    // Edge detection + held-key repeat with initial delay + interval throttle
+    // ════════════════════════════════════════════════════════════════════════
+    const InputRepeat = (() => {
+      const state   = {};      // key → { firstAt, lastAt }
+      const DZ      = 0.30;   // stick dead zone
+      const INIT    = 380;    // ms before repeat kicks in
+      const REPEAT  = 140;    // ms between repeats
+
+      return {
+        check(key, active, now, cb) {
+          if (!active) { delete state[key]; return; }
+          const s = state[key];
+          if (!s) { state[key] = { firstAt: now, lastAt: now }; cb(); return; }
+          if (now - s.firstAt > INIT && now - s.lastAt > REPEAT) {
+            s.lastAt = now; cb();
+          }
+        },
+        axis(v) {
+          return v < -DZ ? -1 : v > DZ ? 1 : 0;
+        },
+        reset() { for (const k in state) delete state[k]; },
+      };
+    })();
+
+    // ════════════════════════════════════════════════════════════════════════
+    // FocusManager
+    // Custom focus system — does NOT rely on tabindex/browser focus
+    // ════════════════════════════════════════════════════════════════════════
+    const FM = (() => {
+      // Bar groups (left → right order)
+      const GROUPS = [
+        { id:'scenario', el:() => document.getElementById('scenarioBtn') },
+        { id:'policy',   el:() => document.getElementById('policyBtn')   },
+        { id:'control',  els:() => ['togglePlay','restart'].map(id => document.getElementById(id)) },
+        { id:'dir',      els:() => ['dirFwd','dirBwd'].map(id => document.getElementById(id)) },
+        { id:'speed',    els:() => [...document.querySelectorAll('.speed-btn')] },
+      ];
+
+      // Modes: 'bar' | 'scenario-l1' | 'scenario-l2' | 'policy' | 'priority-sub'
+      let mode    = 'bar';
+      let barGrp  = 0;      // which group (0..GROUPS.length-1)
+      let barItem = 0;      // which item within group
+      let dropIdx = 0;      // index within current drop list
+      let curEl   = null;   // element currently highlighted
+
+      function hi(el) {
+        if (curEl && curEl !== el) curEl.classList.remove('gp-focus');
+        if (!el) { curEl = null; return; }
+        el.classList.add('gp-focus');
+        el.scrollIntoView({ block:'nearest', inline:'nearest' });
+        curEl = el;
+      }
+
+      function dropList() {
+        if (mode === 'scenario-l1')
+          return [...document.querySelectorAll('#scenarioLvl1 .drop-item')];
+        if (mode === 'scenario-l2')
+          return [...document.querySelectorAll('#scenarioLvl2 .drop-item')];
+        if (mode === 'policy')
+          return [...document.querySelectorAll('#policyMenu > .drop-section > .drop-item')];
+        if (mode === 'priority-sub')
+          return [...document.querySelectorAll('#prioritySub .drop-item')];
+        return [];
+      }
+      function grpEls() {
+        const g = GROUPS[barGrp];
+        return g.els ? g.els() : [g.el()];
+      }
+
+      // Refresh highlight to current position
+      function sync() {
+        if (mode === 'bar') {
+          const els = grpEls();
+          hi(els[Math.min(barItem, els.length - 1)]);
+        } else {
+          const list = dropList();
+          hi(list[Math.min(dropIdx, list.length - 1)]);
+        }
+      }
+
+      return {
+        init() {
+          mode = 'bar'; barGrp = 0; barItem = 0;
+          document.getElementById('ctrlBar').classList.add('gp-active-bar');
+          setTimeout(sync, 80);
+        },
+        deinit() {
+          hi(null);
+          document.getElementById('ctrlBar').classList.remove('gp-active-bar');
+          mode = 'bar';
+        },
+        // Bar navigation — within multi-button groups, left/right moves between items first
+        barLeft() {
+          if (mode !== 'bar') return;
+          if (barItem > 0) {
+            barItem--;            // step left within current group
+          } else {
+            barGrp = (barGrp - 1 + GROUPS.length) % GROUPS.length;
+            barItem = grpEls().length - 1;   // land on last item of new group
+          }
+          sync();
+        },
+        barRight() {
+          if (mode !== 'bar') return;
+          const n = grpEls().length;
+          if (barItem < n - 1) {
+            barItem++;            // step right within current group
+          } else {
+            barGrp = (barGrp + 1) % GROUPS.length;
+            barItem = 0;
+          }
+          sync();
+        },
+        // Up / Down — works in bar (cycles group items) and in drop
+        up() {
+          if (mode === 'bar') {
+            const n = grpEls().length; barItem = (barItem - 1 + n) % n; sync();
+          } else {
+            const list = dropList(); if (!list.length) return;
+            dropIdx = (dropIdx - 1 + list.length) % list.length; sync();
+          }
+        },
+        down() {
+          if (mode === 'bar') {
+            const n = grpEls().length; barItem = (barItem + 1) % n; sync();
+          } else {
+            const list = dropList(); if (!list.length) return;
+            dropIdx = (dropIdx + 1) % list.length; sync();
+          }
+        },
+        // D-pad left/right inside 2-col scenario menu
+        dropLeft() {
+          if (mode === 'scenario-l2') { mode = 'scenario-l1'; dropIdx = 0; sync(); }
+        },
+        dropRight() {
+          if (mode === 'scenario-l1') { mode = 'scenario-l2'; dropIdx = 0; sync(); }
+        },
+        // Confirm — returns the currently highlighted element
+        active() { return curEl; },
+        mode()   { return mode; },
+        grpId()  { return GROUPS[barGrp].id; },
+        // Enter a drop mode
+        enterDrop(m, startIdx = 0) {
+          mode = m; dropIdx = startIdx;
+          setTimeout(sync, 60);  // wait for DOM update
+        },
+        // Return to bar
+        toBar() { mode = 'bar'; sync(); },
+        // Back: close current drop level or back to bar
+        back() {
+          if (mode === 'scenario-l2') { mode = 'scenario-l1'; dropIdx = 0; sync(); return true; }
+          if (mode === 'priority-sub') { mode = 'policy'; dropIdx = 2; sync(); return true; }
+          if (mode !== 'bar') { mode = 'bar'; sync(); return true; }
+          return false;
+        },
+        clearFocus() { hi(null); },
+        sync,
+      };
+    })();
+
+    // ════════════════════════════════════════════════════════════════════════
+    // ActionDispatcher
+    // Maps gamepad events → existing app actions (calls existing JS functions)
+    // ════════════════════════════════════════════════════════════════════════
+    const Actions = {
+      togglePlay() { document.getElementById('togglePlay').click(); },
+      replay()     { document.getElementById('restart').click(); },
+      speedDown() {
+        const steps = ['0.5','1','2'];
+        const cur   = String(playbackSpeed);
+        const idx   = steps.indexOf(cur);
+        if (idx > 0) document.querySelector(`.speed-btn[data-speed="${steps[idx-1]}"]`).click();
+      },
+      speedUp() {
+        const steps = ['0.5','1','2'];
+        const cur   = String(playbackSpeed);
+        const idx   = steps.indexOf(cur);
+        if (idx < steps.length - 1)
+          document.querySelector(`.speed-btn[data-speed="${steps[idx+1]}"]`).click();
+      },
+    };
+
+    // ════════════════════════════════════════════════════════════════════════
+    // GamepadManager — polls Gamepad API, dispatches to FM + Actions
+    // ════════════════════════════════════════════════════════════════════════
+    const GM = (() => {
+      // Xbox button indices (standard mapping)
+      const B = { A:0, B:1, X:2, Y:3, LB:4, RB:5,
+                  SEL:8, START:9,
+                  DU:12, DD:13, DL:14, DR:15 };
+
+      let gpIdx         = null;
+      let pageFocused   = true;
+      let prevBtns      = {};   // button index → bool (previous frame)
+      let gpActive      = false;
+      let prevRStickZone = null; // right stick zone edge detection
+
+      function gp() { return gpIdx !== null ? navigator.getGamepads()[gpIdx] : null; }
+      function pressed(g, i) { return !!(g.buttons[i]?.pressed); }
+      function edge(g, i)    { return pressed(g, i) && !prevBtns[i]; }
+
+      function handleA() {
+        const m   = FM.mode();
+        const grp = FM.grpId();
+        const el  = FM.active();
+
+        if (m === 'bar') {
+          if (grp === 'scenario') {
+            // Open scenario menu, enter level-1
+            document.getElementById('scenarioBtn').click();
+            buildScenarioMenu(robotGroup);
+            FM.enterDrop('scenario-l1');
+          } else if (grp === 'policy') {
+            document.getElementById('policyBtn').click();
+            buildPolicyMenu();
+            FM.enterDrop('policy');
+          } else if (el) {
+            el.click();
+          }
+        } else if (m === 'scenario-l1') {
+          // Clicking a group item loads lvl2 — then move focus there
+          if (el) { el.click(); FM.enterDrop('scenario-l2'); }
+        } else if (m === 'scenario-l2') {
+          // Select a scene — this calls applySetup and closes drop
+          if (el) { el.click(); FM.toBar(); }
+        } else if (m === 'policy') {
+          if (!el) return;
+          if (el.id === 'priorityToggle') {
+            el.click();
+            setTimeout(() => {
+              const sub = document.getElementById('prioritySub');
+              if (sub?.classList.contains('open')) FM.enterDrop('priority-sub');
+            }, 60);
+          } else {
+            el.click(); FM.toBar();
+          }
+        } else if (m === 'priority-sub') {
+          if (el) { el.click(); FM.toBar(); }
+        }
+      }
+
+      function handleBack() {
+        const kept = FM.back();
+        // If we returned all the way to bar, close dropdowns
+        if (!kept || FM.mode() === 'bar') {
+          closeAllDrops();
+          // Collapse priority sub if open
+          const sub  = document.getElementById('prioritySub');
+          const chev = document.getElementById('priorityChevron');
+          if (sub?.classList.contains('open')) {
+            sub.classList.remove('open');
+            if (chev) chev.textContent = '›';
+          }
+        }
+      }
+
+      function tick(now) {
+        requestAnimationFrame(tick);
+        if (!pageFocused || gpIdx === null) return;
+        const g = gp();
+        if (!g) return;
+
+        const ax0  = g.axes[0] ?? 0;
+        const ax1  = g.axes[1] ?? 0;
+        const aH   = InputRepeat.axis(ax0);
+        const aV   = InputRepeat.axis(ax1);
+
+        const dL = pressed(g, B.DL) || aH < 0;
+        const dR = pressed(g, B.DR) || aH > 0;
+        const dU = pressed(g, B.DU) || aV < 0;
+        const dD = pressed(g, B.DD) || aV > 0;
+
+        const m = FM.mode();
+
+        InputRepeat.check('L', dL, now, () => {
+          if (m === 'bar') FM.barLeft();
+          else FM.dropLeft();
+        });
+        InputRepeat.check('R', dR, now, () => {
+          if (m === 'bar') FM.barRight();
+          else FM.dropRight();
+        });
+        InputRepeat.check('U', dU, now, () => FM.up());
+        InputRepeat.check('D', dD, now, () => FM.down());
+
+        // Edge-triggered buttons
+        // Schedule viewer intercepts input when open
+        if (schedViewerOpen) {
+          if (edge(g, B.B))                      closeSchedViewer();
+          if (edge(g, B.LB) || dL)               schedGoTo(schedSlideIdx - 1);
+          if (edge(g, B.RB) || dR)               schedGoTo(schedSlideIdx + 1);
+          g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
+          prevRStickZone = null;
+          return;
+        }
+
+        if (edge(g, B.SEL)) {
+          schedViewerOpen ? closeSchedViewer() : openSchedViewer();
+        }
+        if (edge(g, B.A))  handleA();
+        if (edge(g, B.B))  handleBack();
+        if (edge(g, B.X))  Actions.togglePlay();
+        if (edge(g, B.Y))  Actions.replay();
+        if (edge(g, B.LB)) Actions.speedDown();
+        if (edge(g, B.RB)) Actions.speedUp();
+
+        // Right joystick → local zoom (P1-P4), spatial mapping matches map layout:
+        //   P4(↖)  P3(↗)
+        //   P1(↙)  P2(↘)
+        const ax2 = g.axes[2] ?? 0;   // right stick X  (left < 0, right > 0)
+        const ax3 = g.axes[3] ?? 0;   // right stick Y  (up < 0,   down > 0)
+        const RS_THRESH = 0.6;
+        let rZone = null;
+        if (Math.abs(ax2) > RS_THRESH || Math.abs(ax3) > RS_THRESH) {
+          if (ax2 <= 0 && ax3 >  0) rZone = 'P1'; // left-down
+          if (ax2 >  0 && ax3 >  0) rZone = 'P2'; // right-down
+          if (ax2 >  0 && ax3 <= 0) rZone = 'P3'; // right-up
+          if (ax2 <= 0 && ax3 <= 0) rZone = 'P4'; // left-up
+        }
+        if (rZone && rZone !== prevRStickZone) setLocalView(rZone);
+        prevRStickZone = rZone;
+
+        // Save state for next frame
+        g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
+      }
+
+      function connect(idx) {
+        gpIdx = idx;
+        prevBtns = {};
+        gpActive = true;
+        FM.init();
+        console.log(`[Gamepad] Connected: index ${idx} — A=confirm B=back X=play Y=replay LB/RB=speed Select=schedule-view`);
+      }
+      function disconnect(idx) {
+        if (gpIdx !== idx) return;
+        gpIdx = null;
+        gpActive = false;
+        FM.deinit();
+        InputRepeat.reset();
+        console.log(`[Gamepad] Disconnected`);
+      }
+
+      return {
+        start() {
+          window.addEventListener('gamepadconnected',    e => connect(e.gamepad.index));
+          window.addEventListener('gamepaddisconnected', e => disconnect(e.gamepad.index));
+          window.addEventListener('blur',  () => { pageFocused = false; });
+          window.addEventListener('focus', () => { pageFocused = true; });
+          requestAnimationFrame(tick);
+          // Pick up already-connected gamepads
+          for (const g of navigator.getGamepads()) {
+            if (g) { connect(g.index); break; }
+          }
+        }
+      };
+    })();
+
+    // Also let mouse clicks clear gamepad focus highlight so they don't conflict
+    document.addEventListener('mousedown', () => FM.clearFocus(), { passive: true });
+
+    GM.start();
+
+  })(); // end GamepadModule
   </script>
 </body>
 </html>

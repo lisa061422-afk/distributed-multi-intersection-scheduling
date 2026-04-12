@@ -375,6 +375,25 @@
     .robot-wrap.highlight .robot-img {
       filter: drop-shadow(0 0 6px rgba(255,255,255,0.9)) drop-shadow(0 4px 8px rgba(0,0,0,0.5));
     }
+    /* Priority robot: golden pulsing ring */
+    .robot-wrap.priority-robot .robot-img {
+      filter: drop-shadow(0 0 8px rgba(255,210,0,0.95))
+              drop-shadow(0 0 3px rgba(255,150,0,0.8))
+              drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+      animation: priority-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes priority-pulse {
+      0%, 100% { filter: drop-shadow(0 0 8px rgba(255,210,0,0.95))
+                          drop-shadow(0 0 3px rgba(255,150,0,0.8))
+                          drop-shadow(0 4px 8px rgba(0,0,0,0.5)); }
+      50%       { filter: drop-shadow(0 0 14px rgba(255,230,0,1.0))
+                          drop-shadow(0 0 6px rgba(255,180,0,0.9))
+                          drop-shadow(0 4px 8px rgba(0,0,0,0.5)); }
+    }
+    .robot-wrap.priority-robot .robot-pin {
+      outline: 2px solid rgba(255,210,0,0.9);
+      outline-offset: 1px;
+    }
 
     .overlay {
       position: absolute;
@@ -903,6 +922,29 @@
       text-align: center; padding: 20px; display: none;
     }
     .sched-hint code { color: var(--accent); font-size: 11px; }
+    /* Local schedule image + Merging Zone label overlay */
+    .local-img-wrap {
+      position: relative;
+      /* 1500×950 px — matches MATLAB figure size */
+      aspect-ratio: 1500 / 950;
+      max-width: 100%; max-height: 100%;
+      margin: auto;
+    }
+    .local-img-wrap img {
+      width: 100%; height: 100%; object-fit: contain; border-radius: 8px; display: block;
+    }
+    .mz-label {
+      position: absolute;
+      color: #c8dff5;
+      font-size: clamp(10px, 1.2vw, 15px);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+      background: rgba(10,20,40,0.45);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
     /* ── Tree slide ── */
     .tree-grid {
       display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
@@ -1180,7 +1222,14 @@
                   save MATLAB figure as <code>schedules/images/{group}_{scene}_{policy}_macro.png</code></div>
               </div>
               <div class="sched-slide" id="schedSlide1">
-                <img id="schedImgLocal" src="" alt="Local schedule" draggable="false"/>
+                <div class="local-img-wrap">
+                  <img id="schedImgLocal" src="" alt="Local schedule" draggable="false"/>
+                  <!-- Merging Zone labels — positions match MATLAB panelPos 2×2 layout -->
+                  <span class="mz-label" style="left:4%;top:6%">Merging Zone 1</span>
+                  <span class="mz-label" style="left:52%;top:6%">Merging Zone 2</span>
+                  <span class="mz-label" style="left:4%;top:54%">Merging Zone 3</span>
+                  <span class="mz-label" style="left:52%;top:54%">Merging Zone 4</span>
+                </div>
                 <div class="sched-hint" id="schedHintLocal">No image found —
                   save MATLAB figure as <code>schedules/images/{group}_{scene}_{policy}_local.png</code></div>
               </div>
@@ -1231,7 +1280,7 @@
                     <span class="params-val">2.7 m</span>
                   </div>
                   <div class="params-row">
-                    <span class="params-lbl">Intersection zone  W</span>
+                    <span class="params-lbl">Merging Zone  W</span>
                     <span class="params-val">1.6 × 1.6 m</span>
                   </div>
                   <div class="params-row">
@@ -1251,7 +1300,7 @@
                     <span class="params-val">1.5 m/s</span>
                   </div>
                   <div class="params-row">
-                    <span class="params-lbl">v_int  (intersection)</span>
+                    <span class="params-lbl">v_int  (merging zone)</span>
                     <span class="params-val">0.8 m/s</span>
                   </div>
                   <div class="params-row">
@@ -1269,7 +1318,7 @@
                 </div>
 
                 <div class="params-section">
-                  <div class="params-section-title">Intersection Traversal  (C_k = k-th subtask time)</div>
+                  <div class="params-section-title">Merging Zone Traversal  (C_k = k-th subtask time)</div>
                   <div class="params-row">
                     <span class="params-lbl">C_arc = πW / (8 v_int)</span>
                     <span class="params-val green">≈ 0.785 s</span>
@@ -1717,12 +1766,16 @@
   <script src="schedules/8r_S1_optimal.js"   onerror=""></script>
   <script src="schedules/10r_S1_optimal.js"  onerror=""></script>
   <script src="schedules/10r_S2_optimal.js"  onerror=""></script>
-  <script src="schedules/10r_S3_optimal.js"  onerror=""></script>
+  <script src="schedules/10r_S3_optimal.js"      onerror=""></script>
+  <script src="schedules/10r_S3_p2_optimal.js"   onerror=""></script>
+  <script src="schedules/10r_S3_p9_optimal.js"   onerror=""></script>
   <!-- Tree data for decision-tree viewer (generated by export_tree_json.m) -->
-  <script src="schedules/tree_8r_S1_optimal.js"  onerror=""></script>
-  <script src="schedules/tree_10r_S1_optimal.js" onerror=""></script>
-  <script src="schedules/tree_10r_S2_optimal.js" onerror=""></script>
-  <script src="schedules/tree_10r_S3_optimal.js" onerror=""></script>
+  <script src="schedules/tree_8r_S1_optimal.js"       onerror=""></script>
+  <script src="schedules/tree_10r_S1_optimal.js"      onerror=""></script>
+  <script src="schedules/tree_10r_S2_optimal.js"      onerror=""></script>
+  <script src="schedules/tree_10r_S3_optimal.js"      onerror=""></script>
+  <script src="schedules/tree_10r_S3_p2_optimal.js"   onerror=""></script>
+  <script src="schedules/tree_10r_S3_p9_optimal.js"   onerror=""></script>
 
   <script>
     const CB = '?v=' + Date.now(); // cache-bust: forces fresh load of modified PNGs
@@ -1897,12 +1950,20 @@
 
     function parseRI(ri) { return { dir:Math.ceil(ri/3), turn:['L','S','R'][(ri-1)%3] }; }
 
+    // Lateral offset (px) for straight-through vehicles — keep-right lane discipline
+    const STR_LANE = 20;
+
     // Sample waypoints through one intersection zone
-    function intWaypoints(zx, zy, dir, turn, N=14) {
+    // lateralOx/Oy: pre-computed right-side offset for straight routes (0 for turns)
+    function intWaypoints(zx, zy, dir, turn, N=14, lateralOx=0, lateralOy=0) {
       const [ex,ey]=DIR_ENTRY[dir], h=DIR_H[dir];
       if (turn==='S') {
         const [xx,xy]=DIR_EXIT[dir].S, pts=[];
-        for(let i=0;i<=N;i++){const t=i/N; pts.push({x:zx+ex+(xx-ex)*t,y:zy+ey+(xy-ey)*t,angle:h});}
+        // Straight path is shifted laterally — entry AND exit already offset, pure straight line.
+        for(let i=0;i<=N;i++){
+          const t=i/N;
+          pts.push({x:zx+ex+(xx-ex)*t+lateralOx, y:zy+ey+(xy-ey)*t+lateralOy, angle:h});
+        }
         return pts;
       }
       const [cx,cy,r,a0,adir]=ARC_P[turn][dir], sweep=adir*Math.PI/2, pts=[];
@@ -1924,12 +1985,18 @@
         const [zx,zy]=ZONE_POS[intersections[k]];
         const {dir,turn}=parseRI(routeIds[k]);
         const [ex,ey]=DIR_ENTRY[dir], h=DIR_H[dir];
-        pts.push({x:curX,y:curY,angle:h}, {x:zx+ex,y:zy+ey,angle:h}); // approach
-        const enterIdx=pts.length-1;                                     // intersection entry
-        pts.push(...intWaypoints(zx,zy,dir,turn));                       // arc/straight
-        const exitIdx=pts.length-1;                                      // intersection exit
+        // Lateral offset for straight-through: shift right of travel direction
+        const isStr = turn === 'S';
+        const rightRad = (h + 90) * Math.PI / 180;
+        const ox = isStr ? STR_LANE * Math.cos(rightRad) : 0;
+        const oy = isStr ? STR_LANE * Math.sin(rightRad) : 0;
+        pts.push({x:curX,y:curY,angle:h}, {x:zx+ex+ox,y:zy+ey+oy,angle:h}); // approach
+        const enterIdx=pts.length-1;
+        pts.push(...intWaypoints(zx,zy,dir,turn,14,ox,oy));                   // arc/straight
+        const exitIdx=pts.length-1;
         milestones.push({intId:intersections[k], enterIdx, exitIdx});
-        const [xl,yl]=DIR_EXIT[dir][turn]; curX=zx+xl; curY=zy+yl;
+        const [xl,yl]=DIR_EXIT[dir][turn];
+        curX=zx+xl+ox; curY=zy+yl+oy;   // exit also offset for straight
       }
       const lastH=pts.length?pts[pts.length-1].angle:ENT_DATA[entrance].h;
       const [extX,extY]=EXIT_DATA[exit];
@@ -2059,7 +2126,9 @@
       '8r_S1_fcfs':     true,
       '10r_S1_optimal': true,  '10r_S1_fcfs': true,
       '10r_S2_optimal': true,  '10r_S2_fcfs': true,
-      '10r_S3_optimal': true,  '10r_S3_fcfs': true,
+      '10r_S3_optimal': true,   '10r_S3_fcfs':    true,
+      '10r_S3_p2_optimal': true,
+      '10r_S3_p9_optimal': true,
     };
 
     function schedKey(group, scene, policy) {
@@ -2095,6 +2164,19 @@
         wrap.appendChild(img);
         scene.appendChild(wrap);
         robotEls[r.id] = wrap;
+      }
+    }
+
+    // Highlight the priority robot (golden glow) if scheduleData.priorityRobot > 0.
+    // Robot ids in VEHICLE_CONFIG are 1-based MATLAB indices.
+    function applyPriorityHighlight() {
+      const pr = scheduleData && scheduleData.priorityRobot > 0
+                 ? scheduleData.priorityRobot : 0;
+      for (const [id, el] of Object.entries(robotEls)) {
+        el.classList.remove('priority-robot');
+        if (pr > 0 && Number(id) === pr) {
+          el.classList.add('priority-robot');
+        }
       }
     }
 
@@ -2317,7 +2399,7 @@
 
         el.style.left = `${rx - 17}px`;
         el.style.top  = `${ry - 17}px`;
-        el.querySelector('.robot-img').style.transform = `rotate(${pos.angle}deg)`;
+        el.querySelector('.robot-img').style.transform = `rotate(${pos.angle - 90}deg)`;
       }
 
       // ── Pass 4: reveal delay penalty when robot leaves its last intersection ──
@@ -2361,7 +2443,7 @@
         const imgY = (cy - size/2).toFixed(1);
         groups.push(`
           <image href="${s.imgSrc+CB}" x="${imgX}" y="${imgY}" width="${size}" height="${size}"
-            transform="rotate(${s.angle.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})"
+            transform="rotate(${(s.angle - 90).toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})"
             style="filter:drop-shadow(0 2px 5px rgba(0,0,0,0.55))"/>
           <text x="${cx.toFixed(1)}" y="${(parseFloat(imgY)-3).toFixed(1)}"
             text-anchor="middle" font-size="8" font-weight="900" fill="${s.color}"
@@ -2461,7 +2543,7 @@
 
       // Panel title
       svgEl.appendChild(mkText(VW / 2, 15,
-        `Intersection ${intIdx}  —  Decision Tree  (branching nodes)`,
+        `Merging Zone ${intIdx}  —  Decision Tree  (branching nodes)`,
         { size: 11, fill: '#5a9fc0', weight: 'bold' }));
 
       if (!data || !data.nodes || data.nodes.length === 0) {
@@ -2702,6 +2784,7 @@
           document.querySelectorAll('.robot-wrap').forEach(el => el.remove());
           robotEls = {};
           createRobots();
+          applyPriorityHighlight();
           buildAllKeyframes();
           animDuration = scheduleData.t_final - scheduleData.t_cut + 3;
           finishedCountEl.textContent = '0/' + VEHICLE_CONFIG.length;
@@ -2865,23 +2948,45 @@
     });
 
     // ── Policy dropdown ──────────────────────────────────────────────────────
+    // Return the base scene name, stripping any _p{n} priority suffix
+    function baseScene() { return sceneName.replace(/_p\d+$/, ''); }
+
     function buildPolicyMenu() {
-      // Update selected state on fixed items
-      document.querySelectorAll('#policyMenu .drop-item[data-policy]').forEach(btn => {
-        btn.classList.toggle('selected',
-          btn.dataset.policy === (currentPolicy === 'optimal' || currentPolicy === 'fcfs'
-            ? currentPolicy : 'priority'));
+      const base = baseScene();
+
+      // Find available priority robots for current group + base scene
+      const prioNums = [];
+      Object.keys(AVAILABLE).forEach(key => {
+        const m = key.match(new RegExp('^' + robotGroup + '_' + base + '_p(\\d+)_optimal$'));
+        if (m && AVAILABLE[key]) prioNums.push(parseInt(m[1]));
       });
-      // Rebuild priority sub-list from current VEHICLE_CONFIG
+      prioNums.sort((a, b) => a - b);
+
+      // Show/hide Priority Override toggle
+      const toggle = document.getElementById('priorityToggle');
+      toggle.style.display = prioNums.length > 0 ? '' : 'none';
+
+      // Current priority robot number (0 = none)
+      const curPrio = (sceneName.match(/_p(\d+)$/) || [])[1] | 0;
+
+      // Highlight fixed items: Optimal / FCFS selected when not on a priority scene
+      document.querySelectorAll('#policyMenu .drop-item[data-policy]').forEach(btn => {
+        const isFixed = currentPolicy === 'optimal' || currentPolicy === 'fcfs';
+        btn.classList.toggle('selected',
+          isFixed && !curPrio
+            ? btn.dataset.policy === currentPolicy
+            : btn.dataset.policy === 'priority' && curPrio > 0);
+      });
+
+      // Rebuild priority sub-list
       const sub = document.getElementById('prioritySub');
       sub.innerHTML = '';
-      VEHICLE_CONFIG.forEach(vc => {
+      prioNums.forEach(n => {
         const btn = document.createElement('button');
-        btn.className = 'drop-item' + (currentPolicy === vc.id.toLowerCase() ? ' selected' : '');
-        btn.style.cssText = '';
-        btn.textContent = vc.id;
+        btn.className = 'drop-item' + (curPrio === n ? ' selected' : '');
+        btn.textContent = 'R' + n;
         btn.addEventListener('click', () => {
-          applySetup(robotGroup, sceneName, vc.id.toLowerCase());
+          applySetup(robotGroup, base + '_p' + n, 'optimal');
           closeAllDrops();
           buildPolicyMenu();
         });
@@ -2894,16 +2999,16 @@
       buildPolicyMenu();
     });
     document.getElementById('policyMenu').addEventListener('click', e => e.stopPropagation());
-    // Fixed policy items
+    // Fixed policy items — always navigate to base scene (strip _p{n} if on priority)
     document.querySelectorAll('#policyMenu .drop-item[data-policy="optimal"]').forEach(btn => {
       btn.addEventListener('click', () => {
-        applySetup(robotGroup, sceneName, 'optimal');
+        applySetup(robotGroup, baseScene(), 'optimal');
         closeAllDrops(); buildPolicyMenu();
       });
     });
     document.querySelectorAll('#policyMenu .drop-item[data-policy="fcfs"]').forEach(btn => {
       btn.addEventListener('click', () => {
-        applySetup(robotGroup, sceneName, 'fcfs');
+        applySetup(robotGroup, baseScene(), 'fcfs');
         closeAllDrops(); buildPolicyMenu();
       });
     });

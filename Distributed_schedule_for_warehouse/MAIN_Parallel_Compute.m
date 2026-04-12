@@ -5,8 +5,7 @@ addpath('C:\Users\robin\OneDrive\桌面\RES_Spring2026\CODE\Traffic_Centralized\
 % ===================== Mode switch =====================
 % 'manual' : fixed 10-robot config (warehouse demo special case)
 % 'random' : generateBalancedTrafficConfig batch runs
-configMode = 'random'; %'manual';
-
+configMode = 'random'; %
 % ===================== Physical parameters =====================
 T_val        = 2.0;    % minimum headway between two cars at same entrance (s)
 Dt           = 2.0;    % road travel time between consecutive intersections (s)
@@ -30,8 +29,18 @@ end
 % ===================== Demo export settings (random mode only) =====================
 % demoScene: HTML scene label for this run — change each time you run a new seed
 % demoGroup is auto-derived from Nveh (e.g. 10 robots → '10r')
-demoScene = 'S1';   % <-- change to 'S2', 'S3', etc. for each new seed
+demoScene = 'S3';   % <-- change to 'S2', 'S3', etc. for each new seed
 rootSaveDir = 'BatchRuns';
+
+% ===================== Priority Override =====================
+% After the normal ADMM run, re-run for each robot listed in priority_robots
+% with that robot forced to highest priority at every contended resource.
+% Typical use: look at the normal result, pick robots that got delayed,
+% list them here, then re-run.
+% Scene keys will be e.g. 'S1_p3', 'S1_p7'
+% Set enable_priority_sweep = false to skip entirely.
+enable_priority_sweep = true;    % ← toggle here
+priority_robots       = [2];  % R2 and R9 delayed in S3 10r normal result
 
 if ~exist(rootSaveDir, 'dir')
     mkdir(rootSaveDir);
@@ -222,6 +231,7 @@ const.weight = weight; const.max_iter = max_iter;
 const.tol_r  = tol_r; const.tol_s  = tol_s;
 const.N      = N;
 const.Dt     = Dt;
+const.priority_n = 0;  % 0 = no priority override (normal run)
 const.deadline     = deadline;
 const.alpha_tilde  = alpha_tilde;
 const.initial_position = initial_position;
@@ -232,227 +242,10 @@ const.pathInfo_c   = pathInfo_c;
 const.agent_participation = agent_participation;
 const.IntSpaceDB   = IntSpaceDB;
 
-%% ADMM initialisation
-[x_prev, y_prev, x_prev_bar, y_prev_bar] = ...
-    initEarliestXYPrev_fromChain(alpha_tilde, pathInfo_agent_chain, pathInfo_c, Dt, N);
-
-a_x = cell(1,9); a_y = cell(1,9);
-a_x_new = cell(1,9); a_y_new = cell(1,9);
-for i = 1:9
-    a_x{i} = cell(1,N);    a_y{i} = cell(1,N);
-    a_x_new{i} = cell(1,N); a_y_new{i} = cell(1,N);
-    [a_x{i}{:}]     = deal(0);
-    [a_y{i}{:}]     = deal(0);
-    [a_x_new{i}{:}] = deal(0);
-    [a_y_new{i}{:}] = deal(0);
-end
-
-residual_r  = zeros(max_iter, 1);
-residual_s  = zeros(max_iter, 1);
-delay_costs = zeros(max_iter, 1);
-x_hist = cell(1, 9);
-for i = 1:9
-    x_hist{i} = cell(1, N);
-    for n = 1:N
-        K = length(alpha_tilde{n});
-        x_hist{i}{n} = NaN(K, max_iter);
-    end
-end
-
-iter_time     = zeros(max_iter,1);
-agent_time    = NaN(max_iter,9);
-agent_worker  = NaN(max_iter,9);
-worker_time   = zeros(max_iter, 10);
-
-%%  ──────────────────────── ADMM main loop ──────────────────────────────
-N = const.N; max_iter = const.max_iter;
-tol_r = const.tol_r; tol_s = const.tol_s; rho1 = const.rho1;
-
-for k = 1 : max_iter
-    k
-    t_iter = tic;
-    x_last = x_prev; y_last = y_prev; r_local = 0;
-
-    %% Step 1: update dual variables
-    vehUpd = cell(N,1);
-    for n = 1:N
-        kn    = 1;
-        chain = const.pathInfo_agent_chain{n}{kn};
-
-        ax_loc   = cell(1,9); ay_loc   = cell(1,9);
-        xbar_loc = cell(1,9); ybar_loc = cell(1,8);
-
-        for ag = 1:9
-            ax_loc{ag}   = a_x{ag}{n};
-            ay_loc{ag}   = a_y{ag}{n};
-            xbar_loc{ag} = x_prev_bar{ag}{n};
-            if ag <= 8
-                ybar_loc{ag} = y_prev_bar{ag}{n};
-            end
-        end
-
-        ag0 = chain(1);
-        xbar_loc{ag0}(kn) = (x_prev{ag0}{n}(kn) + 0) / 2;
-
-        for pos = 2:length(chain)
-            prev_ag = chain(pos - 1);
-            curr_ag = chain(pos);
-
-            ax_loc{curr_ag}(kn) = a_x{curr_ag}{n}(kn) + ...
-                rho1 * (x_prev{curr_ag}{n}(kn) - y_prev{prev_ag}{n}(kn));
-
-            xbar_loc{curr_ag}(kn) = ...
-                (x_prev{curr_ag}{n}(kn) + y_prev{prev_ag}{n}(kn)) / 2;
-
-            ay_loc{prev_ag}(kn) = a_y{prev_ag}{n}(kn) + ...
-                rho1 * (y_prev{prev_ag}{n}(kn) - x_prev{curr_ag}{n}(kn));
-
-            ybar_loc{prev_ag}(kn) = ...
-                (y_prev{prev_ag}{n}(kn) + x_prev{curr_ag}{n}(kn)) / 2;
-        end
-
-        vehUpd{n} = struct('ax',{ax_loc}, 'ay',{ay_loc}, 'xbar',{xbar_loc}, 'ybar',{ybar_loc});
-    end
-
-    for n = 1:N
-        ax_loc   = vehUpd{n}.ax;
-        ay_loc   = vehUpd{n}.ay;
-        xbar_loc = vehUpd{n}.xbar;
-        ybar_loc = vehUpd{n}.ybar;
-        for ag = 1:9
-            a_x_new{ag}{n}    = ax_loc{ag};
-            a_y_new{ag}{n}    = ay_loc{ag};
-            x_prev_bar{ag}{n} = xbar_loc{ag};
-            if ag <= 8
-                y_prev_bar{ag}{n} = ybar_loc{ag};
-            end
-        end
-    end
-
-    %% Step 2: parallel local updates
-    f    = parallel.FevalFuture.empty(0,9);
-    meta = cell(1,9);
-
-    for agent_i = 1:9
-        if agent_i >= 1 && agent_i <= 4
-            entries       = agent_participation{agent_i};
-            valid_systems = find(~cellfun(@isempty, entries))';
-            if isempty(valid_systems)
-                f(agent_i) = parfeval(@agent_update_intersection_stub_single, 1, agent_i);
-            else
-                f(agent_i) = parfeval(@agent_update_intersection_single, 1, ...
-                    const, agent_i, entries, valid_systems, ...
-                    x_prev, y_prev, ...
-                    x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
-                    a_x_new{agent_i}, a_y_new{agent_i}, ...
-                    LocalTreeCache{agent_i}, k);
-            end
-        elseif agent_i >= 5 && agent_i <= 8
-            entries       = agent_participation{agent_i};
-            valid_systems = find(~cellfun(@isempty, entries))';
-            if isempty(valid_systems)
-                f(agent_i) = parfeval(@agent_update_road_stub_single, 1, agent_i);
-            else
-                f(agent_i) = parfeval(@agent_update_road_single, 1, ...
-                    const, agent_i, entries, valid_systems, ...
-                    x_prev{agent_i}, y_prev{agent_i}, ...
-                    x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
-                    a_x_new{agent_i}, a_y_new{agent_i});
-            end
-        else
-            f(agent_i) = parfeval(@agent_update_terminal_single, 1, ...
-                const, x_prev{9}, x_prev_bar{9}, a_x_new{9});
-        end
-    end
-
-    meta = cell(1,9);
-    done_flags = false(1,9);
-    for ii = 1:9
-        try
-            [completedIdx, S] = fetchNext(f);
-            meta{completedIdx}       = S;
-            done_flags(completedIdx) = true;
-        catch ME
-            fprintf(2, '\n[Iter %d] fetchNext error:\n%s\n', ...
-                k, getReport(ME,'extended','hyperlinks','off'));
-            rethrow(ME);
-        end
-    end
-
-    %% Merge results
-    r_local = 0;
-    for agent_i = 1:9
-        S = meta{agent_i};
-        fprintf('Agent %d time=%.3f worker=%d\n', agent_i, S.elapsed, S.worker);
-        switch S.kind
-            case 'intersection'
-                LocalTreeCache{agent_i} = S.cache;
-                for n = S.valid_systems
-                    kn = 1;
-                    x_prev{agent_i}{n}(kn) = S.best_x(n);
-                    y_prev{agent_i}{n}(kn) = S.best_y(n);
-                    a_new = S.best_alpha{n}(kn);
-                    g_new = S.best_gamma{n}(kn);
-                    r_local = r_local + (S.best_x(n) - a_new)^2 + (S.best_y(n) - g_new)^2;
-                end
-            case 'road'
-                for n = S.valid_systems
-                    kn = 1;
-                    x_prev{agent_i}{n}(kn) = S.x_road(n);
-                    y_prev{agent_i}{n}(kn) = S.y_road(n);
-                end
-            case 'terminal'
-                delay_costs(k) = S.delay_cost;
-                for n = 1:N
-                    x_prev{9}{n}(1) = S.x9_new(n);
-                end
-            otherwise
-                error('Unknown meta.kind = %s', S.kind);
-        end
-    end
-
-    %% Step 3: residuals
-    r = compute_r(x_prev, y_prev, r_local, const);
-    s = 0;
-    for agent_i = 1:8
-        entries = agent_participation{agent_i};
-        if all(cellfun(@isempty, entries)), continue; end
-        valid_systems = find(~cellfun(@isempty, entries))';
-        for n = valid_systems
-            s = s + norm(x_prev{agent_i}{n} - x_last{agent_i}{n})^2 + ...
-                    norm(y_prev{agent_i}{n} - y_last{agent_i}{n})^2;
-        end
-    end
-    for n = 1:N
-        s = s + norm(x_prev{9}{n} - x_last{9}{n})^2;
-    end
-
-    r, s
-    residual_r(k) = r; residual_s(k) = s;
-
-    for agent_i = 1:9
-        for n = 1:N
-            x_hist{agent_i}{n}(1,k) = x_prev{agent_i}{n}(1);
-        end
-    end
-
-    a_x = a_x_new; a_y = a_y_new;
-
-    if r < tol_r && s < tol_s
-        fprintf('Converged at iteration %d\n', k);
-        residual_r = residual_r(1:k);
-        residual_s = residual_s(1:k);
-        for i = 1:9
-            x_hist{i} = cellfun(@(v) v(1:k), x_hist{i}, 'UniformOutput', false);
-        end
-        break;
-    end
-    iter_time(k) = toc(t_iter);
-    fprintf('[Iter %d] total time = %.3f s\n', k, iter_time(k));
-end
-
-%% Save distributed (ADMM) result
-T_ADMM_TOTAL = toc(Time_begin)/60;
+%% ADMM run — normal (priority_n = 0, set above)
+fprintf('--- ADMM normal run (priority_n = 0) ---\n');
+[x_prev, y_prev, LocalTreeCache, residual_r, residual_s, delay_costs, k, T_ADMM_TOTAL] = ...
+    run_admm_core(const, agent_participation);
 fprintf('ADMM elapsed %.3f mins\n', T_ADMM_TOTAL);
 
 caseConfigFile = fullfile(caseDir, 'case_config.mat');
@@ -463,6 +256,8 @@ save(caseConfigFile, ...
     'pathInfo', 'pathInfo_agent_chain', 'pathInfo_c');
 
 matFile = fullfile(caseDir, sprintf('FourIntersection_ADMM_%s.mat', caseName));
+x_hist  = {};   % x history not tracked in run_admm_core (diagnostic only)
+max_iter = const.max_iter;
 save(matFile, ...
     'config', 'vehicleList', 'stats', ...
     'const', ...
@@ -628,43 +423,95 @@ fcfsPngFile = [fcfsBase '.png'];
 savefig(fig_fcfs, [fcfsBase '.fig']);
 print(fig_fcfs, fcfsPngFile, '-dpng', '-r200');
 
-%% Export JS files for HTML demo (manual mode only)
-if strcmp(configMode, 'manual')
-    % ADMM optimal result
-    export_demo_json(const, x_prev, y_prev, ...
-        '10r · Warehouse', ...
-        fullfile(DEMO_DIR, '10r_S1_optimal.js'), ...
-        'optimal');
+%% ── Auto-export to HTML demo (manual + random) ──────────────────────────
+demoGroup = sprintf('%dr', Nveh);   % e.g. 10 → '10r'
+fprintf('\nAuto-exporting to demo: group=%s  scene=%s\n', demoGroup, demoScene);
+export_scenario_to_demo(caseName, demoGroup, demoScene);
 
-    % FCFS result
-    export_demo_json_fcfs(const_fcfs, DATA_fcfs, ...
-        '10r · Warehouse', ...
-        fullfile(DEMO_DIR, '10r_S1_fcfs.js'), ...
-        'fcfs');
+%% ── Priority Override ────────────────────────────────────────────────────
+if enable_priority_sweep && ~isempty(priority_robots)
+    fprintf('\n========================================================\n');
+    fprintf('Priority Override: robots %s, scene base = %s\n', ...
+        mat2str(priority_robots), demoScene);
+    fprintf('========================================================\n');
 
-    fprintf('Demo JS files exported to:\n  %s\n', DEMO_DIR);
+    if ~exist('demoScene','var') || isempty(demoScene), demoScene = 'S1'; end
+    const_base = const;   % snapshot — priority_n will be overwritten in loop
 
-    % ── Copy schedule PNGs to schedules/images/ for HTML viewer ─────────
-    img_dir = fullfile(DEMO_DIR, 'images');
-    if ~exist(img_dir, 'dir'), mkdir(img_dir); end
+    panelPos_p = {[0.04 0.53 0.44 0.42],[0.52 0.53 0.44 0.42],...
+                  [0.04 0.05 0.44 0.42],[0.52 0.05 0.44 0.42]};
 
-    % HTML naming: {group}_{scene}_{policy}_{tag}.png
-    % robotGroup='10r', sceneName='S1' in warehouse_amr_demo_test.html
-    copyfile(macroFigFile,  fullfile(img_dir, '10r_S1_optimal_macro.png'));
-    copyfile(localPngFile,  fullfile(img_dir, '10r_S1_optimal_local.png'));
-    copyfile(fcfsPngFile,   fullfile(img_dir, '10r_S1_fcfs_local.png'));
-    fprintf('Schedule PNGs copied to: %s\n', img_dir);
+    for prio_n = priority_robots
+        fprintf('\n--- Priority Robot %d ---\n', prio_n);
 
-    % ── Export decision-tree JSON for HTML renderer ──────────────────────
-    treeJsFile = fullfile(DEMO_DIR, 'tree_10r_S1_optimal.js');
-    export_tree_json(LocalTreeCache, '10r', 'S1', treeJsFile);
-end
+        % Build const with priority override
+        const_p           = const_base;
+        const_p.priority_n = prio_n;
 
-%% ── Auto-export to HTML demo (random mode) ──────────────────────────────
-if strcmp(configMode, 'random')
-    demoGroup = sprintf('%dr', Nveh);   % e.g. 10 → '10r'
-    fprintf('\nAuto-exporting to demo: group=%s  scene=%s\n', demoGroup, demoScene);
-    export_scenario_to_demo(caseName, demoGroup, demoScene);
+        % Run ADMM with priority constraint
+        [xp, yp, LCp, rr_p, rs_p, dc_p, kp, Tp] = ...
+            run_admm_core(const_p, agent_participation);
+
+        % Folder and file names
+        caseName_p = sprintf('%s_pR%d', caseName, prio_n);
+        caseDir_p  = fullfile(rootSaveDir, caseName_p);
+        if ~exist(caseDir_p, 'dir'), mkdir(caseDir_p); end
+
+        % Save MAT — use standard variable names expected by export_scenario_to_demo
+        const          = const_p;       % temporarily rebind for save
+        x_prev         = xp;
+        y_prev         = yp;
+        LocalTreeCache  = LCp;
+        residual_r     = rr_p;
+        residual_s     = rs_p;
+        delay_costs    = dc_p;
+        k              = kp;
+        T_ADMM_TOTAL   = Tp;
+
+        matFile_p = fullfile(caseDir_p, sprintf('FourIntersection_ADMM_%s.mat', caseName_p));
+        save(matFile_p, 'const', 'x_prev', 'y_prev', 'LocalTreeCache', ...
+            'residual_r', 'residual_s', 'delay_costs', 'k', 'T_ADMM_TOTAL', ...
+            'seed', 'Nveh');
+
+        % Plot local schedule
+        fig_p = figure('Color', 'w', 'Position', [60 40 1500 950]);
+        for agent_i = 1:4
+            cache = LCp{agent_i};
+            if isempty(cache) || ~isstruct(cache), continue; end
+            pp = uipanel('Parent', fig_p, 'Units', 'normalized', ...
+                'Position', panelPos_p{agent_i}, ...
+                'BackgroundColor', [0.97 0.97 0.97], 'BorderType', 'none');
+            plot_local_schedule_final_into_panel_1(pp, cache.NODES, cache.Path, ...
+                agent_i, cache.valid_systems, const_p, 'x_prev', xp, ...
+                'gap', 0.004, 'panelColor', 'w', 'axColor', [0.98 0.98 0.98], ...
+                'marg_w', 0.12, 'marg_h', 0.08, 'title_pad', 0.06);
+        end
+        drawnow; pause(0.3);
+        localBase_p = fullfile(caseDir_p, sprintf('local_%s', caseName_p));
+        savefig(fig_p, [localBase_p '.fig']);
+        print(fig_p, [localBase_p '.png'], '-dpng', '-r200');
+        close(fig_p);
+
+        % Export to HTML demo (priority_n passed → priorityRobot field in JS)
+        demoScene_p = sprintf('%s_p%d', demoScene, prio_n);
+        export_scenario_to_demo(caseName_p, demoGroup, demoScene_p, prio_n);
+
+        fprintf('Priority R%d → scene %s done.\n', prio_n, demoScene_p);
+
+        % Restore const_base for next iteration
+        const = const_base;
+    end
+
+    fprintf('\n=== Priority Override Complete ===\n');
+    fprintf('Add to HTML AVAILABLE map:\n');
+    for prio_n = priority_robots
+        demoScene_p = sprintf('%s_p%d', demoScene, prio_n);
+        fprintf('  ''%s_%s_optimal'': true,\n', demoGroup, demoScene_p);
+    end
+    fprintf('Add scenes to SCENARIO_GROUPS[''%s''].scenes:\n', demoGroup);
+    for prio_n = priority_robots
+        fprintf('  ''%s_p%d''\n', demoScene, prio_n);
+    end
 end
 
 fprintf('Finished case: %s\n', caseName);
@@ -673,6 +520,219 @@ fprintf('Saved to: %s\n', caseDir);
 end  % iN
 
 %% ═══════════════════════ Local agent functions ═══════════════════════════
+
+% ── run_admm_core ──────────────────────────────────────────────────────────
+% Initialise and run one full ADMM sweep.  All routing/timing data is read
+% from const.  priority_n = 0 → normal run; >0 → that robot has highest
+% priority at every contended resource slot.
+%
+% Returns the converged (or max-iter) x_prev, y_prev, LocalTreeCache,
+% residuals, converged iteration k, and elapsed time in minutes.
+function [x_prev, y_prev, LocalTreeCache, residual_r, residual_s, ...
+          delay_costs, k, T_ADMM] = run_admm_core(const, agent_participation)
+
+N        = const.N;
+Dt       = const.Dt;
+max_iter = const.max_iter;
+tol_r    = const.tol_r;
+tol_s    = const.tol_s;
+rho1     = const.rho1;
+alpha_tilde          = const.alpha_tilde;
+pathInfo_agent_chain = const.pathInfo_agent_chain;
+pathInfo_c           = const.pathInfo_c;
+
+% ── Initialisation ──────────────────────────────────────────────────────
+LocalTreeCache = cell(9,1);
+[x_prev, y_prev, x_prev_bar, y_prev_bar] = ...
+    initEarliestXYPrev_fromChain(alpha_tilde, pathInfo_agent_chain, pathInfo_c, Dt, N);
+
+a_x = cell(1,9); a_y = cell(1,9);
+a_x_new = cell(1,9); a_y_new = cell(1,9);
+for i = 1:9
+    a_x{i} = cell(1,N);    a_y{i} = cell(1,N);
+    a_x_new{i} = cell(1,N); a_y_new{i} = cell(1,N);
+    [a_x{i}{:}]     = deal(0);
+    [a_y{i}{:}]     = deal(0);
+    [a_x_new{i}{:}] = deal(0);
+    [a_y_new{i}{:}] = deal(0);
+end
+
+residual_r  = zeros(max_iter, 1);
+residual_s  = zeros(max_iter, 1);
+delay_costs = zeros(max_iter, 1);
+
+T0 = tic;
+
+% ── ADMM main loop ──────────────────────────────────────────────────────
+for k = 1 : max_iter
+    k %#ok<NOPRT>
+    t_iter = tic;
+    x_last = x_prev; y_last = y_prev;
+
+    %% Step 1: dual variable update
+    vehUpd = cell(N,1);
+    for n = 1:N
+        kn    = 1;
+        chain = const.pathInfo_agent_chain{n}{kn};
+
+        ax_loc   = cell(1,9); ay_loc   = cell(1,9);
+        xbar_loc = cell(1,9); ybar_loc = cell(1,8);
+
+        for ag = 1:9
+            ax_loc{ag}   = a_x{ag}{n};
+            ay_loc{ag}   = a_y{ag}{n};
+            xbar_loc{ag} = x_prev_bar{ag}{n};
+            if ag <= 8
+                ybar_loc{ag} = y_prev_bar{ag}{n};
+            end
+        end
+
+        ag0 = chain(1);
+        xbar_loc{ag0}(kn) = (x_prev{ag0}{n}(kn) + 0) / 2;
+
+        for pos = 2:length(chain)
+            prev_ag = chain(pos - 1);
+            curr_ag = chain(pos);
+
+            ax_loc{curr_ag}(kn) = a_x{curr_ag}{n}(kn) + ...
+                rho1 * (x_prev{curr_ag}{n}(kn) - y_prev{prev_ag}{n}(kn));
+            xbar_loc{curr_ag}(kn) = ...
+                (x_prev{curr_ag}{n}(kn) + y_prev{prev_ag}{n}(kn)) / 2;
+
+            ay_loc{prev_ag}(kn) = a_y{prev_ag}{n}(kn) + ...
+                rho1 * (y_prev{prev_ag}{n}(kn) - x_prev{curr_ag}{n}(kn));
+            ybar_loc{prev_ag}(kn) = ...
+                (y_prev{prev_ag}{n}(kn) + x_prev{curr_ag}{n}(kn)) / 2;
+        end
+
+        vehUpd{n} = struct('ax',{ax_loc},'ay',{ay_loc},'xbar',{xbar_loc},'ybar',{ybar_loc});
+    end
+
+    for n = 1:N
+        for ag = 1:9
+            a_x_new{ag}{n}    = vehUpd{n}.ax{ag};
+            a_y_new{ag}{n}    = vehUpd{n}.ay{ag};
+            x_prev_bar{ag}{n} = vehUpd{n}.xbar{ag};
+            if ag <= 8
+                y_prev_bar{ag}{n} = vehUpd{n}.ybar{ag};
+            end
+        end
+    end
+
+    %% Step 2: parallel local updates
+    f = parallel.FevalFuture.empty(0,9);
+    for agent_i = 1:9
+        if agent_i >= 1 && agent_i <= 4
+            entries       = agent_participation{agent_i};
+            valid_systems = find(~cellfun(@isempty, entries))';
+            if isempty(valid_systems)
+                f(agent_i) = parfeval(@agent_update_intersection_stub_single, 1, agent_i);
+            else
+                f(agent_i) = parfeval(@agent_update_intersection_single, 1, ...
+                    const, agent_i, entries, valid_systems, ...
+                    x_prev, y_prev, ...
+                    x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
+                    a_x_new{agent_i}, a_y_new{agent_i}, ...
+                    LocalTreeCache{agent_i}, k);
+            end
+        elseif agent_i >= 5 && agent_i <= 8
+            entries       = agent_participation{agent_i};
+            valid_systems = find(~cellfun(@isempty, entries))';
+            if isempty(valid_systems)
+                f(agent_i) = parfeval(@agent_update_road_stub_single, 1, agent_i);
+            else
+                f(agent_i) = parfeval(@agent_update_road_single, 1, ...
+                    const, agent_i, entries, valid_systems, ...
+                    x_prev{agent_i}, y_prev{agent_i}, ...
+                    x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
+                    a_x_new{agent_i}, a_y_new{agent_i});
+            end
+        else
+            f(agent_i) = parfeval(@agent_update_terminal_single, 1, ...
+                const, x_prev{9}, x_prev_bar{9}, a_x_new{9});
+        end
+    end
+
+    meta = cell(1,9);
+    for ii = 1:9
+        try
+            [completedIdx, S_res] = fetchNext(f);
+            meta{completedIdx} = S_res;
+        catch ME
+            fprintf(2, '\n[Iter %d] fetchNext error:\n%s\n', k, ...
+                getReport(ME,'extended','hyperlinks','off'));
+            rethrow(ME);
+        end
+    end
+
+    %% Merge results
+    r_local = 0;
+    for agent_i = 1:9
+        S_res = meta{agent_i};
+        fprintf('Agent %d time=%.3f worker=%d\n', agent_i, S_res.elapsed, S_res.worker);
+        switch S_res.kind
+            case 'intersection'
+                LocalTreeCache{agent_i} = S_res.cache;
+                for n = S_res.valid_systems
+                    kn = 1;
+                    x_prev{agent_i}{n}(kn) = S_res.best_x(n);
+                    y_prev{agent_i}{n}(kn) = S_res.best_y(n);
+                    r_local = r_local + (S_res.best_x(n) - S_res.best_alpha{n}(kn))^2 ...
+                                      + (S_res.best_y(n) - S_res.best_gamma{n}(kn))^2;
+                end
+            case 'road'
+                for n = S_res.valid_systems
+                    kn = 1;
+                    x_prev{agent_i}{n}(kn) = S_res.x_road(n);
+                    y_prev{agent_i}{n}(kn) = S_res.y_road(n);
+                end
+            case 'terminal'
+                delay_costs(k) = S_res.delay_cost;
+                for n = 1:N
+                    x_prev{9}{n}(1) = S_res.x9_new(n);
+                end
+            otherwise
+                error('Unknown meta.kind = %s', S_res.kind);
+        end
+    end
+
+    %% Step 3: residuals
+    r = compute_r(x_prev, y_prev, r_local, const);
+    s = 0;
+    for agent_i = 1:8
+        ent = agent_participation{agent_i};
+        if all(cellfun(@isempty, ent)), continue; end
+        vs = find(~cellfun(@isempty, ent))';
+        for n = vs
+            s = s + norm(x_prev{agent_i}{n} - x_last{agent_i}{n})^2 + ...
+                    norm(y_prev{agent_i}{n} - y_last{agent_i}{n})^2;
+        end
+    end
+    for n = 1:N
+        s = s + norm(x_prev{9}{n} - x_last{9}{n})^2;
+    end
+
+    r %#ok<NOPRT>
+    s %#ok<NOPRT>
+    residual_r(k) = r;
+    residual_s(k) = s;
+    a_x = a_x_new; a_y = a_y_new;
+
+    if r < tol_r && s < tol_s
+        fprintf('Converged at iteration %d\n', k);
+        residual_r  = residual_r(1:k);
+        residual_s  = residual_s(1:k);
+        delay_costs = delay_costs(1:k);
+        break;
+    end
+    fprintf('[Iter %d] total time = %.3f s\n', k, toc(t_iter));
+end
+
+T_ADMM = toc(T0) / 60;
+fprintf('ADMM elapsed %.3f mins  (priority_n=%d)\n', T_ADMM, const.priority_n);
+end
+
+% ── run_admm_core end ──────────────────────────────────────────────────────
 
 function S = agent_update_intersection_single(const, agent_i, entries, valid_systems, ...
         x_prev_all, y_prev_all, xi_prev_bar, yi_prev_bar, ai_x, ai_y, cache_ai, k)

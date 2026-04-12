@@ -749,6 +749,101 @@
       transition: background 0.15s;
     }
     .view-sched-btn:hover { background: rgba(121,202,255,0.22); }
+    .params-btn {
+      margin-top: 6px; width: 100%;
+      padding: 6px 0; border-radius: 10px;
+      background: rgba(139,227,159,0.10);
+      border: 1px solid rgba(139,227,159,0.22);
+      color: var(--good); font-size: 12px; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.5px;
+      transition: background 0.15s;
+    }
+    .params-btn:hover { background: rgba(139,227,159,0.20); }
+
+    /* ── Parameters Popup ──────────────────────────────────────────────────── */
+    .params-overlay {
+      position: absolute; inset: 0; z-index: 180;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .params-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+      cursor: pointer;
+    }
+    .params-box {
+      position: relative; z-index: 1;
+      width: 920px; max-height: 88vh;
+      background: rgba(10,22,36,0.98);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.65);
+      display: flex; flex-direction: column;
+    }
+    .params-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 26px 14px; flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .params-header-title {
+      font-size: 15px; font-weight: 800; letter-spacing: 1.1px;
+      text-transform: uppercase; color: var(--good);
+    }
+    .params-header-hint {
+      font-size: 11px; color: var(--muted); margin-left: 12px;
+    }
+    .params-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(255,255,255,0.07); border: none;
+      color: #ccc; font-size: 15px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .params-close:hover { background: rgba(255,80,80,0.28); color: #fff; }
+    .params-body {
+      padding: 14px 24px 16px;
+      display: flex; gap: 24px;
+      overflow-y: auto; flex: 1;
+      scroll-behavior: smooth;
+    }
+    .params-tables { flex: 0 0 auto; width: 330px; }
+    .params-diagrams {
+      flex: 1; display: flex; flex-direction: column; gap: 10px;
+      align-items: stretch; justify-content: space-between;
+    }
+    .params-section { margin-bottom: 12px; }
+    .params-section-title {
+      font-size: 10px; font-weight: 800; letter-spacing: 1.4px;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 6px; padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .params-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 4px 0; font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .params-row:last-child { border-bottom: 0; }
+    .params-lbl { color: var(--muted); }
+    .params-val { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .params-val.green  { color: var(--good); }
+    .params-val.yellow { color: var(--warn); }
+    .params-diag-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted);
+      text-align: center; margin-bottom: 6px;
+    }
+    .params-svg-wrap {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px; padding: 10px;
+      width: 100%;
+    }
+    .params-footer {
+      padding: 11px 26px; font-size: 12px; color: var(--muted);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      text-align: center; letter-spacing: 0.3px; flex-shrink: 0;
+    }
 
     /* ── Schedule Image Viewer ─────────────────────────────────────────────── */
     .sched-viewer {
@@ -762,18 +857,18 @@
     }
     .sched-box {
       position: relative; z-index: 1;
-      width: 92vw; max-width: 1400px;
-      height: 88vh;
+      width: 98vw; max-width: 1800px;
+      height: 96vh;
       background: rgba(10,20,32,0.97);
       border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 22px;
+      border-radius: 16px;
       display: flex; flex-direction: column;
       overflow: hidden;
       box-shadow: 0 30px 80px rgba(0,0,0,0.6);
     }
     .sched-header {
       display: flex; align-items: center; gap: 16px;
-      padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
       flex-shrink: 0;
     }
     #schedViewerTitle { font-size: 15px; font-weight: 700; color: #e8f4ff; flex: 1; }
@@ -808,9 +903,19 @@
       text-align: center; padding: 20px; display: none;
     }
     .sched-hint code { color: var(--accent); font-size: 11px; }
+    /* ── Tree slide ── */
+    .tree-grid {
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+      width: 100%; height: 100%; gap: 4px; padding: 4px;
+      background: #0e1220; box-sizing: border-box;
+    }
+    .tree-cell {
+      background: #111826; border-radius: 8px; overflow: hidden; position: relative;
+    }
+    .tree-cell svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .sched-nav {
       display: flex; align-items: center; justify-content: center; gap: 20px;
-      padding: 12px; flex-shrink: 0;
+      padding: 6px; flex-shrink: 0;
     }
     .sched-arrow {
       width: 40px; height: 40px; border-radius: 50%;
@@ -1043,8 +1148,15 @@
             <span class="setup-lbl">Playback</span>
             <span class="setup-val" id="setupPlayback">Forward · 1×</span>
           </div>
+          <div class="setup-row">
+            <span class="setup-lbl">Duration</span>
+            <span class="setup-val" id="setupDuration">— s</span>
+          </div>
           <button class="view-sched-btn" id="viewSchedBtn" title="View schedule diagrams">
             ▦ View Schedule
+          </button>
+          <button class="params-btn" id="paramsBtn" title="System parameters">
+            ⊙ Parameters
           </button>
         </div>
 
@@ -1057,6 +1169,7 @@
               <div class="sched-tabs">
                 <button class="sched-tab active" data-slide="0">Macro View</button>
                 <button class="sched-tab" data-slide="1">Local View</button>
+                <button class="sched-tab" id="schedTab2" data-slide="2" style="display:none;">Tree View</button>
               </div>
               <button class="sched-close" id="schedClose">✕</button>
             </div>
@@ -1071,16 +1184,275 @@
                 <div class="sched-hint" id="schedHintLocal">No image found —
                   save MATLAB figure as <code>schedules/images/{group}_{scene}_{policy}_local.png</code></div>
               </div>
+              <div class="sched-slide" id="schedSlide2">
+                <div class="tree-grid">
+                  <div class="tree-cell"><svg id="treeSvg1"></svg></div>
+                  <div class="tree-cell"><svg id="treeSvg2"></svg></div>
+                  <div class="tree-cell"><svg id="treeSvg3"></svg></div>
+                  <div class="tree-cell"><svg id="treeSvg4"></svg></div>
+                </div>
+              </div>
             </div>
             <div class="sched-nav">
               <button class="sched-arrow" id="schedPrev">‹</button>
               <span class="sched-dots">
                 <span class="sched-dot active" data-slide="0"></span>
                 <span class="sched-dot" data-slide="1"></span>
+                <span class="sched-dot" id="schedDot2" data-slide="2" style="display:none;"></span>
               </span>
               <button class="sched-arrow" id="schedNext">›</button>
             </div>
             <div class="sched-footer-hint">← → / LB RB / Left stick &nbsp;·&nbsp; navigate &nbsp;|&nbsp; B / Esc / Select &nbsp;·&nbsp; close</div>
+          </div>
+        </div>
+
+        <!-- ══ Parameters Popup ══════════════════════════════════════════════ -->
+        <div id="paramsOverlay" class="params-overlay" style="display:none;">
+          <div class="params-backdrop" id="paramsBackdrop"></div>
+          <div class="params-box" id="paramsBox" tabindex="-1">
+            <div class="params-header">
+              <span class="params-header-title">⊙ System Parameters</span>
+              <span class="params-header-hint">Esc / P / B · close</span>
+              <button class="params-close" id="paramsClose">✕</button>
+            </div>
+
+            <div class="params-body" id="paramsBody">
+              <!-- ── Left: parameter tables ── -->
+              <div class="params-tables">
+
+                <div class="params-section">
+                  <div class="params-section-title">Physical Layout</div>
+                  <div class="params-row">
+                    <span class="params-lbl">Robot size</span>
+                    <span class="params-val">0.6 × 0.6 m</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Road width</span>
+                    <span class="params-val">2.7 m</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Intersection zone  W</span>
+                    <span class="params-val">1.6 × 1.6 m</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Scale</span>
+                    <span class="params-val">1 m ≈ 56 px</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Approach range</span>
+                    <span class="params-val">3.8 m  (213 px)</span>
+                  </div>
+                </div>
+
+                <div class="params-section">
+                  <div class="params-section-title">Motion Parameters</div>
+                  <div class="params-row">
+                    <span class="params-lbl">v_max  (road)</span>
+                    <span class="params-val">1.5 m/s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">v_int  (intersection)</span>
+                    <span class="params-val">0.8 m/s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Dt  (road segment)</span>
+                    <span class="params-val">2.0 s  (3.0 m ÷ 1.5)</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Headway T_val</span>
+                    <span class="params-val">2.0 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Drive policy</span>
+                    <span class="params-val yellow">No-wait approach</span>
+                  </div>
+                </div>
+
+                <div class="params-section">
+                  <div class="params-section-title">Intersection Traversal  (C_k = k-th subtask time)</div>
+                  <div class="params-row">
+                    <span class="params-lbl">C_arc = πW / (8 v_int)</span>
+                    <span class="params-val green">≈ 0.785 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">C_str = W / (2 v_int)</span>
+                    <span class="params-val yellow">1.0 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Left-turn  (C₁+C₂+C₃)</span>
+                    <span class="params-val green">≈ 2.36 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Straight   (C₁+C₂)</span>
+                    <span class="params-val green">2.0 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Right-turn (C₁)</span>
+                    <span class="params-val green">≈ 0.785 s</span>
+                  </div>
+                </div>
+
+                <div class="params-section" style="margin-bottom:0;">
+                  <div class="params-section-title">C-ADMM Algorithm</div>
+                  <div class="params-row"><span class="params-lbl">ρ₁ = ρ₂</span><span class="params-val">1.0</span></div>
+                  <div class="params-row"><span class="params-lbl">Penalty weight</span><span class="params-val">1.5</span></div>
+                  <div class="params-row"><span class="params-lbl">Max iterations</span><span class="params-val">100</span></div>
+                  <div class="params-row"><span class="params-lbl">Convergence tol.</span><span class="params-val">10⁻³</span></div>
+                  <div class="params-row"><span class="params-lbl">Parallel workers</span><span class="params-val">10</span></div>
+                  <div class="params-row"><span class="params-lbl">Space slots (4×5)</span><span class="params-val">20</span></div>
+                </div>
+
+              </div><!-- /params-tables -->
+
+              <!-- ── Right: geometry diagrams ── -->
+              <div class="params-diagrams">
+
+                <!-- Diagram (a): Subtask execution time by route direction -->
+                <div class="params-svg-wrap">
+                  <div class="params-diag-label">(a) Subtask execution time by route direction</div>
+                  <!-- C_arc = πW/(8v_int) ≈ 0.785s → 40px;  C_str = W/(2v_int) = 1.0s → 51px -->
+                  <svg viewBox="0 0 290 162" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <marker id="ahT" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill="#b6c3d8"/>
+                      </marker>
+                    </defs>
+
+                    <!-- ── Row labels (right-aligned at x=54) ── -->
+                    <text x="54" y="23"  text-anchor="end" fill="#b6c3d8" font-size="9" font-style="italic" font-family="serif">L-turn :</text>
+                    <text x="54" y="57"  text-anchor="end" fill="#b6c3d8" font-size="9" font-style="italic" font-family="serif">Straight :</text>
+                    <text x="54" y="91"  text-anchor="end" fill="#b6c3d8" font-size="9" font-style="italic" font-family="serif">R-turn :</text>
+
+                    <!-- ── αₙ vertical guide & tick ── -->
+                    <line x1="58" y1="8"   x2="58" y2="107" stroke="#b6c3d8" stroke-width="0.6" stroke-dasharray="3,3" opacity="0.4"/>
+                    <line x1="58" y1="108" x2="58" y2="114" stroke="#b6c3d8" stroke-width="1"/>
+                    <text x="58" y="126" text-anchor="middle" fill="#b6c3d8" font-size="10" font-style="italic" font-family="serif">αₙ</text>
+
+                    <!-- ══ Row 1: Left-turn  C₁ C₂ C₃  (3 × C_arc, 40px each) ══ -->
+                    <rect x="58" y="10" width="40" height="22" rx="2"
+                          fill="rgba(139,227,159,0.28)" stroke="#8be39f" stroke-width="1.5"/>
+                    <text x="78" y="25" text-anchor="middle" fill="#8be39f" font-size="10" font-weight="700" font-family="serif" font-style="italic">C₁</text>
+
+                    <rect x="98" y="10" width="40" height="22" rx="2"
+                          fill="rgba(255,211,107,0.28)" stroke="#ffd36b" stroke-width="1.5"/>
+                    <text x="118" y="25" text-anchor="middle" fill="#ffd36b" font-size="10" font-weight="700" font-family="serif" font-style="italic">C₂</text>
+
+                    <rect x="138" y="10" width="40" height="22" rx="2"
+                          fill="rgba(121,202,255,0.28)" stroke="#79caff" stroke-width="1.5"/>
+                    <text x="158" y="25" text-anchor="middle" fill="#79caff" font-size="10" font-weight="700" font-family="serif" font-style="italic">C₃</text>
+
+                    <!-- γ tick row 1 -->
+                    <line x1="178" y1="108" x2="178" y2="114" stroke="#b6c3d8" stroke-width="1"/>
+                    <text x="178" y="126" text-anchor="middle" fill="#b6c3d8" font-size="10" font-style="italic" font-family="serif">γₙ</text>
+
+                    <!-- Row 1 duration label — to the right of blocks -->
+                    <text x="183" y="22" fill="#b6c3d8" font-size="7.5" opacity="0.75" font-family="serif" font-style="italic">≈ 2.36 s</text>
+
+                    <!-- ══ Row 2: Straight  C₁ C₂  (2 × C_str, 51px each) ══ -->
+                    <rect x="58" y="44" width="51" height="22" rx="2"
+                          fill="rgba(139,227,159,0.28)" stroke="#8be39f" stroke-width="1.5"/>
+                    <text x="83" y="59" text-anchor="middle" fill="#8be39f" font-size="10" font-weight="700" font-family="serif" font-style="italic">C₁</text>
+
+                    <rect x="109" y="44" width="51" height="22" rx="2"
+                          fill="rgba(255,211,107,0.28)" stroke="#ffd36b" stroke-width="1.5"/>
+                    <text x="134" y="59" text-anchor="middle" fill="#ffd36b" font-size="10" font-weight="700" font-family="serif" font-style="italic">C₂</text>
+
+                    <!-- γ tick row 2 -->
+                    <line x1="160" y1="108" x2="160" y2="114" stroke="#b6c3d8" stroke-width="1"/>
+
+                    <!-- Row 2 duration label — to the right of blocks -->
+                    <text x="183" y="56" fill="#b6c3d8" font-size="7.5" opacity="0.75" font-family="serif" font-style="italic">2.0 s</text>
+
+                    <!-- ══ Row 3: Right-turn  C₁  (1 × C_arc, 40px) ══ -->
+                    <rect x="58" y="78" width="40" height="22" rx="2"
+                          fill="rgba(139,227,159,0.28)" stroke="#8be39f" stroke-width="1.5"/>
+                    <text x="78" y="93" text-anchor="middle" fill="#8be39f" font-size="10" font-weight="700" font-family="serif" font-style="italic">C₁</text>
+
+                    <!-- γ tick row 3 -->
+                    <line x1="98" y1="108" x2="98" y2="114" stroke="#b6c3d8" stroke-width="1"/>
+
+                    <!-- Row 3 duration label — to the right of block -->
+                    <text x="103" y="90" fill="#b6c3d8" font-size="7.5" opacity="0.75" font-family="serif" font-style="italic">≈ 0.785 s</text>
+
+                    <!-- ── Time axis ── -->
+                    <line x1="46" y1="111" x2="258" y2="111" stroke="#b6c3d8" stroke-width="1.2" marker-end="url(#ahT)"/>
+                    <text x="263" y="115" fill="#b6c3d8" font-size="11" font-style="italic" font-family="serif">t</text>
+
+                    <!-- ── Legend (below time axis, clear of all blocks) ── -->
+                    <text x="58"  y="141" fill="#b6c3d8" font-size="8" opacity="0.75" font-family="monospace">C_arc = πW/(8v_int) ≈ 0.785 s</text>
+                    <text x="58"  y="153" fill="#b6c3d8" font-size="8" opacity="0.75" font-family="monospace">C_str = W/(2v_int)  = 1.0 s</text>
+                  </svg>
+                </div>
+
+                <!-- Diagram (b): Inter-vehicle headway constraint -->
+                <div class="params-svg-wrap">
+                  <div class="params-diag-label">(b) Headway constraint between consecutive vehicles</div>
+                  <svg viewBox="0 0 280 90" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <marker id="bhL" markerWidth="6" markerHeight="6" refX="0" refY="3" orient="auto">
+                        <path d="M6,0 L0,3 L6,6 Z" fill="#f0896a"/>
+                      </marker>
+                      <marker id="bhR" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill="#f0896a"/>
+                      </marker>
+                      <marker id="bhT" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill="#b6c3d8"/>
+                      </marker>
+                    </defs>
+
+                    <!-- ── Vehicle n−1 row (y=12..34) ── -->
+                    <text x="22" y="27" text-anchor="end" fill="#b6c3d8" font-size="9" font-style="italic" font-family="serif">n−1 :</text>
+                    <!-- blue zone1 block -->
+                    <rect x="28" y="12" width="45" height="22" rx="2"
+                          fill="rgba(121,202,255,0.28)" stroke="#79caff" stroke-width="1.5"/>
+                    <text x="50" y="27" text-anchor="middle" fill="#79caff" font-size="11" font-weight="700" font-family="serif" font-style="italic">n−1</text>
+                    <!-- Δtₙ₋₁[1] gap label (between the two blue blocks) -->
+                    <text x="88" y="9" text-anchor="middle" dominant-baseline="auto" fill="#f0896a" font-size="8" font-style="italic" font-family="serif">Δtₙ₋₁[1]</text>
+                    <line x1="73" y1="13" x2="103" y2="13" stroke="#f0896a" stroke-width="1.3"
+                          marker-start="url(#bhL)" marker-end="url(#bhR)"/>
+                    <!-- blue zone2 block -->
+                    <rect x="103" y="12" width="45" height="22" rx="2"
+                          fill="rgba(121,202,255,0.28)" stroke="#79caff" stroke-width="1.5"/>
+                    <text x="125" y="27" text-anchor="middle" fill="#79caff" font-size="11" font-weight="700" font-family="serif" font-style="italic">n−1</text>
+
+                    <!-- ── Vehicle n row (y=44..66) — one green system box ── -->
+                    <text x="22" y="58" text-anchor="end" fill="#b6c3d8" font-size="9" font-style="italic" font-family="serif">n :</text>
+                    <rect x="50" y="44" width="38" height="22" rx="2"
+                          fill="rgba(139,227,159,0.25)" stroke="#8be39f" stroke-width="1.5"/>
+                    <text x="69" y="59" text-anchor="middle" fill="#8be39f" font-size="11" font-weight="700" font-family="serif" font-style="italic">n</text>
+
+                    <!-- ── Headway arrow (αₙ₋₁[kₙ₋₁] → αₙ[kₙ] = green box left edge), moved down ── -->
+                    <line x1="28" y1="43" x2="50" y2="43" stroke="#f0896a" stroke-width="1.3"
+                          marker-start="url(#bhL)" marker-end="url(#bhR)"/>
+                    <text x="39" y="41" text-anchor="middle" dominant-baseline="auto" fill="#f0896a" font-size="8" font-style="italic" font-family="serif">headway</text>
+
+                    <!-- ── Time axis ── -->
+                    <line x1="22" y1="72" x2="252" y2="72" stroke="#b6c3d8" stroke-width="1.2" marker-end="url(#bhT)"/>
+                    <text x="256" y="76" fill="#b6c3d8" font-size="11" font-style="italic" font-family="serif">t</text>
+
+                    <!-- ticks -->
+                    <line x1="28" y1="69" x2="28" y2="75" stroke="#b6c3d8" stroke-width="1"/>
+                    <text x="28" y="84" text-anchor="middle" fill="#b6c3d8" font-size="7.5" font-style="italic" font-family="serif">αₙ₋₁[kₙ₋₁]</text>
+                    <line x1="50" y1="69" x2="50" y2="75" stroke="#b6c3d8" stroke-width="1"/>
+                    <text x="50" y="84" text-anchor="middle" fill="#b6c3d8" font-size="7.5" font-style="italic" font-family="serif">αₙ[kₙ]</text>
+
+                    <!-- Δt constraint — right of n-1 row, above αₙ[kₙ] -->
+                    <text x="152" y="21" fill="#b6c3d8" font-size="7.5" opacity="0.85" font-style="italic" font-family="serif">αₙ₋₁[k] − γₙ₋₁[k−1]</text>
+                    <text x="152" y="31" fill="#b6c3d8" font-size="7.5" opacity="0.85" font-style="italic" font-family="serif">  ≥ Δtₙ₋₁[k−1]</text>
+
+                    <!-- headway constraint formula -->
+                    <text x="110" y="58" fill="#b6c3d8" font-size="8.5" opacity="0.8" font-style="italic" font-family="serif">αₙ[kₙ] − αₙ₋₁[kₙ₋₁] ≥ T_headway</text>
+                  </svg>
+                </div>
+
+              </div><!-- /params-diagrams -->
+            </div><!-- /params-body -->
+
+            <div class="params-footer">
+              delay = max(0,&nbsp; γ<tspan style="font-size:0.85em">last</tspan> − deadline) &nbsp;·&nbsp;
+              deadline = α₀ + Σ c_k + (K−1)·Dt &nbsp;·&nbsp;
+              c_k = Σ C over spaces visited at intersection k
+            </div>
           </div>
         </div>
 
@@ -1342,7 +1714,15 @@
   <!-- Default schedule loaded on page open (must match robotGroup/sceneName below).
        <script src> works with file:// — no CORS, unlike fetch().
        Each file declares: var SCHEDULE_DATA = { ... }; -->
-  <script src="schedules/10r_S1_optimal.js"></script>
+  <script src="schedules/8r_S1_optimal.js"   onerror=""></script>
+  <script src="schedules/10r_S1_optimal.js"  onerror=""></script>
+  <script src="schedules/10r_S2_optimal.js"  onerror=""></script>
+  <script src="schedules/10r_S3_optimal.js"  onerror=""></script>
+  <!-- Tree data for decision-tree viewer (generated by export_tree_json.m) -->
+  <script src="schedules/tree_8r_S1_optimal.js"  onerror=""></script>
+  <script src="schedules/tree_10r_S1_optimal.js" onerror=""></script>
+  <script src="schedules/tree_10r_S2_optimal.js" onerror=""></script>
+  <script src="schedules/tree_10r_S3_optimal.js" onerror=""></script>
 
   <script>
     const CB = '?v=' + Date.now(); // cache-bust: forces fresh load of modified PNGs
@@ -1668,62 +2048,18 @@
     // Add entries to AVAILABLE as MATLAB results become ready.
     // Policy keys: 'optimal', 'fcfs', 'r1', 'r2', ... (robot priority override)
     const SCENARIO_GROUPS = {
-      '8r':  { label:'8 Robots',  scenes:['S1','S2','S3'] },
+      '8r':  { label:'8 Robots',  scenes:['S1'] },
       '10r': { label:'10 Robots', scenes:['S1','S2','S3'] },
-      '15r': { label:'15 Robots', scenes:['S1','S2','S3','S4'] },
-      '20r': { label:'20 Robots', scenes:['S1','S2','S3','S4','S5'] },
-      '25r': { label:'25 Robots', scenes:['S1','S2','S3'] },
     };
 
     // Availability map — keys: '{group}_{scene}_{policy}'
-    // Uncomment a line once the corresponding .js file has been exported from MATLAB.
-    // To export: run export_to_demo.m (optimal) / export_to_demo_fcfs.m (fcfs)
+    // JS files exported by export_demo_images.m → schedules/10r_S1_*.js
     const AVAILABLE = {
-      // ── 8 Robots ──────────────────────────────────
-      '8r_S1_optimal': true,   // seed_4123_N_8  balanced
-      '8r_S1_fcfs':    true,
-      '8r_S2_optimal': true,   // seed_4125_N_8  balanced
-      '8r_S2_fcfs':    true,
-      '8r_S3_optimal': true,   // seed_4127_N_8  skewed I1
-      '8r_S3_fcfs':    true,
-
-      // ── 10 Robots ─────────────────────────────────
-      '10r_S1_optimal': true,  // fixed CR-MPC demo (original, keep)
-      '10r_S1_fcfs': true,
-      '10r_S2_optimal': true,  // seed_4120_N_10 balanced
-      '10r_S2_fcfs':    true,
-      '10r_S3_optimal': true,  // seed_4122_N_10 balanced
-      '10r_S3_fcfs':    true,
-
-      // ── 15 Robots ─────────────────────────────────
-      '15r_S1_optimal': true,  // seed_4112_N_15 balanced
-      '15r_S1_fcfs':    true,
-      '15r_S2_optimal': true,  // seed_4113_N_15 balanced
-      '15r_S2_fcfs':    true,
-      '15r_S3_optimal': true,  // seed_4114_N_15 balanced
-      '15r_S3_fcfs':    true,
-      '15r_S4_optimal': true,  // seed_4115_N_15 balanced
-      '15r_S4_fcfs':    true,
-
-      // ── 20 Robots ─────────────────────────────────
-      '20r_S1_optimal': true,  // seed_4101_N_20 balanced
-      '20r_S1_fcfs':    true,
-      '20r_S2_optimal': true,  // seed_4102_N_20 balanced
-      '20r_S2_fcfs':    true,
-      '20r_S3_optimal': true,  // seed_4103_N_20 balanced
-      '20r_S3_fcfs':    true,
-      '20r_S4_optimal': true,  // seed_4110_N_20 balanced
-      '20r_S4_fcfs':    true,
-      '20r_S5_optimal': true,  // seed_4111_N_20 balanced
-      '20r_S5_fcfs':    true,
-
-      // ── 25 Robots ─────────────────────────────────
-      '25r_S1_optimal': true,  // seed_4104_N_25 balanced
-      '25r_S1_fcfs':    true,
-      '25r_S2_optimal': true,  // seed_4108_N_25 balanced
-      '25r_S2_fcfs':    true,
-      '25r_S3_optimal': true,  // seed_4109_N_25 balanced
-      '25r_S3_fcfs':    true,
+      '8r_S1_optimal':  true,
+      '8r_S1_fcfs':     true,
+      '10r_S1_optimal': true,  '10r_S1_fcfs': true,
+      '10r_S2_optimal': true,  '10r_S2_fcfs': true,
+      '10r_S3_optimal': true,  '10r_S3_fcfs': true,
     };
 
     function schedKey(group, scene, policy) {
@@ -2052,7 +2388,7 @@
     // ── Schedule Image Viewer ─────────────────────────────────────────────────
     let schedViewerOpen = false;
     let schedSlideIdx   = 0;
-    const SCHED_SLIDES  = 2;
+    let SCHED_SLIDES    = 2;   // updated dynamically when tree data is available
 
     function schedImgPath(slide) {
       const g = robotGroup.replace(' ', '').toLowerCase();   // "10r"
@@ -2064,11 +2400,11 @@
 
     function openSchedViewer() {
       schedViewerOpen = true;
-      schedSlideIdx   = 0;
+      schedSlideIdx   = 1;   // open on Local schedule (slide 1) by default
       document.getElementById('schedViewer').style.display = 'flex';
       document.getElementById('schedViewerTitle').textContent =
         `Schedule — ${robotGroup} · ${sceneName} · ${currentPolicy === 'optimal' ? 'Optimal' : 'FCFS'}`;
-      schedGoTo(0);
+      schedGoTo(1);
     }
 
     function closeSchedViewer() {
@@ -2076,27 +2412,210 @@
       document.getElementById('schedViewer').style.display = 'none';
     }
 
-    function schedGoTo(idx) {
-      schedSlideIdx = (idx + SCHED_SLIDES) % SCHED_SLIDES;
-      // slides + tabs + dots
-      document.querySelectorAll('.sched-slide').forEach((el, i) =>
-        el.classList.toggle('active', i === schedSlideIdx));
-      document.querySelectorAll('.sched-tab').forEach((el, i) =>
-        el.classList.toggle('active', i === schedSlideIdx));
-      document.querySelectorAll('.sched-dot').forEach((el, i) =>
-        el.classList.toggle('active', i === schedSlideIdx));
-      // load image
-      const imgId  = schedSlideIdx === 0 ? 'schedImgMacro' : 'schedImgLocal';
-      const hintId = schedSlideIdx === 0 ? 'schedHintMacro' : 'schedHintLocal';
-      const imgEl  = document.getElementById(imgId);
-      const hint   = document.getElementById(hintId);
-      const path   = schedImgPath(schedSlideIdx);
-      imgEl.style.display = 'none';
-      hint.style.display  = 'none';
-      imgEl.onload  = () => { imgEl.style.display = ''; hint.style.display = 'none'; };
-      imgEl.onerror = () => { imgEl.style.display = 'none'; hint.style.display = 'block'; };
-      imgEl.src = path + '?v=' + Date.now();
+    // ── Tree slide availability ───────────────────────────────────────────────
+    function currentTreeData() {
+      const key = robotGroup + '_' + sceneName;
+      return (window.ALL_TREE_DATA && window.ALL_TREE_DATA[key]) || null;
     }
+
+    function updateSchedSlides() {
+      const hasTree = currentPolicy === 'optimal' && currentTreeData() !== null;
+      SCHED_SLIDES = hasTree ? 3 : 2;
+      const tab2 = document.getElementById('schedTab2');
+      const dot2 = document.getElementById('schedDot2');
+      if (tab2) tab2.style.display = hasTree ? '' : 'none';
+      if (dot2) dot2.style.display = hasTree ? '' : 'none';
+      // If currently on tree slide but it's no longer available, go back
+      if (schedSlideIdx >= SCHED_SLIDES) schedGoTo(0);
+    }
+
+    // ── Decision-tree SVG renderer ───────────────────────────────────────────
+    function drawTreePanel() {
+      const treeData = currentTreeData();
+      for (let ai = 1; ai <= 4; ai++) {
+        const svgEl = document.getElementById('treeSvg' + ai);
+        if (!svgEl) continue;
+        svgEl.innerHTML = '';
+        const intData = treeData ? treeData.intersections[String(ai)] : null;
+        drawSingleTree(svgEl, intData, ai);
+      }
+    }
+
+    function drawSingleTree(svgEl, data, intIdx) {
+      const VW = 580, VH = 370;   // fixed viewBox keeps layout stable
+      svgEl.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+      svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      const ns = 'http://www.w3.org/2000/svg';
+
+      const mkText = (x, y, txt, cfg = {}) => {
+        const el = document.createElementNS(ns, 'text');
+        el.setAttribute('x', x); el.setAttribute('y', y);
+        el.setAttribute('text-anchor', cfg.anchor || 'middle');
+        el.setAttribute('font-size',   cfg.size   || 10);
+        el.setAttribute('fill',        cfg.fill   || '#7aabcc');
+        el.setAttribute('font-family', cfg.mono   ? 'monospace' : 'sans-serif');
+        if (cfg.weight) el.setAttribute('font-weight', cfg.weight);
+        el.textContent = txt;
+        return el;
+      };
+
+      // Panel title
+      svgEl.appendChild(mkText(VW / 2, 15,
+        `Intersection ${intIdx}  —  Decision Tree  (branching nodes)`,
+        { size: 11, fill: '#5a9fc0', weight: 'bold' }));
+
+      if (!data || !data.nodes || data.nodes.length === 0) {
+        svgEl.appendChild(mkText(VW / 2, VH / 2,
+          'No branching — trivial schedule', { size: 11, fill: '#334' }));
+        return;
+      }
+
+      const nodes = data.nodes;    // [{id, orig, tw, f, isPath}]
+      const edges = data.edges;    // [[src, dst], ...]
+      const pathSet = new Set(data.path || []);
+      const nd = nodes.length;
+
+      // Build child map (compressed 1-based ids)
+      const childMap = {};
+      for (let i = 1; i <= nd; i++) childMap[i] = [];
+      for (const [s, d] of edges) { if (childMap[s]) childMap[s].push(d); }
+
+      // BFS to assign depth levels
+      const dep = {}; dep[1] = 0;
+      const q = [1]; let maxDep = 0;
+      while (q.length) {
+        const n = q.shift();
+        for (const c of (childMap[n] || [])) {
+          if (dep[c] === undefined) { dep[c] = dep[n] + 1; maxDep = Math.max(maxDep, dep[c]); q.push(c); }
+        }
+      }
+
+      // Group by depth
+      const byDep = {};
+      for (const node of nodes) {
+        const lv = dep[node.id] ?? 0;
+        if (!byDep[lv]) byDep[lv] = [];
+        byDep[lv].push(node.id);
+      }
+
+      // Assign positions: left-to-right, root at left
+      const PAD = { t: 28, b: 18, l: 24, r: 16 };
+      const uW = VW - PAD.l - PAD.r;
+      const uH = VH - PAD.t - PAD.b;
+      const xStep = maxDep > 0 ? uW / maxDep : uW;
+
+      const pos = {};
+      for (let lv = 0; lv <= maxDep; lv++) {
+        const here = byDep[lv] || [];
+        here.forEach((nid, i) => {
+          pos[nid] = {
+            x: PAD.l + lv * xStep,
+            y: PAD.t + (here.length <= 1 ? uH / 2 : i * uH / (here.length - 1))
+          };
+        });
+      }
+
+      // Draw edges
+      for (const [s, d] of edges) {
+        if (!pos[s] || !pos[d]) continue;
+        const onPath = pathSet.has(s) && pathSet.has(d);
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', pos[s].x); line.setAttribute('y1', pos[s].y);
+        line.setAttribute('x2', pos[d].x); line.setAttribute('y2', pos[d].y);
+        line.setAttribute('stroke',       onPath ? '#e05535' : '#2a3d55');
+        line.setAttribute('stroke-width', onPath ? 2.5 : 1.2);
+        line.setAttribute('stroke-linecap', 'round');
+        svgEl.appendChild(line);
+      }
+
+      // Draw nodes + labels
+      const R = Math.min(7, Math.max(3, Math.floor(uH / (nd * 2.5))));
+      const lblSize = Math.max(7, Math.min(9, Math.floor(uH / nd * 0.65)));
+
+      for (const node of nodes) {
+        const p = pos[node.id];
+        if (!p) continue;
+        const onPath = node.isPath;
+
+        const circ = document.createElementNS(ns, 'circle');
+        circ.setAttribute('cx', p.x); circ.setAttribute('cy', p.y);
+        circ.setAttribute('r',  R);
+        circ.setAttribute('fill',         onPath ? '#c03820' : '#1e4a88');
+        circ.setAttribute('stroke',       onPath ? '#ff6a45' : '#4488cc');
+        circ.setAttribute('stroke-width', 1.5);
+        svgEl.appendChild(circ);
+
+        const lbl = `${node.orig}: tw=${node.tw.toFixed(1)} f=${node.f.toFixed(2)}`;
+        svgEl.appendChild(mkText(p.x, p.y - R - 2, lbl,
+          { size: lblSize, fill: onPath ? '#ff9a80' : '#4e7a9a', mono: true }));
+      }
+
+      // Legend
+      const ly = VH - 6;
+      const legLine = document.createElementNS(ns, 'line');
+      legLine.setAttribute('x1', 8); legLine.setAttribute('y1', ly - 4);
+      legLine.setAttribute('x2', 24); legLine.setAttribute('y2', ly - 4);
+      legLine.setAttribute('stroke', '#e05535'); legLine.setAttribute('stroke-width', 2.5);
+      svgEl.appendChild(legLine);
+      svgEl.appendChild(mkText(28, ly, 'optimal path', { anchor: 'start', size: 8, fill: '#886' }));
+    }
+
+    function schedGoTo(idx) {
+      schedSlideIdx = ((idx % SCHED_SLIDES) + SCHED_SLIDES) % SCHED_SLIDES;
+      // slides: toggle active by data-slide attribute so hidden tabs don't shift index
+      document.querySelectorAll('.sched-slide').forEach(el =>
+        el.classList.toggle('active', +el.id.replace('schedSlide','') === schedSlideIdx));
+      document.querySelectorAll('.sched-tab').forEach(el =>
+        el.classList.toggle('active', +el.dataset.slide === schedSlideIdx));
+      document.querySelectorAll('.sched-dot').forEach(el =>
+        el.classList.toggle('active', +el.dataset.slide === schedSlideIdx));
+
+      if (schedSlideIdx === 2) {
+        // tree slide — render SVG
+        requestAnimationFrame(drawTreePanel);
+      } else {
+        // image slides
+        const imgId  = schedSlideIdx === 0 ? 'schedImgMacro' : 'schedImgLocal';
+        const hintId = schedSlideIdx === 0 ? 'schedHintMacro' : 'schedHintLocal';
+        const imgEl  = document.getElementById(imgId);
+        const hint   = document.getElementById(hintId);
+        const newPath = schedImgPath(schedSlideIdx) + CB;  // CB fixed at page load — no per-click refetch
+        if (imgEl.dataset.loadedSrc === newPath) {
+          // already cached — show instantly, no flicker
+          imgEl.style.display = '';
+          hint.style.display  = 'none';
+        } else {
+          imgEl.style.display = 'none';
+          hint.style.display  = 'none';
+          imgEl.onload  = () => { imgEl.style.display = ''; hint.style.display = 'none'; imgEl.dataset.loadedSrc = newPath; };
+          imgEl.onerror = () => { imgEl.style.display = 'none'; hint.style.display = 'block'; };
+          imgEl.src = newPath;
+        }
+      }
+    }
+
+    // ── Parameters popup ────────────────────────────────────────────────────
+    let paramsOpen = false;
+    function openParams() {
+      paramsOpen = true;
+      document.getElementById('paramsOverlay').style.display = 'flex';
+    }
+    function closeParams() {
+      paramsOpen = false;
+      document.getElementById('paramsOverlay').style.display = 'none';
+    }
+    document.getElementById('paramsBtn').addEventListener('click', openParams);
+    document.getElementById('paramsClose').addEventListener('click', closeParams);
+    document.getElementById('paramsBackdrop').addEventListener('click', closeParams);
+    // Capture phase: fires before any element handler, regardless of focus
+    document.addEventListener('keydown', e => {
+      if (!paramsOpen) return;
+      if (e.key === 'Escape' || e.key === 'p' || e.key === 'P' || e.key === 'b' || e.key === 'B') {
+        e.stopPropagation();
+        closeParams();
+      }
+    }, true);
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Button
     document.getElementById('viewSchedBtn').addEventListener('click', openSchedViewer);
@@ -2116,6 +2635,8 @@
       if (e.key === 'ArrowLeft')  schedGoTo(schedSlideIdx - 1);
       if (e.key === 'ArrowRight') schedGoTo(schedSlideIdx + 1);
     });
+    // Initialise tree-tab visibility on page load
+    updateSchedSlides();
     // ─────────────────────────────────────────────────────────────────────────
 
     function updateSetupCard() {
@@ -2127,6 +2648,8 @@
       document.getElementById('setupPolicy').textContent   = policyStr;
       document.getElementById('setupPlayback').textContent =
         (playbackDir === 'forward' ? 'Forward' : 'Backward') + ' · ' + playbackSpeed + '×';
+      const dur = scheduleData ? (scheduleData.t_final - scheduleData.t_cut) : null;
+      document.getElementById('setupDuration').textContent = dur ? dur.toFixed(1) + ' s' : '— s';
       document.getElementById('scenarioLabel').textContent = robotGroup + ' · ' + sceneName;
       document.getElementById('policyBtnLabel').textContent =
         currentPolicy === 'optimal' ? 'Optimal' :
@@ -2195,6 +2718,7 @@
       s.onerror = () => console.warn('Failed to load:', s.src);
       document.head.appendChild(s);
       updateSetupCard();
+      updateSchedSlides();
     }
 
     function loop(ts) {
@@ -2408,6 +2932,7 @@
         document.getElementById('dirBwd').click();
       }
       if (e.key === 'Escape') closeAllDrops();
+      if ((e.key === 'b' || e.key === 'B') && paramsOpen) closeParams();
     });
 
     // Bust cache for all static warehouse decoration images
@@ -2663,7 +3188,7 @@
     const GM = (() => {
       // Xbox button indices (standard mapping)
       const B = { A:0, B:1, X:2, Y:3, LB:4, RB:5,
-                  SEL:8, START:9,
+                  SEL:8, START:9, L3:10, R3:11,
                   DU:12, DD:13, DL:14, DR:15 };
 
       let gpIdx         = null;
@@ -2718,10 +3243,8 @@
 
       function handleBack() {
         const kept = FM.back();
-        // If we returned all the way to bar, close dropdowns
         if (!kept || FM.mode() === 'bar') {
           closeAllDrops();
-          // Collapse priority sub if open
           const sub  = document.getElementById('prioritySub');
           const chev = document.getElementById('priorityChevron');
           if (sub?.classList.contains('open')) {
@@ -2742,25 +3265,37 @@
         const aH   = InputRepeat.axis(ax0);
         const aV   = InputRepeat.axis(ax1);
 
-        const dL = pressed(g, B.DL) || aH < 0;
-        const dR = pressed(g, B.DR) || aH > 0;
-        const dU = pressed(g, B.DU) || aV < 0;
-        const dD = pressed(g, B.DD) || aV > 0;
+        // D-pad only (not left stick) — controls FM bar/dropdown navigation
+        const dpL = pressed(g, B.DL);
+        const dpR = pressed(g, B.DR);
+        const dpU = pressed(g, B.DU);
+        const dpD = pressed(g, B.DD);
 
-        const m = FM.mode();
+        // Left stick — used for scrolling scrollable content
+        const stickU = aV < 0;
+        const stickD = aV > 0;
+        const stickL = aH < 0;
+        const stickR = aH > 0;
 
-        InputRepeat.check('L', dL, now, () => {
-          if (m === 'bar') FM.barLeft();
-          else FM.dropLeft();
-        });
-        InputRepeat.check('R', dR, now, () => {
-          if (m === 'bar') FM.barRight();
-          else FM.dropRight();
-        });
-        InputRepeat.check('U', dU, now, () => FM.up());
-        InputRepeat.check('D', dD, now, () => FM.down());
+        // For schedule viewer slide nav: D-pad or stick both OK
+        const dL = dpL || stickL;
+        const dR = dpR || stickR;
 
         // Edge-triggered buttons
+        // Params overlay intercepts all input when open
+        if (paramsOpen) {
+          if (edge(g, B.B) || edge(g, B.START)) closeParams();
+          // Left stick + D-pad both scroll the params body
+          const pBody = document.getElementById('paramsBody');
+          if (pBody) {
+            if (stickU || dpU) pBody.scrollTop -= 40;
+            if (stickD || dpD) pBody.scrollTop += 40;
+          }
+          g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
+          prevRStickZone = null;
+          return;
+        }
+
         // Schedule viewer intercepts input when open
         if (schedViewerOpen) {
           if (edge(g, B.B))                      closeSchedViewer();
@@ -2771,15 +3306,26 @@
           return;
         }
 
-        if (edge(g, B.SEL)) {
-          schedViewerOpen ? closeSchedViewer() : openSchedViewer();
-        }
+        // D-pad → FM bar / dropdown navigation (metal panel control)
+        const m = FM.mode();
+        InputRepeat.check('L', dpL, now, () => {
+          if (m === 'bar') FM.barLeft(); else FM.dropLeft();
+        });
+        InputRepeat.check('R', dpR, now, () => {
+          if (m === 'bar') FM.barRight(); else FM.dropRight();
+        });
+        InputRepeat.check('U', dpU, now, () => FM.up());
+        InputRepeat.check('D', dpD, now, () => FM.down());
+
+        if (edge(g, B.SEL))   { schedViewerOpen ? closeSchedViewer() : openSchedViewer(); }
+        if (edge(g, B.START)) { paramsOpen       ? closeParams()      : openParams(); }
         if (edge(g, B.A))  handleA();
         if (edge(g, B.B))  handleBack();
         if (edge(g, B.X))  Actions.togglePlay();
         if (edge(g, B.Y))  Actions.replay();
         if (edge(g, B.LB)) Actions.speedDown();
         if (edge(g, B.RB)) Actions.speedUp();
+        if (edge(g, B.L3)) location.reload();
 
         // Right joystick → local zoom (P1-P4), spatial mapping matches map layout:
         //   P4(↖)  P3(↗)
@@ -2806,7 +3352,7 @@
         prevBtns = {};
         gpActive = true;
         FM.init();
-        console.log(`[Gamepad] Connected: index ${idx} — A=confirm B=back X=play Y=replay LB/RB=speed Select=schedule-view`);
+        console.log(`[Gamepad] Connected: index ${idx} — A=confirm B=back X=play Y=replay LB/RB=speed Select=schedule-view Start=params L3=reload`);
       }
       function disconnect(idx) {
         if (gpIdx !== idx) return;

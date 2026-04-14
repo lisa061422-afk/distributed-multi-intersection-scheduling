@@ -24,9 +24,10 @@ function U_valid = traverse_columns(U_c, priority_n)
         elseif numel(rows) == 1
             U_base(rows, m) = U_c(rows, m);
         else
-            % Priority override: if the priority robot contends this column,
-            % force it to win — skip enumeration for this column.
             if priority_n > 0 && U_c(priority_n, m) > 0
+                % Priority robot n1 wins this space — no branch created.
+                % Others get V_temp=0, so resetting_rule detects them as
+                % interrupted and computes their earliest restart time.
                 U_base(priority_n, m) = U_c(priority_n, m);
             else
                 contended_cols(end+1) = m; %#ok<AGROW>
@@ -53,13 +54,12 @@ function U_list = recurse_contended(U_c, U_temp, contended_cols, k, U_list)
     m = contended_cols(k);
     rows = find(U_c(:,m) > 0);
 
+    % Non-priority contended column: enumerate all orderings (one winner per branch).
     for ii = 1:numel(rows)
         n = rows(ii);
-
         U_next = U_temp;
-        U_next(:,m) = 0;
-        U_next(n,m) = U_c(n,m);
-
+        U_next(:, m) = 0;
+        U_next(n, m) = U_c(n, m);
         U_list = recurse_contended(U_c, U_next, contended_cols, k+1, U_list);
     end
 end

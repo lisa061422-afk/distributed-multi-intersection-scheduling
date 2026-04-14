@@ -69,6 +69,7 @@ localBase = fullfile(CASE_DIR, sprintf('local_%s', caseName));
 savefig(fig_local, [localBase '.fig']);
 print(fig_local, [localBase '.png'], '-dpng', '-r200');
 copyfile([localBase '.png'], fullfile(IMG_DIR, sprintf('%s_optimal_local.png', pfx)));
+close(fig_local);
 fprintf('  -> local done\n');
 
 %% ── Decision tree JSON ───────────────────────────────────────────────────
@@ -104,6 +105,7 @@ if priority_n == 0 && exist(FCFS_MAT, 'file')
     savefig(fig_fcfs, [fcfsBase '.fig']);
     print(fig_fcfs, [fcfsBase '.png'], '-dpng', '-r200');
     copyfile([fcfsBase '.png'], fullfile(IMG_DIR, sprintf('%s_fcfs_local.png', pfx)));
+    close(fig_fcfs);
     export_demo_json_fcfs(const_fcfs, DATA_fcfs, ...
         sprintf('%s · %s · FCFS', group, scene), ...
         fullfile(DEMO_DIR, sprintf('%s_fcfs.js', pfx)), 'fcfs');

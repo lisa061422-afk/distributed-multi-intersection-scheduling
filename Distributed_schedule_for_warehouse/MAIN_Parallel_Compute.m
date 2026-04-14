@@ -5,9 +5,10 @@ addpath('C:\Users\robin\OneDrive\桌面\RES_Spring2026\CODE\Traffic_Centralized\
 % ===================== Mode switch =====================
 % 'manual' : fixed 10-robot config (warehouse demo special case)
 % 'random' : generateBalancedTrafficConfig batch runs
-configMode = 'random'; %
+configMode = 'manual'; 
 % ===================== Physical parameters =====================
-T_val        = 2.0;    % minimum headway between two cars at same entrance (s)
+T_val        = 2.0;    % headway between vehicles at the SAME entrance (s)
+T_ent        = 0.0;    % stagger between first vehicles at DIFFERENT entrances (s)
 Dt           = 2.0;    % road travel time between consecutive intersections (s)
 v_max_phys   = 1.5;    % AMR speed on road (m/s)
 W            = 1.6;    % merging zone width (m)  — scale 1:12.5 from traffic W=20m
@@ -22,32 +23,37 @@ if strcmp(configMode, 'manual')
     numVehiclesList = [10];
     seedList        = [0];   % seed unused in manual mode
 else
-    numVehiclesList = [10];
-    seedList        = [41206];
+    numVehiclesList = [20];
+    seedList        = [41221]; 
 end
 
 % ===================== Demo export settings (random mode only) =====================
 % demoScene: HTML scene label for this run — change each time you run a new seed
 % demoGroup is auto-derived from Nveh (e.g. 10 robots → '10r')
-demoScene = 'S3';   % <-- change to 'S2', 'S3', etc. for each new seed
+demoScene = 'S1';   % <-- change to 'S2', 'S3', etc. for each new seed
 rootSaveDir = 'BatchRuns';
 
-% ===================== Priority Override =====================
-% After the normal ADMM run, re-run for each robot listed in priority_robots
-% with that robot forced to highest priority at every contended resource.
-% Typical use: look at the normal result, pick robots that got delayed,
-% list them here, then re-run.
-% Scene keys will be e.g. 'S1_p3', 'S1_p7'
-% Set enable_priority_sweep = false to skip entirely.
-enable_priority_sweep = true;    % ← toggle here
-priority_robots       = [2];  % R2 and R9 delayed in S3 10r normal result
+% ===================== Run Mode =====================
+% 'normal'   : full ADMM + FCFS + export (no priority)
+% 'priority' : skip normal run, load existing result, run priority sweep only
+runMode         = 'normal';   % ← 改这一个
+priority_robots = [9];        % priority 模式下给哪些 robot 最高优先级
+
+% ===================== Parallel switch =====================
+% true  : use parfeval (fast, multi-worker)
+% false : sequential direct calls (easy to set breakpoints and inspect variables)
+useParallel = true;
+
+% (derived — do not edit)
+skip_normal_run       = strcmp(runMode, 'priority');
+enable_priority_sweep = strcmp(runMode, 'priority');
 
 if ~exist(rootSaveDir, 'dir')
     mkdir(rootSaveDir);
 end
 
 % ===================== Parallel pool (10 workers) =====================
-if license('test','Distrib_Computing_Toolbox')
+if useParallel && license('test','Distrib_Computing_Toolbox')
     p = gcp('nocreate');
     if isempty(p) || p.NumWorkers ~= 10
         if ~isempty(p)
@@ -83,8 +89,17 @@ for iN = 1:numel(numVehiclesList)
         fprintf('====================================================\n');
 
 %% -----------------------ADMM penalty parameters-------------------------
-rho1 = 1; rho2 = 1; weight = 1.5; max_iter = 300;
+rho1 = 1; rho2 = 1; weight = 1.5; max_iter = 200;
+%tol_r = 0.1; tol_s = 0.1;
 tol_r = 5e-3; tol_s = 5e-3;
+
+% ── Random initialisation switch ──────────────────────────────────────
+% 0   : deterministic earliest-time init (original)
+% >0  : each vehicle gets a uniform random delay in [0, randInitScale] seconds
+%       added to its entire chain — any positive value is valid, e.g.:
+%         0.5  — small nudge, stays close to earliest-time solution
+%         2.0  — up to one road-segment worth of spread
+randInitScale = 0;
 
 %% Local Intersection Information
 IntSpaceDB = makeIntSpaceDB();
@@ -108,7 +123,9 @@ else
     % ── Random balanced config ─────────────────────────────────────────
     [config_raw, vehicleList, stats] = generateBalancedTrafficConfig(Nveh, ...
         'Seed', seed, ...
-        'MaxPerEntrance', 3, ...
+        'MaxPerEntrance',    ceil(Nveh/4), ...
+        'MaxPerIntersection', ceil(Nveh * 1.5 / 4) + 2, ...
+        'MaxPerStage',       ceil(Nveh / 4) + 1, ...
         'EntrancePenalty', 0.4);
     configFile = fullfile(caseDir, sprintf('config_seed%d_N%d.m', seed, Nveh));
     printTrafficConfig(config_raw, configFile);
@@ -198,10 +215,23 @@ alpha_tilde      = cell(N,1);
 %     detect_range(5) = detect_range_val - 2 * 0.3 * v_max(5);
 % end
 
+% Assign each unique entrance a rank (order of first appearance) so that
+% the first vehicle at each entrance is staggered by headway seconds.
+% This reduces simultaneous conflicts across entrances and speeds up convergence.
+all_entrances = cellfun(@(c) c.entrance, config);
+unique_ents   = unique(all_entrances, 'stable');   % order of first appearance
+ent_rank      = zeros(1, max(unique_ents));
+for ei = 1:numel(unique_ents)
+    ent_rank(unique_ents(ei)) = ei - 1;   % 0-indexed rank
+end
+
 for n = 1:N
     alpha_tilde{n} = zeros(1,1);
     base = (detect_range(n)/2 - W/2) / v_max(n) + d1(n);
-    alpha_tilde{n}(1) = base + (config{n}.entryIndex - 1) * headway;
+    % within-entrance stagger + across-entrance stagger
+    alpha_tilde{n}(1) = base ...
+        + ent_rank(config{n}.entrance) * T_ent ...     % across-entrance stagger
+        + (config{n}.entryIndex - 1)   * headway;      % within-entrance headway
 
     t_arr = alpha_tilde{n}(1);
     init_p_vehi_1(n)    = -(detect_range(n)/2 - W/2 + t_arr * v_max(n));
@@ -241,33 +271,51 @@ const.pathInfo_agent_chain = pathInfo_agent_chain;
 const.pathInfo_c   = pathInfo_c;
 const.agent_participation = agent_participation;
 const.IntSpaceDB   = IntSpaceDB;
+const.randInitScale = randInitScale;
+const.useParallel   = useParallel;
+
+%% Demo export group label (needed in both branches below)
+demoGroup = sprintf('%dr', Nveh);   % e.g. 10 → '10r'
 
 %% ADMM run — normal (priority_n = 0, set above)
-fprintf('--- ADMM normal run (priority_n = 0) ---\n');
-[x_prev, y_prev, LocalTreeCache, residual_r, residual_s, delay_costs, k, T_ADMM_TOTAL] = ...
-    run_admm_core(const, agent_participation);
-fprintf('ADMM elapsed %.3f mins\n', T_ADMM_TOTAL);
-
-caseConfigFile = fullfile(caseDir, 'case_config.mat');
-save(caseConfigFile, ...
-    'config', 'seed', 'Nveh', 'T_val', ...
-    'detect_range', 'v_max', ...
-    'alpha_tilde', 'initial_position', ...
-    'pathInfo', 'pathInfo_agent_chain', 'pathInfo_c');
-
 matFile = fullfile(caseDir, sprintf('FourIntersection_ADMM_%s.mat', caseName));
-x_hist  = {};   % x history not tracked in run_admm_core (diagnostic only)
-max_iter = const.max_iter;
-save(matFile, ...
-    'config', 'vehicleList', 'stats', ...
-    'const', ...
-    'residual_r', 'residual_s', ...
-    'x_hist', ...
-    'x_prev', 'y_prev', ...
-    'max_iter', 'k', 'delay_costs', 'LocalTreeCache', ...
-    'T_ADMM_TOTAL', 'seed', 'Nveh');
 
-load(matFile);
+if skip_normal_run
+    %% ── Skip normal ADMM: load existing result ───────────────────────────
+    fprintf('--- skip_normal_run=true: loading existing matFile ---\n');
+    if ~exist(matFile, 'file')
+        error(['skip_normal_run=true but matFile not found:\n  %s\n' ...
+               'Run with skip_normal_run=false first to generate it.'], matFile);
+    end
+    load(matFile, 'x_prev', 'y_prev', 'LocalTreeCache', ...
+                  'residual_r', 'residual_s', 'delay_costs', 'k');
+    fprintf('Loaded: %s\n', matFile);
+else
+    %% ── Full normal ADMM + FCFS + export ─────────────────────────────────
+    fprintf('--- ADMM normal run (priority_n = 0) ---\n');
+    [x_prev, y_prev, LocalTreeCache, residual_r, residual_s, delay_costs, k, T_ADMM_TOTAL] = ...
+        run_admm_core(const, agent_participation);
+    fprintf('ADMM elapsed %.3f mins\n', T_ADMM_TOTAL);
+
+    caseConfigFile = fullfile(caseDir, 'case_config.mat');
+    save(caseConfigFile, ...
+        'config', 'seed', 'Nveh', 'T_val', ...
+        'detect_range', 'v_max', ...
+        'alpha_tilde', 'initial_position', ...
+        'pathInfo', 'pathInfo_agent_chain', 'pathInfo_c');
+
+    x_hist  = {};
+    max_iter = const.max_iter;
+    save(matFile, ...
+        'config', 'vehicleList', 'stats', ...
+        'const', ...
+        'residual_r', 'residual_s', ...
+        'x_hist', ...
+        'x_prev', 'y_prev', ...
+        'max_iter', 'k', 'delay_costs', 'LocalTreeCache', ...
+        'T_ADMM_TOTAL', 'seed', 'Nveh');
+
+    load(matFile);
 
 %% Plots – distributed schedule
 figs_before = findall(0, 'Type', 'figure');
@@ -280,7 +328,7 @@ new_figs = setdiff(figs_after, figs_before);
 new_figs = new_figs(ord);
 fig_macro = new_figs(min(3, end));   % Figure 3 = intersection schedule
 
-macroBase    = fullfile(caseDir, sprintf('macro_schedule_%s', caseName));
+macroBase    = fullfile(caseDir, sprintf('macro_%s', caseName));
 macroFigFile = [macroBase '.png'];
 savefig(fig_macro, [macroBase '.fig']);
 print(fig_macro, macroFigFile, '-dpng', '-r300');
@@ -307,7 +355,7 @@ for agent_i = 1:4
         'marg_w', 0.12, 'marg_h', 0.08, 'title_pad', 0.06);
 end
 drawnow; pause(0.3);
-localBase    = fullfile(caseDir, sprintf('local_schedules_%s', caseName));
+localBase    = fullfile(caseDir, sprintf('local_%s', caseName));
 localPngFile = [localBase '.png'];
 savefig(fig, [localBase '.fig']);
 print(fig, localPngFile, '-dpng', '-r200');
@@ -418,15 +466,16 @@ for agent_i = 1:4
         'marg_w', 0.12, 'marg_h', 0.08, 'title_pad', 0.06);
 end
 drawnow; pause(0.3);
-fcfsBase    = fullfile(caseDir, sprintf('fcfs_schedule_%s', caseName));
-fcfsPngFile = [fcfsBase '.png'];
-savefig(fig_fcfs, [fcfsBase '.fig']);
-print(fig_fcfs, fcfsPngFile, '-dpng', '-r200');
+    fcfsBase    = fullfile(caseDir, sprintf('fcfs_%s', caseName));
+    fcfsPngFile = [fcfsBase '.png'];
+    savefig(fig_fcfs, [fcfsBase '.fig']);
+    print(fig_fcfs, fcfsPngFile, '-dpng', '-r200');
 
-%% ── Auto-export to HTML demo (manual + random) ──────────────────────────
-demoGroup = sprintf('%dr', Nveh);   % e.g. 10 → '10r'
-fprintf('\nAuto-exporting to demo: group=%s  scene=%s\n', demoGroup, demoScene);
-export_scenario_to_demo(caseName, demoGroup, demoScene);
+    %% ── Auto-export to HTML demo ─────────────────────────────────────────
+    fprintf('\nAuto-exporting to demo: group=%s  scene=%s\n', demoGroup, demoScene);
+    export_scenario_to_demo(caseName, demoGroup, demoScene);
+
+end  % if ~skip_normal_run
 
 %% ── Priority Override ────────────────────────────────────────────────────
 if enable_priority_sweep && ~isempty(priority_robots)
@@ -544,7 +593,7 @@ pathInfo_c           = const.pathInfo_c;
 % ── Initialisation ──────────────────────────────────────────────────────
 LocalTreeCache = cell(9,1);
 [x_prev, y_prev, x_prev_bar, y_prev_bar] = ...
-    initEarliestXYPrev_fromChain(alpha_tilde, pathInfo_agent_chain, pathInfo_c, Dt, N);
+    initEarliestXYPrev_fromChain(alpha_tilde, pathInfo_agent_chain, pathInfo_c, Dt, N, const.randInitScale);
 
 a_x = cell(1,9); a_y = cell(1,9);
 a_x_new = cell(1,9); a_y_new = cell(1,9);
@@ -619,49 +668,80 @@ for k = 1 : max_iter
         end
     end
 
-    %% Step 2: parallel local updates
-    f = parallel.FevalFuture.empty(0,9);
-    for agent_i = 1:9
-        if agent_i >= 1 && agent_i <= 4
-            entries       = agent_participation{agent_i};
-            valid_systems = find(~cellfun(@isempty, entries))';
-            if isempty(valid_systems)
-                f(agent_i) = parfeval(@agent_update_intersection_stub_single, 1, agent_i);
-            else
-                f(agent_i) = parfeval(@agent_update_intersection_single, 1, ...
-                    const, agent_i, entries, valid_systems, ...
-                    x_prev, y_prev, ...
-                    x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
-                    a_x_new{agent_i}, a_y_new{agent_i}, ...
-                    LocalTreeCache{agent_i}, k);
-            end
-        elseif agent_i >= 5 && agent_i <= 8
-            entries       = agent_participation{agent_i};
-            valid_systems = find(~cellfun(@isempty, entries))';
-            if isempty(valid_systems)
-                f(agent_i) = parfeval(@agent_update_road_stub_single, 1, agent_i);
-            else
-                f(agent_i) = parfeval(@agent_update_road_single, 1, ...
-                    const, agent_i, entries, valid_systems, ...
-                    x_prev{agent_i}, y_prev{agent_i}, ...
-                    x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
-                    a_x_new{agent_i}, a_y_new{agent_i});
-            end
-        else
-            f(agent_i) = parfeval(@agent_update_terminal_single, 1, ...
-                const, x_prev{9}, x_prev_bar{9}, a_x_new{9});
-        end
-    end
-
+    %% Step 2: local updates (parallel or sequential)
     meta = cell(1,9);
-    for ii = 1:9
-        try
-            [completedIdx, S_res] = fetchNext(f);
-            meta{completedIdx} = S_res;
-        catch ME
-            fprintf(2, '\n[Iter %d] fetchNext error:\n%s\n', k, ...
-                getReport(ME,'extended','hyperlinks','off'));
-            rethrow(ME);
+    if const.useParallel
+        f = parallel.FevalFuture.empty(0,9);
+        for agent_i = 1:9
+            if agent_i >= 1 && agent_i <= 4
+                entries       = agent_participation{agent_i};
+                valid_systems = find(~cellfun(@isempty, entries))';
+                if isempty(valid_systems)
+                    f(agent_i) = parfeval(@agent_update_intersection_stub_single, 1, agent_i);
+                else
+                    f(agent_i) = parfeval(@agent_update_intersection_single, 1, ...
+                        const, agent_i, entries, valid_systems, ...
+                        x_prev, y_prev, ...
+                        x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
+                        a_x_new{agent_i}, a_y_new{agent_i}, ...
+                        LocalTreeCache{agent_i}, k);
+                end
+            elseif agent_i >= 5 && agent_i <= 8
+                entries       = agent_participation{agent_i};
+                valid_systems = find(~cellfun(@isempty, entries))';
+                if isempty(valid_systems)
+                    f(agent_i) = parfeval(@agent_update_road_stub_single, 1, agent_i);
+                else
+                    f(agent_i) = parfeval(@agent_update_road_single, 1, ...
+                        const, agent_i, entries, valid_systems, ...
+                        x_prev{agent_i}, y_prev{agent_i}, ...
+                        x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
+                        a_x_new{agent_i}, a_y_new{agent_i});
+                end
+            else
+                f(agent_i) = parfeval(@agent_update_terminal_single, 1, ...
+                    const, x_prev{9}, x_prev_bar{9}, a_x_new{9});
+            end
+        end
+        for ii = 1:9
+            try
+                [completedIdx, S_res] = fetchNext(f);
+                meta{completedIdx} = S_res;
+            catch ME
+                fprintf(2, '\n[Iter %d] fetchNext error:\n%s\n', k, ...
+                    getReport(ME,'extended','hyperlinks','off'));
+                rethrow(ME);
+            end
+        end
+    else
+        % Sequential — no parfeval, easy to debug with breakpoints
+        for agent_i = 1:9
+            if agent_i >= 1 && agent_i <= 4
+                entries       = agent_participation{agent_i};
+                valid_systems = find(~cellfun(@isempty, entries))';
+                if isempty(valid_systems)
+                    meta{agent_i} = agent_update_intersection_stub_single(agent_i);
+                else
+                    meta{agent_i} = agent_update_intersection_single(const, agent_i, entries, valid_systems, ...
+                        x_prev, y_prev, ...
+                        x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
+                        a_x_new{agent_i}, a_y_new{agent_i}, ...
+                        LocalTreeCache{agent_i}, k);
+                end
+            elseif agent_i >= 5 && agent_i <= 8
+                entries       = agent_participation{agent_i};
+                valid_systems = find(~cellfun(@isempty, entries))';
+                if isempty(valid_systems)
+                    meta{agent_i} = agent_update_road_stub_single(agent_i);
+                else
+                    meta{agent_i} = agent_update_road_single(const, agent_i, entries, valid_systems, ...
+                        x_prev{agent_i}, y_prev{agent_i}, ...
+                        x_prev_bar{agent_i}, y_prev_bar{agent_i}, ...
+                        a_x_new{agent_i}, a_y_new{agent_i});
+                end
+            else
+                meta{agent_i} = agent_update_terminal_single(const, x_prev{9}, x_prev_bar{9}, a_x_new{9});
+            end
         end
     end
 
@@ -717,6 +797,13 @@ for k = 1 : max_iter
     residual_r(k) = r;
     residual_s(k) = s;
     a_x = a_x_new; a_y = a_y_new;
+
+    % ── checkpoint: save after every iteration so Ctrl+C is recoverable ──
+    if mod(k, 10) == 0
+        save('admm_checkpoint.mat', ...
+            'x_prev', 'y_prev', 'LocalTreeCache', ...
+            'residual_r', 'residual_s', 'delay_costs', 'k');
+    end
 
     if r < tol_r && s < tol_s
         fprintf('Converged at iteration %d\n', k);

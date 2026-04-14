@@ -70,6 +70,9 @@ function [NODES,OPEN,LEAF] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
        OPEN = [OPEN, NODES_new{1}]; %add the new produced node to OPEN set 
        NODES = [NODES; {NODES_new}]; 
     elseif any(ra(:, valid_systems) > 1e-5, 'all') % have tasks to execute
+    % suppress floating-point noise before building U_c
+    da = round(da, 6);
+    ra = round(ra, 6);
     % only traverse systems that still have unfinished subtasks
     active_systems = valid_systems( any(ra(:, valid_systems) > 1e-5, 1) );
 

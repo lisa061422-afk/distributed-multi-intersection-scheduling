@@ -111,7 +111,6 @@ ctx.MapMat = MapMat;
 ctx.ddl = ddl;
 ctx.arrival_ref = arrival_ref;
 %% ---------------解包----------------
-agent_i      = ctx.agent_i; 
 M = ctx.M;
 NI_agent = ctx.NI_agent;
 entries = ctx.entries;

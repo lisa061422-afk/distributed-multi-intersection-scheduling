@@ -35,8 +35,19 @@ diagnostics = optimize(Constraints, Objective, options);
 
 % 若求解成功，则返回最优值；否则 fallback 为上次值
 if diagnostics.problem ~= 0
-    warning(['YALMIP: updateRoadAgent infeasible for agent ', num2str(agent_i)]);
-    x9_new = x9_prev;
+    warning('YALMIP: updateAgent9 infeasible (terminal agent).');
+    % Always return a numeric N×1 vector, never the raw cell (which would
+    % cause MATLAB struct() to expand into a struct array in the caller).
+    x9_fb = NaN(N, 1);
+    for nf_ = 1:N
+        if iscell(x9_prev) && numel(x9_prev) >= nf_
+            v_ = x9_prev{nf_};
+            if isnumeric(v_) && ~isempty(v_), x9_fb(nf_) = v_(1); end
+        elseif isnumeric(x9_prev) && numel(x9_prev) >= nf_
+            x9_fb(nf_) = x9_prev(nf_);
+        end
+    end
+    x9_new = x9_fb;
     delay_cost = NaN;  % fallback
 else
     x9_new = value(x9);

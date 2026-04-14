@@ -750,7 +750,7 @@
       right: 526px;   /* just left of local-panel (16 + 490 + 20) */
       width: 250px;
       padding: 13px 16px;
-      z-index: 25;
+      z-index: 40;
     }
     .setup-title {
       font-size: 10px; font-weight: 800;
@@ -982,6 +982,46 @@
     .sched-dot.active { background: var(--accent); }
     .sched-footer-hint { text-align: center; font-size: 11px; color: var(--muted); padding-bottom: 10px; }
 
+    /* ── Traffic map mode ─────────────────────────────────────────────────── */
+    #warehouseLayer { transition: opacity 0.35s; }
+    #trafficLayer   { display: none; }
+
+    .scene.traffic-mode {
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.04) 0%, transparent 40%),
+        linear-gradient(160deg, #1e2228 0%, #191d22 50%, #141720 100%);
+    }
+    .scene.traffic-mode::before { background: none; }
+    .scene.traffic-mode::after  { background: none; }
+    .scene.traffic-mode #warehouseLayer { display: none; }
+    .scene.traffic-mode #trafficLayer   { display: block; }
+    .scene.traffic-mode .robot-wrap     { display: none; }
+    /* ── Panel repositioning in traffic mode ─────────────────────────────── */
+    .scene.traffic-mode .local-panel    { display: none; }
+    .scene.traffic-mode .setup-card     { top: auto; right: 344px; bottom: 94px; z-index: 40; }
+    .scene.traffic-mode .cost-panel     { right: 16px; bottom: 94px; width: 316px; z-index: 40; }
+
+    /* Map toggle button */
+    .map-toggle-btn {
+      background: rgba(121,202,255,0.08);
+      border: 1px solid rgba(121,202,255,0.22);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .map-toggle-btn:hover { background: rgba(121,202,255,0.18); transform: translateY(-1px); }
+    .map-toggle-btn.traffic-active {
+      background: rgba(139,227,159,0.14);
+      border-color: rgba(139,227,159,0.38);
+      color: var(--good);
+    }
+    .map-toggle-btn.traffic-active:hover { background: rgba(139,227,159,0.22); }
+
   </style>
 </head>
 <body>
@@ -992,6 +1032,9 @@
           <div class="title">Warehouse AMR Merging Zone Demo</div>
           <div class="subtitle">Fullscreen demo mode.</div>
         </div>
+
+        <!-- ══ Warehouse layer (hidden in traffic-mode) ══════════════════════ -->
+        <div id="warehouseLayer">
 
         <!-- Aisle corridors -->
         <div class="road-h h1"></div>
@@ -1182,6 +1225,280 @@
         <div class="io-arrow io-ext a-right" style="left:820px;top:330px;"><div class="arr-shape"></div><span class="arr-num">4</span></div>
         <div class="io-arrow io-ent a-left"  style="left:820px;top:570px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
         <div class="io-arrow io-ext a-right" style="left:820px;top:660px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
+
+        </div><!-- #warehouseLayer -->
+
+        <!-- ══ Traffic map layer (shown in traffic-mode) ════════════════════════
+             Topology:  I1(1)—I2(2)—I5(5)
+                          |    |
+                        I3(3)—I4(4)
+             Centers: I1=(300,310) I2=(730,310) I5=(1160,310)
+                      I3=(300,640) I4=(730,640)
+             Zone: 180×180 (half=90).  Road width: 130px (half=65).
+        ════════════════════════════════════════════════════════════════════ -->
+        <div id="trafficLayer">
+          <svg style="position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;"
+               viewBox="0 0 1600 900" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+
+            <!-- 1. Grass-green background -->
+            <rect x="0" y="0" width="1600" height="900" fill="#7ab648"/>
+
+            <!-- 2. City block fills (slightly darker green for building zones) -->
+            <rect x="0"    y="0"   width="190"  height="200" fill="#6aa03a"/>
+            <rect x="410"  y="0"   width="210"  height="200" fill="#6aa03a"/>
+            <rect x="840"  y="0"   width="210"  height="200" fill="#6aa03a"/>
+            <rect x="1270" y="0"   width="330"  height="200" fill="#6aa03a"/>
+            <rect x="0"    y="420" width="190"  height="110" fill="#6aa03a"/>
+            <rect x="410"  y="420" width="210"  height="110" fill="#6aa03a"/>
+            <rect x="840"  y="420" width="760"  height="110" fill="#6aa03a"/>
+            <rect x="0"    y="750" width="190"  height="150" fill="#6aa03a"/>
+            <rect x="410"  y="750" width="210"  height="150" fill="#6aa03a"/>
+            <rect x="840"  y="750" width="220"  height="150" fill="#6aa03a"/>
+            <rect x="1060" y="750" width="540"  height="150" fill="#6aa03a"/>
+            <rect x="1480" y="200" width="120"  height="220" fill="#6aa03a"/>
+
+            <!-- 3. Decorative building / greenery images
+                   Grass: extends to road asphalt edge (curb concrete renders on top, looks natural).
+                   Buildings: bottom stops at y=225 / top starts at y=395 (above/below concrete curb)
+                   so storefronts are never covered by the road surface. -->
+
+            <!-- Top-left block (x=0-190): grass flush to road — bottom at y=245 -->
+            <image href="images_traffic/grass.png"       x="5"    y="0"   width="182" height="245"/>
+            <!-- Top-center-left (x=410-620): bank bottom at y=225 (above curb); grass2 flush to y=245 -->
+            <image href="images_traffic/bank.png"        x="432"  y="62"  width="133" height="163"/>
+            <image href="images_traffic/grass2.png"      x="568"  y="165" width="46"  height="80"/>
+            <!-- Top-center-right (x=840-1050): food bottom at y=225; grass flush to y=245 -->
+            <image href="images_traffic/food.png"        x="858"  y="62"  width="133" height="163"/>
+            <image href="images_traffic/grass.png"       x="995"  y="165" width="46"  height="80"/>
+            <!-- Top-right (x=1270-1600): police bottom at y=225; grass2 flush to y=245 -->
+            <image href="images_traffic/police.png"      x="1278" y="57"  width="140" height="168"/>
+            <image href="images_traffic/grass2.png"      x="1428" y="39"  width="162" height="206"/>
+            <!-- Middle-left (x=0-190): grass2 flush to road bottom — top at y=375 -->
+            <image href="images_traffic/grass2.png"      x="5"    y="375" width="182" height="153"/>
+            <!-- Middle-center-left (x=410-620): pizza top at y=395 (below curb); grass flush y=375 -->
+            <image href="images_traffic/pizza.png"       x="428"  y="395" width="138" height="135"/>
+            <image href="images_traffic/grass.png"       x="569"  y="375" width="46"  height="155"/>
+            <!-- Middle-center-right (x=840-1600): charge top at y=395; grass flush y=375 -->
+            <image href="images_traffic/take_charge.png" x="850"  y="395" width="122" height="135"/>
+            <image href="images_traffic/grass.png"       x="975"  y="375" width="102" height="155"/>
+            <image href="images_traffic/grass2.png"      x="1080" y="375" width="90"  height="155"/>
+            <image href="images_traffic/grass.png"       x="1283" y="375" width="142" height="155"/>
+            <image href="images_traffic/grass2.png"      x="1428" y="375" width="114" height="155"/>
+            <!-- Right narrow strip (x=1480-1600): grass2, left edge at road end x=1480 -->
+            <image href="images_traffic/grass2.png"      x="1480" y="208" width="114" height="212"/>
+            <!-- Bottom-left (x=0-190): grass, top at y=705 (curb y=705-725 renders on top) -->
+            <image href="images_traffic/grass.png"       x="5"    y="705" width="182" height="190"/>
+            <!-- Bottom-center-left (x=410-620): grass2, top at y=705 -->
+            <image href="images_traffic/grass2.png"      x="418"  y="705" width="184" height="190"/>
+            <!-- Bottom-center-right (x=840-1060): grass, top at y=705 -->
+            <image href="images_traffic/grass.png"       x="842"  y="705" width="210" height="190"/>
+            <!-- Bottom-right large block (x=1060-1600): buildings at block top y=750 -->
+            <image href="images_traffic/pizza.png"       x="1068" y="750" width="115" height="145"/>
+            <image href="images_traffic/grass.png"       x="1192" y="750" width="115" height="145"/>
+            <image href="images_traffic/grass2.png"      x="1358" y="750" width="115" height="145"/>
+            <image href="images_traffic/food.png"        x="1483" y="750" width="112" height="145"/>
+
+            <!-- 4. Intersection sidewalk halos (concrete grey) -->
+            <rect x="190" y="200" width="220" height="220" fill="#c8c3b0"/><!-- P1 halo -->
+            <rect x="620" y="200" width="220" height="220" fill="#c8c3b0"/><!-- P2 halo -->
+            <rect x="1050" y="200" width="220" height="220" fill="#c8c3b0"/><!-- P5 halo -->
+            <rect x="190" y="530" width="220" height="220" fill="#c8c3b0"/><!-- P3 halo -->
+            <rect x="620" y="530" width="220" height="220" fill="#c8c3b0"/><!-- P4 halo -->
+
+            <!-- 5. Road sidewalk strips (concrete grey, 20px) -->
+            <rect x="390" y="225" width="250" height="20" fill="#c8c3b0"/>
+            <rect x="390" y="375" width="250" height="20" fill="#c8c3b0"/>
+            <rect x="820" y="225" width="250" height="20" fill="#c8c3b0"/>
+            <rect x="820" y="375" width="250" height="20" fill="#c8c3b0"/>
+            <rect x="215" y="400" width="20"  height="150" fill="#c8c3b0"/>
+            <rect x="365" y="400" width="20"  height="150" fill="#c8c3b0"/>
+            <rect x="645" y="400" width="20"  height="150" fill="#c8c3b0"/>
+            <rect x="795" y="400" width="20"  height="150" fill="#c8c3b0"/>
+            <rect x="390" y="555" width="250" height="20"  fill="#c8c3b0"/>
+            <rect x="390" y="705" width="250" height="20"  fill="#c8c3b0"/>
+            <rect x="215" y="0"   width="20"  height="220" fill="#c8c3b0"/>
+            <rect x="365" y="0"   width="20"  height="220" fill="#c8c3b0"/>
+            <rect x="0"   y="225" width="210" height="20"  fill="#c8c3b0"/>
+            <rect x="0"   y="375" width="210" height="20"  fill="#c8c3b0"/>
+            <rect x="645" y="0"   width="20"  height="220" fill="#c8c3b0"/>
+            <rect x="795" y="0"   width="20"  height="220" fill="#c8c3b0"/>
+            <rect x="0"   y="555" width="210" height="20"  fill="#c8c3b0"/>
+            <rect x="0"   y="705" width="210" height="20"  fill="#c8c3b0"/>
+            <rect x="215" y="730" width="20"  height="170" fill="#c8c3b0"/>
+            <rect x="365" y="730" width="20"  height="170" fill="#c8c3b0"/>
+            <rect x="645" y="730" width="20"  height="170" fill="#c8c3b0"/>
+            <rect x="795" y="730" width="20"  height="170" fill="#c8c3b0"/>
+            <rect x="820" y="555" width="240" height="20"  fill="#c8c3b0"/>
+            <rect x="820" y="705" width="240" height="20"  fill="#c8c3b0"/>
+            <rect x="1075" y="0"  width="20"  height="220" fill="#c8c3b0"/>
+            <rect x="1225" y="0"  width="20"  height="220" fill="#c8c3b0"/>
+            <rect x="1250" y="225" width="230" height="20" fill="#c8c3b0"/>
+            <rect x="1250" y="375" width="230" height="20" fill="#c8c3b0"/>
+
+            <!-- 4. Road surfaces (asphalt #7e8892) -->
+            <rect x="390"  y="245" width="250" height="130" fill="#7e8892"/><!-- R6 P1-P2 -->
+            <rect x="820"  y="245" width="250" height="130" fill="#7e8892"/><!-- R7 P2-P5 -->
+            <rect x="235"  y="400" width="130" height="150" fill="#7e8892"/><!-- R8 P1-P3 -->
+            <rect x="665"  y="400" width="130" height="150" fill="#7e8892"/><!-- R9 P2-P4 -->
+            <rect x="390"  y="575" width="250" height="130" fill="#7e8892"/><!-- R10 P3-P4 -->
+            <rect x="235"  y="0"   width="130" height="220" fill="#7e8892"/><!-- port P1-N -->
+            <rect x="0"    y="245" width="210" height="130" fill="#7e8892"/><!-- port P2-W -->
+            <rect x="665"  y="0"   width="130" height="220" fill="#7e8892"/><!-- port P3-N -->
+            <rect x="0"    y="575" width="210" height="130" fill="#7e8892"/><!-- port P4-W -->
+            <rect x="235"  y="730" width="130" height="170" fill="#7e8892"/><!-- port P5-S -->
+            <rect x="665"  y="730" width="130" height="170" fill="#7e8892"/><!-- port P6-S -->
+            <rect x="820"  y="575" width="240" height="130" fill="#7e8892"/><!-- port P7-E (shortened x=820-1060) -->
+            <rect x="1095" y="0"   width="130" height="220" fill="#7e8892"/><!-- port P8-N -->
+            <rect x="1250" y="245" width="230" height="130" fill="#7e8892"/><!-- port P9-E (shortened x=1250-1480) -->
+
+            <!-- 5. Intersection boxes + amber hatch -->
+            <rect x="210"  y="220" width="180" height="180" fill="#7e8892" stroke="rgba(255,255,255,0.10)" stroke-width="1.5" rx="4"/><!-- P1 -->
+            <rect x="640"  y="220" width="180" height="180" fill="#7e8892" stroke="rgba(255,255,255,0.10)" stroke-width="1.5" rx="4"/><!-- P2 -->
+            <rect x="1070" y="220" width="180" height="180" fill="#7e8892" stroke="rgba(255,255,255,0.10)" stroke-width="1.5" rx="4"/><!-- P5 -->
+            <rect x="210"  y="550" width="180" height="180" fill="#7e8892" stroke="rgba(255,255,255,0.10)" stroke-width="1.5" rx="4"/><!-- P3 -->
+            <rect x="640"  y="550" width="180" height="180" fill="#7e8892" stroke="rgba(255,255,255,0.10)" stroke-width="1.5" rx="4"/><!-- P4 -->
+            <!-- amber halo removed — intersections now same colour as road -->
+
+            <!-- 6. L-brackets -->
+            <path d="M210,240 L210,220 L230,220" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M370,220 L390,220 L390,240" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M210,380 L210,400 L230,400" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M370,400 L390,400 L390,380" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M640,240 L640,220 L660,220" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M800,220 L820,220 L820,240" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M640,380 L640,400 L660,400" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M800,400 L820,400 L820,380" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M1070,240 L1070,220 L1090,220" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M1230,220 L1250,220 L1250,240" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M1070,380 L1070,400 L1090,400" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M1230,400 L1250,400 L1250,380" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M210,570 L210,550 L230,550" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M370,550 L390,550 L390,570" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M210,710 L210,730 L230,730" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M370,730 L390,730 L390,710" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M640,570 L640,550 L660,550" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M800,550 L820,550 L820,570" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M640,710 L640,730 L660,730" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M800,730 L820,730 L820,710" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
+
+            <!-- 7. Double solid yellow center lines (no-pass, center ± 3px) -->
+            <!-- Horizontal y=310: P2-W, R6, R7, P9 -->
+            <line x1="0"    y1="307" x2="210"  y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="0"    y1="313" x2="210"  y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="390"  y1="307" x2="640"  y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="390"  y1="313" x2="640"  y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="820"  y1="307" x2="1070" y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="820"  y1="313" x2="1070" y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="1250" y1="307" x2="1480" y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="1250" y1="313" x2="1480" y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- Horizontal y=640: P4-W, R10, P7 -->
+            <line x1="0"    y1="637" x2="210"  y2="637" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="0"    y1="643" x2="210"  y2="643" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="390"  y1="637" x2="640"  y2="637" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="390"  y1="643" x2="640"  y2="643" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="820"  y1="637" x2="1060" y2="637" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="820"  y1="643" x2="1060" y2="643" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- Vertical x=300: P1-N, R8, P5-S -->
+            <line x1="297" y1="0"   x2="297" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="303" y1="0"   x2="303" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="297" y1="400" x2="297" y2="550" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="303" y1="400" x2="303" y2="550" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="297" y1="730" x2="297" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="303" y1="730" x2="303" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- Vertical x=730: P3-N, R9, P6-S -->
+            <line x1="727" y1="0"   x2="727" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="733" y1="0"   x2="733" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="727" y1="400" x2="727" y2="550" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="733" y1="400" x2="733" y2="550" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="727" y1="730" x2="727" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="733" y1="730" x2="733" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- Vertical x=1160: P8-N -->
+            <line x1="1157" y1="0"  x2="1157" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="1163" y1="0"  x2="1163" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+
+            <!-- 8. White dashed lane markings (center ± 33px, midpoint of each half-lane) -->
+            <!-- Horizontal y=310: dashes at y=277 and y=343 -->
+            <line x1="0"    y1="277" x2="210"  y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="0"    y1="343" x2="210"  y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="390"  y1="277" x2="640"  y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="390"  y1="343" x2="640"  y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="820"  y1="277" x2="1070" y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="820"  y1="343" x2="1070" y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="1250" y1="277" x2="1480" y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="1250" y1="343" x2="1480" y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <!-- Horizontal y=640: dashes at y=607 and y=673 -->
+            <line x1="0"    y1="607" x2="210"  y2="607" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="0"    y1="673" x2="210"  y2="673" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="390"  y1="607" x2="640"  y2="607" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="390"  y1="673" x2="640"  y2="673" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="820"  y1="607" x2="1060" y2="607" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="820"  y1="673" x2="1060" y2="673" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <!-- Vertical x=300: dashes at x=267 and x=333 -->
+            <line x1="267" y1="0"   x2="267" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="333" y1="0"   x2="333" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="267" y1="400" x2="267" y2="550" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="333" y1="400" x2="333" y2="550" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="267" y1="730" x2="267" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="333" y1="730" x2="333" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <!-- Vertical x=730: dashes at x=697 and x=763 -->
+            <line x1="697" y1="0"   x2="697" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="763" y1="0"   x2="763" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="697" y1="400" x2="697" y2="550" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="763" y1="400" x2="763" y2="550" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="697" y1="730" x2="697" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="763" y1="730" x2="763" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <!-- Vertical x=1160: dashes at x=1127 and x=1193 -->
+            <line x1="1127" y1="0"  x2="1127" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="1193" y1="0"  x2="1193" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+
+            <!-- 9. Intersection labels (P1–P5) -->
+            <text x="300"  y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P1</text>
+            <text x="730"  y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P2</text>
+            <text x="1160" y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P5</text>
+            <text x="300"  y="640" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P3</text>
+            <text x="730"  y="640" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P4</text>
+
+            <!-- 10. Road agent labels -->
+            <text x="515"  y="298" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" fill="rgba(180,200,230,0.60)">R6</text>
+            <text x="945"  y="298" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" fill="rgba(180,200,230,0.60)">R7</text>
+            <text x="248"  y="475" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" fill="rgba(180,200,230,0.60)">R8</text>
+            <text x="678"  y="475" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" fill="rgba(180,200,230,0.60)">R9</text>
+            <text x="515"  y="627" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" fill="rgba(180,200,230,0.60)">R10</text>
+          </svg>
+
+          <!-- ── Traffic port arrows (9 ports) ─────────────────────────────────
+               Centers: I1=(300,310) I2=(730,310) I5=(1160,310)
+                        I3=(300,640) I4=(730,640)
+               Enter arrow offset from road center: −21px; Exit: +10px
+          ─────────────────────────────────────────────────────────────────── -->
+          <!-- Port 1 (I1-North, x=300) -->
+          <div class="io-arrow io-ent a-down" style="left:279px;top:20px;"><div class="arr-shape"></div><span class="arr-num">1</span></div>
+          <div class="io-arrow io-ext a-up"   style="left:310px;top:20px;"><div class="arr-shape"></div><span class="arr-num">1</span></div>
+          <!-- Port 2 (I1-West, y=310) -->
+          <div class="io-arrow io-ent a-right" style="left:20px;top:289px;"><div class="arr-shape"></div><span class="arr-num">2</span></div>
+          <div class="io-arrow io-ext a-left"  style="left:20px;top:320px;"><div class="arr-shape"></div><span class="arr-num">2</span></div>
+          <!-- Port 3 (I2-North, x=730) -->
+          <div class="io-arrow io-ent a-down" style="left:709px;top:20px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
+          <div class="io-arrow io-ext a-up"   style="left:740px;top:20px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
+          <!-- Port 4 (I3-West, y=640) -->
+          <div class="io-arrow io-ent a-right" style="left:20px;top:619px;"><div class="arr-shape"></div><span class="arr-num">4</span></div>
+          <div class="io-arrow io-ext a-left"  style="left:20px;top:650px;"><div class="arr-shape"></div><span class="arr-num">4</span></div>
+          <!-- Port 5 (I3-South, x=300) -->
+          <div class="io-arrow io-ent a-up"   style="left:310px;top:800px;"><div class="arr-shape"></div><span class="arr-num">5</span></div>
+          <div class="io-arrow io-ext a-down" style="left:279px;top:800px;"><div class="arr-shape"></div><span class="arr-num">5</span></div>
+          <!-- Port 6 (I4-South, x=730) -->
+          <div class="io-arrow io-ent a-up"   style="left:740px;top:800px;"><div class="arr-shape"></div><span class="arr-num">6</span></div>
+          <div class="io-arrow io-ext a-down" style="left:709px;top:800px;"><div class="arr-shape"></div><span class="arr-num">6</span></div>
+          <!-- Port 7 (I4-East, y=640, shortened end x=1060) -->
+          <div class="io-arrow io-ent a-left"  style="left:1040px;top:619px;"><div class="arr-shape"></div><span class="arr-num">7</span></div>
+          <div class="io-arrow io-ext a-right" style="left:1040px;top:650px;"><div class="arr-shape"></div><span class="arr-num">7</span></div>
+          <!-- Port 8 (I5-North, x=1160) -->
+          <div class="io-arrow io-ent a-down" style="left:1139px;top:20px;"><div class="arr-shape"></div><span class="arr-num">8</span></div>
+          <div class="io-arrow io-ext a-up"   style="left:1170px;top:20px;"><div class="arr-shape"></div><span class="arr-num">8</span></div>
+          <!-- Port 9 (I5-East, y=310, shortened end x=1480) -->
+          <div class="io-arrow io-ent a-left"  style="left:1440px;top:289px;"><div class="arr-shape"></div><span class="arr-num">9</span></div>
+          <div class="io-arrow io-ext a-right" style="left:1440px;top:320px;"><div class="arr-shape"></div><span class="arr-num">9</span></div>
+        </div><!-- #trafficLayer -->
 
         <!-- ══ Current Setup status card ══════════════════════════════════ -->
         <div class="overlay setup-card">
@@ -1516,6 +1833,14 @@
         <!-- ══ Bottom Control Bar ════════════════════════════════════════════ -->
         <div class="ctrl-bar" id="ctrlBar">
 
+          <!-- Map switch -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">Map</div>
+            <button class="map-toggle-btn" id="mapToggleBtn">🏭 Warehouse</button>
+          </div>
+
+          <div class="ctrl-sep"></div>
+
           <!-- Scenario (two-level dropdown) -->
           <div class="ctrl-group">
             <div class="ctrl-label">Scenario</div>
@@ -1848,6 +2173,9 @@
       return (dir - 1) * 3 + {L:1, S:2, R:3}[turn];
     }
 
+    // Traffic mode flag — MUST be declared before buildVehicleConfig is called (~20 lines below)
+    let isTrafficMode = false;
+
     // Vehicle color palette (cycles if more than palette length)
     const V_COLORS = ['#ff7b7b','#72b7ff','#ffd66d','#c8a2ff','#7bffc8','#ffb07b'];
 
@@ -1869,24 +2197,64 @@
       7:0,   8:0,     // west border  →E
     };
 
+    // ─── TRAFFIC MODE (5-intersection) geometry ───────────────────────────────
+    // Intersection zone top-left corners (zone is 180×180 px, same as warehouse)
+    //   P1=(300,310) P2=(730,310) P5=(1160,310) P3=(300,640) P4=(730,640)
+    const ZONE_POS_TR = { 1:[210,220], 2:[640,220], 3:[210,550], 4:[640,550], 5:[1070,220] };
+    // Entry positions: derived from DIR_ENTRY offsets so lanes align inside zone
+    //   going south (dir3): enters zone at zx+45 → port entry x = zx+45, y=0
+    //   going north (dir1): enters zone at zx+135 → port entry x = zx+135, y=900
+    //   going east  (dir4): enters zone at zy+135 → port entry y = zy+135, x=0
+    //   going west  (dir2): enters zone at zy+45  → port entry y = zy+45, x=1480/1060
+    // Entry positions — vehicle centre on white dashed lane line (road_centre ± 33 px)
+    // Going S: right-hand lane = left in x  → road_centre − 33
+    // Going N: right-hand lane = right in x → road_centre + 33
+    // Going E: right-hand lane = bottom in y → road_centre + 33
+    // Going W: right-hand lane = top in y    → road_centre − 33
+    const ENT_DATA_TR = {
+      1:{pos:[267,  0],  h: 90},  // port 1: P1-North, going south  (x=300−33=267)
+      2:{pos:[0,   343], h:  0},  // port 2: P1-West,  going east   (y=310+33=343)
+      3:{pos:[697,  0],  h: 90},  // port 3: P2-North, going south  (x=730−33=697)
+      4:{pos:[0,   673], h:  0},  // port 4: P3-West,  going east   (y=640+33=673)
+      5:{pos:[333, 900], h:-90},  // port 5: P3-South, going north  (x=300+33=333)
+      6:{pos:[763, 900], h:-90},  // port 6: P4-South, going north  (x=730+33=763)
+      7:{pos:[1060,607], h:180},  // port 7: P4-East,  going west   (y=640−33=607)
+      8:{pos:[1127, 0],  h: 90},  // port 8: P5-North, going south  (x=1160−33=1127)
+      9:{pos:[1480,277], h:180},  // port 9: P5-East,  going west   (y=310−33=277)
+    };
+    // Exit world positions — lane-aligned (mirror of entry logic, opposite direction)
+    const EXIT_DATA_TR = {
+      1:[333,  0],  2:[0,  277],  3:[763,  0],  4:[0,  607],
+      5:[267, 900], 6:[697, 900], 7:[1060, 673],
+      8:[1193, 0],  9:[1480, 343],
+    };
+    // Headings for buildVehicleConfig in traffic mode
+    const ENT_H_TR_PRE = { 1:90, 2:0, 3:90, 4:0, 5:-90, 6:-90, 7:180, 8:90, 9:180 };
+
     // Build VEHICLE_CONFIG automatically from SCHEDULE_DATA
     function buildVehicleConfig(sched) {
+      // Pick geometry tables based on current map mode
+      const _entH   = isTrafficMode ? ENT_H_TR_PRE  : ENT_H_PRE;
+      const _zonePre = isTrafficMode ? ZONE_POS_TR   : ZONE_POS_PRE;
+      const _exitPos = isTrafficMode ? EXIT_DATA_TR  : EXIT_POS_PRE;
+      function _zoneCentre(id) { const [x,y]=_zonePre[id]; return [x+90, y+90]; }
+
       return sched.vehicles.map((vj, i) => {
         // Normalize: MATLAB may encode single-intersection keyframes as flat [id,β,γ]
         const kfs = Array.isArray(vj.keyframes[0]) ? vj.keyframes : [vj.keyframes];
         const ints = kfs.map(kf => kf[0]);  // intersection id sequence
         // Derive routeIds from geometry
         const routeIds = [];
-        let entryDir = headingToDir(ENT_H_PRE[vj.entrance]);
+        let entryDir = headingToDir(_entH[vj.entrance]);
         for (let k = 0; k < ints.length; k++) {
           const intId = ints[k];
-          const fc = zoneCentre(intId);
+          const fc = _zoneCentre(intId);
           // Where does this vehicle go after this intersection?
           let toPos;
           if (k + 1 < ints.length) {
-            toPos = zoneCentre(ints[k + 1]);
+            toPos = _zoneCentre(ints[k + 1]);
           } else {
-            toPos = EXIT_POS_PRE[vj.exit];
+            toPos = _exitPos[vj.exit];
           }
           const exitDir = neededExitDir(fc, toPos);
           const turn    = deriveTurn(entryDir, exitDir);
@@ -1927,6 +2295,7 @@
       5:[730,10],  6:[400,10],  7:[80,240],  8:[80,570],
     };
 
+    // ── Warehouse geometry (shared for both 4-int and 5-int warehouse mode) ──────
     // Entry point into zone (zone-local coords) by direction
     const DIR_ENTRY = { 1:[135,180], 2:[180,45], 3:[45,0], 4:[0,135] };
     // Exit point (zone-local) by direction × turn (S/R/L)
@@ -1938,10 +2307,8 @@
     };
     // Straight-travel heading by direction
     const DIR_H = { 1:-90, 2:180, 3:90, 4:0 };
-
     // Arc params [cx,cy,r,a0,adir]: adir +1=screen-CW, -1=screen-CCW
-    // Right turns: r=ZW/4=45, sweep +π/2 (CW)
-    // Left  turns: r=3ZW/4=135, sweep −π/2 (CCW)
+    // Right turns: r=ZW/4=45  Left turns: r=3ZW/4=135
     const ARC_P = {
       R:{ 1:[180,180,45, Math.PI,     +1],
           2:[180,0,  45, Math.PI/2,   +1],
@@ -1951,6 +2318,27 @@
           2:[180,180,135,-Math.PI/2,  -1],
           3:[180,0,  135, Math.PI,    -1],
           4:[0,  0,  135, Math.PI/2,  -1] },
+    };
+
+    // ── Traffic-mode geometry — lanes aligned with white dashed lines (±33px from road centre)
+    //    In zone-local coords, lane centre = 57 (inner) or 123 (outer), matching x/y=road_centre±33.
+    //    Right-turn radius = 57; Left-turn radius = 123.
+    const DIR_ENTRY_TR = { 1:[123,180], 2:[180,57], 3:[57,0], 4:[0,123] };
+    const DIR_EXIT_TR = {
+      1:{S:[123,0],   R:[180,123], L:[0,57]   },
+      2:{S:[0,57],    R:[123,0],   L:[57,180] },
+      3:{S:[57,180],  R:[0,57],    L:[180,123]},
+      4:{S:[180,123], R:[57,180],  L:[123,0]  },
+    };
+    const ARC_P_TR = {
+      R:{ 1:[180,180,57, Math.PI,     +1],
+          2:[180,0,  57, Math.PI/2,   +1],
+          3:[0,  0,  57, 0,           +1],
+          4:[0,  180,57,-Math.PI/2,   +1] },
+      L:{ 1:[0,  180,123, 0,          -1],
+          2:[180,180,123,-Math.PI/2,  -1],
+          3:[180,0,  123, Math.PI,    -1],
+          4:[0,  0,  123, Math.PI/2,  -1] },
     };
 
     function parseRI(ri) { return { dir:Math.ceil(ri/3), turn:['L','S','R'][(ri-1)%3] }; }
@@ -2022,9 +2410,12 @@
 
     // Sample waypoints through one intersection zone
     function intWaypoints(zx, zy, dir, turn, N=14) {
-      const [ex,ey]=DIR_ENTRY[dir], h=DIR_H[dir];
+      const _de  = isTrafficMode ? DIR_ENTRY_TR : DIR_ENTRY;
+      const _dx  = isTrafficMode ? DIR_EXIT_TR  : DIR_EXIT;
+      const _arc = isTrafficMode ? ARC_P_TR     : ARC_P;
+      const [ex,ey]=_de[dir], h=DIR_H[dir];
       if (turn==='S') {
-        const [xx,xy]=DIR_EXIT[dir].S, pts=[];
+        const [xx,xy]=_dx[dir].S, pts=[];
         // Bow path: entry/exit at normal position, rightward peak at center (sin bow).
         const rightRad = (h + 90) * Math.PI / 180;
         for(let i=0;i<=N;i++){
@@ -2038,7 +2429,7 @@
         }
         return pts;
       }
-      const [cx,cy,r,a0,adir]=ARC_P[turn][dir], sweep=adir*Math.PI/2, pts=[];
+      const [cx,cy,r,a0,adir]=_arc[turn][dir], sweep=adir*Math.PI/2, pts=[];
       for(let i=0;i<=N;i++){
         const a=a0+sweep*(i/N);
         const hRad=adir>0?a+Math.PI/2:a-Math.PI/2;
@@ -2049,14 +2440,21 @@
 
     // Build full waypoint list for a vehicle
     function buildVehiclePath(vc) {
+      // Pick geometry tables based on current map mode
+      const _zonePos = isTrafficMode ? ZONE_POS_TR  : ZONE_POS;
+      const _entData = isTrafficMode ? ENT_DATA_TR  : ENT_DATA;
+      const _exitData= isTrafficMode ? EXIT_DATA_TR : EXIT_DATA;
+
       const {entrance,exit,intersections,routeIds}=vc;
       const pts=[];
       const milestones=[];  // [{intId, enterIdx, exitIdx}]
-      let [curX,curY]=ENT_DATA[entrance].pos;
+      let [curX,curY]=_entData[entrance].pos;
       for(let k=0;k<intersections.length;k++){
-        const [zx,zy]=ZONE_POS[intersections[k]];
+        const [zx,zy]=_zonePos[intersections[k]];
         const {dir,turn}=parseRI(routeIds[k]);
-        const [ex,ey]=DIR_ENTRY[dir], h=DIR_H[dir];
+        const _de = isTrafficMode ? DIR_ENTRY_TR : DIR_ENTRY;
+        const _dx = isTrafficMode ? DIR_EXIT_TR  : DIR_EXIT;
+        const [ex,ey]=_de[dir], h=DIR_H[dir];
         // Road approach: bow sideways if this robot overtakes another on this segment
         const prevInt  = k > 0 ? intersections[k-1] : null;
         const roadKey  = prevInt !== null ? prevInt + '_' + intersections[k] : null;
@@ -2070,11 +2468,11 @@
         pts.push(...intWaypoints(zx,zy,dir,turn,14));  // bow handled inside intWaypoints
         const exitIdx=pts.length-1;
         milestones.push({intId:intersections[k], enterIdx, exitIdx});
-        const [xl,yl]=DIR_EXIT[dir][turn];
-        curX=zx+xl; curY=zy+yl;   // exit at normal position
+        const [xl,yl]=_dx[dir][turn];
+        curX=zx+xl; curY=zy+yl;   // exit at lane-aligned position
       }
-      const lastH=pts.length?pts[pts.length-1].angle:ENT_DATA[entrance].h;
-      const [extX,extY]=EXIT_DATA[exit];
+      const lastH=pts.length?pts[pts.length-1].angle:_entData[entrance].h;
+      const [extX,extY]=_exitData[exit];
       pts.push({x:curX,y:curY,angle:lastH},{x:extX,y:extY,angle:lastH});
       return {pts, milestones};
     }
@@ -2190,16 +2588,14 @@
     // Files live at: schedules/{group}_{scene}_{policy}.js
     // Add entries to AVAILABLE as MATLAB results become ready.
     // Policy keys: 'optimal', 'fcfs', 'r1', 'r2', ... (robot priority override)
-    const SCENARIO_GROUPS = {
+    // ── Warehouse scenarios ───────────────────────────────────────────────────
+    const SCENARIO_GROUPS_WH = {
       '8r':  { label:'8 Robots',  scenes:['S1'] },
       '10r': { label:'10 Robots', scenes:['S1','S2','S3'] },
       '15r': { label:'15 Robots', scenes:['S1','S2'] },
       '20r': { label:'20 Robots', scenes:['S1'] },
     };
-
-    // Availability map — keys: '{group}_{scene}_{policy}'
-    // JS files exported by export_demo_images.m → schedules/10r_S1_*.js
-    const AVAILABLE = {
+    const AVAILABLE_WH = {
       '8r_S1_optimal':  true,
       '8r_S1_fcfs':     true,
       '10r_S1_optimal': true,  '10r_S1_fcfs': true,  '10r_S1_p1_optimal': true,
@@ -2213,6 +2609,27 @@
       '15r_S2_optimal': true,  '15r_S2_fcfs': true,
       '20r_S1_optimal': true,  '20r_S1_fcfs': true,
     };
+
+    // ── Traffic scenarios (5-intersection map) ────────────────────────────────
+    // Groups/scenes match export_scenario_to_demo_5int.m output filenames.
+    // Run the MATLAB export script to generate the .js files, then set flags below.
+    const SCENARIO_GROUPS_TR = {
+      '10r': { label:'10 Vehicles', scenes:['S1'] },
+      '15r': { label:'15 Vehicles', scenes:['S1','S2'] },
+      '20r': { label:'20 Vehicles', scenes:['S1','S2'] },
+    };
+    const AVAILABLE_TR = {
+      // Generated by export_scenario_to_demo_5int.m — set true after each MATLAB export:
+      // '10r_S1_optimal': true, '10r_S1_fcfs': true,  // 5int_manual_10r
+      // '15r_S1_optimal': true, '15r_S1_fcfs': true,  // 5int_seed42005_N15
+      // '15r_S2_optimal': true, '15r_S2_fcfs': true,  // 5int_seed42001_N15
+      // '20r_S1_optimal': true, '20r_S1_fcfs': true,  // 5int_seed42003_N20
+      // '20r_S2_optimal': true, '20r_S2_fcfs': true,  // 5int_seed42005_N20
+    };
+
+    // Active set — switched by the Map toggle
+    let activeGroups    = SCENARIO_GROUPS_WH;
+    let activeAvailable = AVAILABLE_WH;
 
     function schedKey(group, scene, policy) {
       return group + '_' + scene + '_' + policy;
@@ -2879,7 +3296,7 @@
 
     function applySetup(group, scene, policy) {
       const key = schedKey(group, scene, policy);
-      if (!AVAILABLE[key]) {
+      if (!activeAvailable[key]) {
         // No data yet — show placeholder message, don't change animation
         robotGroup    = group;
         sceneName     = scene;
@@ -2976,6 +3393,65 @@
       btn.addEventListener('click', () => setLocalView(btn.dataset.local));
     });
 
+    // ── Map toggle (Warehouse ↔ Traffic) ────────────────────────────────────
+    let currentMapMode = 'warehouse';
+    document.getElementById('mapToggleBtn').addEventListener('click', () => {
+      const scene = document.getElementById('scene');
+      const btn   = document.getElementById('mapToggleBtn');
+      const title = document.querySelector('.title');
+
+      // Pause animation during switch
+      playing = false;
+      document.getElementById('togglePlay').textContent = '▶ Play';
+      document.getElementById('togglePlay').classList.remove('primary');
+
+      if (currentMapMode === 'warehouse') {
+        // ── Switch to Traffic ──
+        scene.classList.add('traffic-mode');
+        btn.textContent = '🚦 Traffic';
+        btn.classList.add('traffic-active');
+        title.textContent = '5-Intersection Traffic Map';
+        currentMapMode = 'traffic';
+
+        isTrafficMode   = true;
+        activeGroups    = SCENARIO_GROUPS_TR;
+        activeAvailable = AVAILABLE_TR;
+
+        // Rebuild scenario dropdown with traffic groups
+        populateSceneLvl1();
+        const firstGroup = Object.keys(SCENARIO_GROUPS_TR)[0];
+        if (firstGroup) {
+          const firstScene = SCENARIO_GROUPS_TR[firstGroup].scenes[0];
+          applySetup(firstGroup, firstScene, 'optimal');
+        } else {
+          // No traffic data yet — clear schedule display
+          scheduleData = null;
+          document.getElementById('scenarioLabel').textContent = '— no data —';
+          document.getElementById('policyBtnLabel').textContent = 'Optimal';
+          document.getElementById('setupScenario').textContent = '—';
+          document.getElementById('setupDuration').textContent = '— s';
+        }
+
+      } else {
+        // ── Switch back to Warehouse ──
+        scene.classList.remove('traffic-mode');
+        btn.textContent = '🏭 Warehouse';
+        btn.classList.remove('traffic-active');
+        title.textContent = 'Warehouse AMR Merging Zone Demo';
+        currentMapMode = 'warehouse';
+
+        isTrafficMode   = false;
+        activeGroups    = SCENARIO_GROUPS_WH;
+        activeAvailable = AVAILABLE_WH;
+
+        // Rebuild scenario dropdown and reload default warehouse scenario
+        populateSceneLvl1();
+        const defGroup = Object.keys(SCENARIO_GROUPS_WH)[0];
+        const defScene = SCENARIO_GROUPS_WH[defGroup].scenes[0];
+        applySetup(defGroup, defScene, 'optimal');
+      }
+    });
+
     // ── Pause / Play ─────────────────────────────────────────────────────────
     document.getElementById('togglePlay').addEventListener('click', () => {
       playing = !playing;
@@ -3046,7 +3522,7 @@
       const lvl1 = document.getElementById('scenarioLvl1');
       const lvl2 = document.getElementById('scenarioLvl2');
       lvl1.innerHTML = '';
-      Object.entries(SCENARIO_GROUPS).forEach(([gid, g]) => {
+      Object.entries(activeGroups).forEach(([gid, g]) => {
         const btn = document.createElement('button');
         btn.className = 'drop-item' + (gid === selectedGroup ? ' selected' : '');
         btn.textContent = g.label;
@@ -3060,7 +3536,7 @@
     function populateSceneLvl2(gid) {
       const lvl2   = document.getElementById('scenarioLvl2');
       const header = document.getElementById('sceneLvl2Header');
-      const g      = SCENARIO_GROUPS[gid];
+      const g      = activeGroups[gid];
       header.textContent = g.label + ' — Scenes';
       // Keep only the header, rebuild scene buttons
       const oldBtns = lvl2.querySelectorAll('.drop-item');
@@ -3097,7 +3573,7 @@
 
       // Find available priority robots for current group + base scene
       const prioNums = [];
-      Object.keys(AVAILABLE).forEach(key => {
+      Object.keys(activeAvailable).forEach(key => {
         const m = key.match(new RegExp('^' + robotGroup + '_' + base + '_p(\\d+)_optimal$'));
         if (m && AVAILABLE[key]) prioNums.push(parseInt(m[1]));
       });
@@ -3158,6 +3634,7 @@
         document.getElementById('togglePlay').click();
       }
       if (e.key.toLowerCase() === 'r') document.getElementById('restart').click();
+      if (e.key.toLowerCase() === 'm') document.getElementById('mapToggleBtn').click();
       if (e.key === 'ArrowRight') {
         playbackDir = 'forward';
         document.getElementById('dirFwd').click();
@@ -3268,6 +3745,7 @@
     const FM = (() => {
       // Bar groups (left → right order)
       const GROUPS = [
+        { id:'map',      el:() => document.getElementById('mapToggleBtn') },
         { id:'scenario', el:() => document.getElementById('scenarioBtn') },
         { id:'policy',   el:() => document.getElementById('policyBtn')   },
         { id:'control',  els:() => ['togglePlay','restart'].map(id => document.getElementById(id)) },
@@ -3541,6 +4019,7 @@
         if (edge(g, B.LB)) Actions.speedDown();
         if (edge(g, B.RB)) Actions.speedUp();
         if (edge(g, B.L3)) location.reload();
+        if (edge(g, B.R3)) document.getElementById('mapToggleBtn').click();  // R3 → switch map
 
         // Right joystick → local zoom (P1-P4), spatial mapping matches map layout:
         //   P4(↖)  P3(↗)

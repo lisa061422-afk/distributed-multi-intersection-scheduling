@@ -1,0 +1,10 @@
+# MATLAB autosave and temporary files
+*.asv
+*.m~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large temporary outputs (keep BatchRuns tracked)
+*.log

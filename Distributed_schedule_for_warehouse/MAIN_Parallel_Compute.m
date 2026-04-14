@@ -36,8 +36,8 @@ rootSaveDir = 'BatchRuns';
 % ===================== Run Mode =====================
 % 'normal'   : full ADMM + FCFS + export (no priority)
 % 'priority' : skip normal run, load existing result, run priority sweep only
-runMode         = 'normal';   % ← 改这一个
-priority_robots = [9];        % priority 模式下给哪些 robot 最高优先级
+runMode         = 'priority';   % ← 改这一个
+priority_robots = [1];        % priority 模式下给哪些 robot 最高优先级
 
 % ===================== Parallel switch =====================
 % true  : use parfeval (fast, multi-worker)

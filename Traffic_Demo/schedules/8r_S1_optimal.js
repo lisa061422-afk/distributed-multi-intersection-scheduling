@@ -1,6 +1,7 @@
 var SCHEDULE_DATA = {
   "scenario": "8r · S1 · Optimal",
   "policy": "optimal",
+  "priorityRobot": 0,
   "t_cut": -2,
   "t_final": 11.921823665501186,
   "Dt": 2,

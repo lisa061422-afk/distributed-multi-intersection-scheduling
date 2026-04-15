@@ -8,3 +8,5 @@ Thumbs.db
 
 # Large temporary outputs (keep BatchRuns tracked)
 *.log
+*.zip
+admm_checkpoint_5int.mat

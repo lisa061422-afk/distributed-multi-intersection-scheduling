@@ -728,9 +728,9 @@
     /* Action buttons */
     .ctrl-action {
       border: 1px solid rgba(255,255,255,0.13);
-      border-radius: 12px; padding: 8px 18px;
+      border-radius: 12px; padding: 7px 12px;
       background: rgba(255,255,255,0.06);
-      color: var(--text); font-size: 14px; font-weight: 700;
+      color: var(--text); font-size: 13px; font-weight: 700;
       cursor: pointer; white-space: nowrap;
     }
     .ctrl-action:hover, .ctrl-action:focus {
@@ -741,7 +741,7 @@
       background: linear-gradient(180deg,#8ad3ff,#61befd);
       color: #061826; border-color: transparent;
     }
-    .ctrl-action-row { display: flex; gap: 8px; }
+    .ctrl-action-row { display: flex; gap: 5px; }
 
     /* ══ Current Setup Card ══════════════════════════════════════════════════ */
     .setup-card {
@@ -995,11 +995,27 @@
     .scene.traffic-mode::after  { background: none; }
     .scene.traffic-mode #warehouseLayer { display: none; }
     .scene.traffic-mode #trafficLayer   { display: block; }
-    .scene.traffic-mode .robot-wrap     { display: none; }
+    /* Traffic mode: narrower/taller car container for realistic proportions */
+    .scene.traffic-mode .robot-wrap  { width: 26px; height: 40px; }
+    .scene.traffic-mode .robot-img   { width: 26px; height: 40px; }
     /* ── Panel repositioning in traffic mode ─────────────────────────────── */
     .scene.traffic-mode .local-panel    { display: none; }
-    .scene.traffic-mode .setup-card     { top: auto; right: 344px; bottom: 94px; z-index: 40; }
-    .scene.traffic-mode .cost-panel     { right: 16px; bottom: 94px; width: 316px; z-index: 40; }
+    .scene.traffic-mode .setup-card     { display: none; }
+    /* cost-panel: same position/size in both modes — no override needed */
+    .traffic-action-btns {
+      position: absolute;
+      right: 18px;
+      bottom: 235px;
+      width: 430px;
+      z-index: 36;
+      display: none;
+      flex-direction: row;
+      gap: 6px;
+    }
+    .traffic-action-btns button {
+      flex: 1;
+    }
+    .scene.traffic-mode .traffic-action-btns { display: flex; }
 
     /* Map toggle button */
     .map-toggle-btn {
@@ -1264,36 +1280,30 @@
 
             <!-- Top-left block (x=0-190): grass flush to road — bottom at y=245 -->
             <image href="images_traffic/grass.png"       x="5"    y="0"   width="182" height="245"/>
-            <!-- Top-center-left (x=410-620): bank bottom at y=225 (above curb); grass2 flush to y=245 -->
+            <!-- Top-center-left (x=410-620): bank -->
             <image href="images_traffic/bank.png"        x="432"  y="62"  width="133" height="163"/>
-            <image href="images_traffic/grass2.png"      x="568"  y="165" width="46"  height="80"/>
-            <!-- Top-center-right (x=840-1050): food bottom at y=225; grass flush to y=245 -->
+            <!-- Top-center-right (x=840-1050): food -->
             <image href="images_traffic/food.png"        x="858"  y="62"  width="133" height="163"/>
-            <image href="images_traffic/grass.png"       x="995"  y="165" width="46"  height="80"/>
             <!-- Top-right (x=1270-1600): police bottom at y=225; grass2 flush to y=245 -->
             <image href="images_traffic/police.png"      x="1278" y="57"  width="140" height="168"/>
             <image href="images_traffic/grass2.png"      x="1428" y="39"  width="162" height="206"/>
             <!-- Middle-left (x=0-190): grass2 flush to road bottom — top at y=375 -->
             <image href="images_traffic/grass2.png"      x="5"    y="375" width="182" height="153"/>
-            <!-- Middle-center-left (x=410-620): pizza top at y=395 (below curb); grass flush y=375 -->
+            <!-- Middle-center-left (x=410-620): pizza -->
             <image href="images_traffic/pizza.png"       x="428"  y="395" width="138" height="135"/>
-            <image href="images_traffic/grass.png"       x="569"  y="375" width="46"  height="155"/>
-            <!-- Middle-center-right (x=840-1600): charge top at y=395; grass flush y=375 -->
-            <image href="images_traffic/take_charge.png" x="850"  y="395" width="122" height="135"/>
-            <image href="images_traffic/grass.png"       x="975"  y="375" width="102" height="155"/>
-            <image href="images_traffic/grass2.png"      x="1080" y="375" width="90"  height="155"/>
-            <image href="images_traffic/grass.png"       x="1283" y="375" width="142" height="155"/>
-            <image href="images_traffic/grass2.png"      x="1428" y="375" width="114" height="155"/>
-            <!-- Right narrow strip (x=1480-1600): grass2, left edge at road end x=1480 -->
-            <image href="images_traffic/grass2.png"      x="1480" y="208" width="114" height="212"/>
+            <!-- Middle-center-right (x=840-1050): charge2 (pizza-size) + flower -->
+            <image href="images_traffic/charge2.png"     x="845"  y="395" width="138" height="135"/>
+            <image href="images_traffic/flower.png"      x="1060" y="400" width="185" height="120"/>
+            <!-- Middle-far-right (x=1270-1480): grass4 large -->
+            <image href="images_traffic/grass4.png"      x="1283" y="405" width="185" height="120"/>
             <!-- Bottom-left (x=0-190): grass, top at y=705 (curb y=705-725 renders on top) -->
             <image href="images_traffic/grass.png"       x="5"    y="705" width="182" height="190"/>
             <!-- Bottom-center-left (x=410-620): grass2, top at y=705 -->
             <image href="images_traffic/grass2.png"      x="418"  y="705" width="184" height="190"/>
             <!-- Bottom-center-right (x=840-1060): grass, top at y=705 -->
-            <image href="images_traffic/grass.png"       x="842"  y="705" width="210" height="190"/>
+            <image href="images_traffic/grass.png"       x="842"  y="730" width="140" height="130"/>
             <!-- Bottom-right large block (x=1060-1600): buildings at block top y=750 -->
-            <image href="images_traffic/pizza.png"       x="1068" y="750" width="115" height="145"/>
+            <image href="images_traffic/hotel.png"       x="1020" y="690" width="170" height="210"/>
             <image href="images_traffic/grass.png"       x="1192" y="750" width="115" height="145"/>
             <image href="images_traffic/grass2.png"      x="1358" y="750" width="115" height="145"/>
             <image href="images_traffic/food.png"        x="1483" y="750" width="112" height="145"/>
@@ -1452,11 +1462,11 @@
             <line x1="1193" y1="0"  x2="1193" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
 
             <!-- 9. Intersection labels (P1–P5) -->
-            <text x="300"  y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P1</text>
-            <text x="730"  y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P2</text>
-            <text x="1160" y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P5</text>
-            <text x="300"  y="640" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P3</text>
-            <text x="730"  y="640" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="26" font-weight="800" fill="rgba(255,220,60,0.88)">P4</text>
+            <text x="300"  y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="42" font-weight="900" fill="rgba(255,220,60,0.88)">P1</text>
+            <text x="730"  y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="42" font-weight="900" fill="rgba(255,220,60,0.88)">P2</text>
+            <text x="1160" y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="42" font-weight="900" fill="rgba(255,220,60,0.88)">P5</text>
+            <text x="300"  y="640" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="42" font-weight="900" fill="rgba(255,220,60,0.88)">P3</text>
+            <text x="730"  y="640" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="42" font-weight="900" fill="rgba(255,220,60,0.88)">P4</text>
 
             <!-- 10. Road agent labels -->
             <text x="515"  y="298" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" fill="rgba(180,200,230,0.60)">R6</text>
@@ -1469,35 +1479,36 @@
           <!-- ── Traffic port arrows (9 ports) ─────────────────────────────────
                Centers: I1=(300,310) I2=(730,310) I5=(1160,310)
                         I3=(300,640) I4=(730,640)
-               Enter arrow offset from road center: −21px; Exit: +10px
+               Arrow center on white dashed lane line: road_center ± 33px
+               Right-hand traffic: drive on right side of road.
           ─────────────────────────────────────────────────────────────────── -->
-          <!-- Port 1 (I1-North, x=300) -->
-          <div class="io-arrow io-ent a-down" style="left:279px;top:20px;"><div class="arr-shape"></div><span class="arr-num">1</span></div>
-          <div class="io-arrow io-ext a-up"   style="left:310px;top:20px;"><div class="arr-shape"></div><span class="arr-num">1</span></div>
-          <!-- Port 2 (I1-West, y=310) -->
-          <div class="io-arrow io-ent a-right" style="left:20px;top:289px;"><div class="arr-shape"></div><span class="arr-num">2</span></div>
-          <div class="io-arrow io-ext a-left"  style="left:20px;top:320px;"><div class="arr-shape"></div><span class="arr-num">2</span></div>
-          <!-- Port 3 (I2-North, x=730) -->
-          <div class="io-arrow io-ent a-down" style="left:709px;top:20px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
-          <div class="io-arrow io-ext a-up"   style="left:740px;top:20px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
-          <!-- Port 4 (I3-West, y=640) -->
-          <div class="io-arrow io-ent a-right" style="left:20px;top:619px;"><div class="arr-shape"></div><span class="arr-num">4</span></div>
-          <div class="io-arrow io-ext a-left"  style="left:20px;top:650px;"><div class="arr-shape"></div><span class="arr-num">4</span></div>
-          <!-- Port 5 (I3-South, x=300) -->
-          <div class="io-arrow io-ent a-up"   style="left:310px;top:800px;"><div class="arr-shape"></div><span class="arr-num">5</span></div>
-          <div class="io-arrow io-ext a-down" style="left:279px;top:800px;"><div class="arr-shape"></div><span class="arr-num">5</span></div>
-          <!-- Port 6 (I4-South, x=730) -->
-          <div class="io-arrow io-ent a-up"   style="left:740px;top:800px;"><div class="arr-shape"></div><span class="arr-num">6</span></div>
-          <div class="io-arrow io-ext a-down" style="left:709px;top:800px;"><div class="arr-shape"></div><span class="arr-num">6</span></div>
-          <!-- Port 7 (I4-East, y=640, shortened end x=1060) -->
-          <div class="io-arrow io-ent a-left"  style="left:1040px;top:619px;"><div class="arr-shape"></div><span class="arr-num">7</span></div>
-          <div class="io-arrow io-ext a-right" style="left:1040px;top:650px;"><div class="arr-shape"></div><span class="arr-num">7</span></div>
-          <!-- Port 8 (I5-North, x=1160) -->
-          <div class="io-arrow io-ent a-down" style="left:1139px;top:20px;"><div class="arr-shape"></div><span class="arr-num">8</span></div>
-          <div class="io-arrow io-ext a-up"   style="left:1170px;top:20px;"><div class="arr-shape"></div><span class="arr-num">8</span></div>
-          <!-- Port 9 (I5-East, y=310, shortened end x=1480) -->
-          <div class="io-arrow io-ent a-left"  style="left:1440px;top:289px;"><div class="arr-shape"></div><span class="arr-num">9</span></div>
-          <div class="io-arrow io-ext a-right" style="left:1440px;top:320px;"><div class="arr-shape"></div><span class="arr-num">9</span></div>
+          <!-- Port 1 (I1-North, x=300): ent going south x=267, ext going north x=333 -->
+          <div class="io-arrow io-ent a-down" style="left:267px;top:20px;"><div class="arr-shape"></div><span class="arr-num">1</span></div>
+          <div class="io-arrow io-ext a-up"   style="left:333px;top:20px;"><div class="arr-shape"></div><span class="arr-num">1</span></div>
+          <!-- Port 2 (I1-West, y=310): ent going east y=343, ext going west y=277 -->
+          <div class="io-arrow io-ent a-right" style="left:20px;top:343px;"><div class="arr-shape"></div><span class="arr-num">2</span></div>
+          <div class="io-arrow io-ext a-left"  style="left:20px;top:277px;"><div class="arr-shape"></div><span class="arr-num">2</span></div>
+          <!-- Port 3 (I2-North, x=730): ent going south x=697, ext going north x=763 -->
+          <div class="io-arrow io-ent a-down" style="left:697px;top:20px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
+          <div class="io-arrow io-ext a-up"   style="left:763px;top:20px;"><div class="arr-shape"></div><span class="arr-num">3</span></div>
+          <!-- Port 4 (I3-West, y=640): ent going east y=673, ext going west y=607 -->
+          <div class="io-arrow io-ent a-right" style="left:20px;top:673px;"><div class="arr-shape"></div><span class="arr-num">4</span></div>
+          <div class="io-arrow io-ext a-left"  style="left:20px;top:607px;"><div class="arr-shape"></div><span class="arr-num">4</span></div>
+          <!-- Port 5 (I3-South, x=300): ent going north x=333, ext going south x=267 -->
+          <div class="io-arrow io-ent a-up"   style="left:333px;top:800px;"><div class="arr-shape"></div><span class="arr-num">5</span></div>
+          <div class="io-arrow io-ext a-down" style="left:267px;top:800px;"><div class="arr-shape"></div><span class="arr-num">5</span></div>
+          <!-- Port 6 (I4-South, x=730): ent going north x=763, ext going south x=697 -->
+          <div class="io-arrow io-ent a-up"   style="left:763px;top:800px;"><div class="arr-shape"></div><span class="arr-num">6</span></div>
+          <div class="io-arrow io-ext a-down" style="left:697px;top:800px;"><div class="arr-shape"></div><span class="arr-num">6</span></div>
+          <!-- Port 7 (I4-East, y=640): ent going west y=607, ext going east y=673 -->
+          <div class="io-arrow io-ent a-left"  style="left:1040px;top:607px;"><div class="arr-shape"></div><span class="arr-num">7</span></div>
+          <div class="io-arrow io-ext a-right" style="left:1040px;top:673px;"><div class="arr-shape"></div><span class="arr-num">7</span></div>
+          <!-- Port 8 (I5-North, x=1160): ent going south x=1127, ext going north x=1193 -->
+          <div class="io-arrow io-ent a-down" style="left:1127px;top:20px;"><div class="arr-shape"></div><span class="arr-num">8</span></div>
+          <div class="io-arrow io-ext a-up"   style="left:1193px;top:20px;"><div class="arr-shape"></div><span class="arr-num">8</span></div>
+          <!-- Port 9 (I5-East, y=310): ent going west y=277, ext going east y=343 -->
+          <div class="io-arrow io-ent a-left"  style="left:1440px;top:277px;"><div class="arr-shape"></div><span class="arr-num">9</span></div>
+          <div class="io-arrow io-ext a-right" style="left:1440px;top:343px;"><div class="arr-shape"></div><span class="arr-num">9</span></div>
         </div><!-- #trafficLayer -->
 
         <!-- ══ Current Setup status card ══════════════════════════════════ -->
@@ -1525,6 +1536,9 @@
           <button class="params-btn" id="paramsBtn" title="System parameters">
             ⊙ Parameters
           </button>
+          <button class="params-btn" id="treeExploreBtn" title="Explore decision tree" style="display:none;">
+            🌳 Tree
+          </button>
         </div>
 
         <!-- ══ Schedule Image Viewer (fullscreen lightbox) ═════════════════════ -->
@@ -1547,23 +1561,25 @@
                   save MATLAB figure as <code>schedules/images/{group}_{scene}_{policy}_macro.png</code></div>
               </div>
               <div class="sched-slide" id="schedSlide1">
-                <div class="local-img-wrap">
+                <div class="local-img-wrap" id="localImgWrap">
                   <img id="schedImgLocal" src="" alt="Local schedule" draggable="false"/>
-                  <!-- Merging Zone labels — positions match MATLAB panelPos 2×2 layout -->
-                  <span class="mz-label" style="left:4%;top:6%">Merging Zone 1</span>
-                  <span class="mz-label" style="left:52%;top:6%">Merging Zone 2</span>
-                  <span class="mz-label" style="left:4%;top:54%">Merging Zone 3</span>
-                  <span class="mz-label" style="left:52%;top:54%">Merging Zone 4</span>
+                  <!-- Zone labels — updated dynamically by updateMzLabels() -->
+                  <span class="mz-label" id="mzLabel1" style="left:4%;top:6%">Merging Zone 1</span>
+                  <span class="mz-label" id="mzLabel2" style="left:52%;top:6%">Merging Zone 2</span>
+                  <span class="mz-label" id="mzLabel3" style="left:4%;top:54%">Merging Zone 3</span>
+                  <span class="mz-label" id="mzLabel4" style="left:52%;top:54%">Merging Zone 4</span>
+                  <span class="mz-label" id="mzLabel5" style="left:35%;top:54%;display:none;">Intersection 5</span>
                 </div>
                 <div class="sched-hint" id="schedHintLocal">No image found —
                   save MATLAB figure as <code>schedules/images/{group}_{scene}_{policy}_local.png</code></div>
               </div>
               <div class="sched-slide" id="schedSlide2">
-                <div class="tree-grid">
+                <div class="tree-grid" id="treeGrid">
                   <div class="tree-cell"><svg id="treeSvg1"></svg></div>
                   <div class="tree-cell"><svg id="treeSvg2"></svg></div>
                   <div class="tree-cell"><svg id="treeSvg3"></svg></div>
                   <div class="tree-cell"><svg id="treeSvg4"></svg></div>
+                  <div class="tree-cell" id="treeCell5" style="display:none;"><svg id="treeSvg5"></svg></div>
                 </div>
               </div>
             </div>
@@ -1592,7 +1608,8 @@
 
             <div class="params-body" id="paramsBody">
               <!-- ── Left: parameter tables ── -->
-              <div class="params-tables">
+              <!-- ═══ Warehouse parameters ═══ -->
+              <div class="params-tables" id="paramsWarehouse">
 
                 <div class="params-section">
                   <div class="params-section-title">Physical Layout</div>
@@ -1676,7 +1693,94 @@
                   <div class="params-row"><span class="params-lbl">Space slots (4×5)</span><span class="params-val">20</span></div>
                 </div>
 
-              </div><!-- /params-tables -->
+              </div><!-- /paramsWarehouse -->
+
+              <!-- ═══ Traffic parameters ═══ -->
+              <div class="params-tables" id="paramsTraffic" style="display:none;">
+
+                <div class="params-section">
+                  <div class="params-section-title">Physical Layout</div>
+                  <div class="params-row">
+                    <span class="params-lbl">Vehicle size</span>
+                    <span class="params-val">4.5 × 2.0 m</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Road width (2 lanes)</span>
+                    <span class="params-val">7.0 m</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Intersection  W</span>
+                    <span class="params-val">20 × 20 m</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Road segment length</span>
+                    <span class="params-val">100 m</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Detection range</span>
+                    <span class="params-val">510 m  (255 m each side)</span>
+                  </div>
+                </div>
+
+                <div class="params-section">
+                  <div class="params-section-title">Motion Parameters</div>
+                  <div class="params-row">
+                    <span class="params-lbl">v_max  (road)</span>
+                    <span class="params-val">20 m/s  (72 km/h)</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">v_int  (intersection)</span>
+                    <span class="params-val">10 m/s  (36 km/h)</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Dt  (road segment)</span>
+                    <span class="params-val">5.0 s  (100 m ÷ 20)</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Headway T_val</span>
+                    <span class="params-val">3.0 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Drive policy</span>
+                    <span class="params-val yellow">No-wait approach</span>
+                  </div>
+                </div>
+
+                <div class="params-section">
+                  <div class="params-section-title">Intersection Traversal  (C_k = k-th subtask time)</div>
+                  <div class="params-row">
+                    <span class="params-lbl">C_arc = πW / (8 v_int)</span>
+                    <span class="params-val green">≈ 0.785 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">C_str = W / (2 v_int)</span>
+                    <span class="params-val yellow">1.0 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Left-turn  (C₁+C₂+C₃)</span>
+                    <span class="params-val green">≈ 2.36 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Straight   (C₁+C₂)</span>
+                    <span class="params-val green">2.0 s</span>
+                  </div>
+                  <div class="params-row">
+                    <span class="params-lbl">Right-turn (C₁)</span>
+                    <span class="params-val green">≈ 0.785 s</span>
+                  </div>
+                </div>
+
+                <div class="params-section" style="margin-bottom:0;">
+                  <div class="params-section-title">C-ADMM Algorithm</div>
+                  <div class="params-row"><span class="params-lbl">ρ₁ = ρ₂</span><span class="params-val">1.0</span></div>
+                  <div class="params-row"><span class="params-lbl">Penalty weight</span><span class="params-val">1.5</span></div>
+                  <div class="params-row"><span class="params-lbl">Max iterations</span><span class="params-val">200</span></div>
+                  <div class="params-row"><span class="params-lbl">Convergence tol.</span><span class="params-val">0.01</span></div>
+                  <div class="params-row"><span class="params-lbl">Parallel workers</span><span class="params-val">8</span></div>
+                  <div class="params-row"><span class="params-lbl">Space slots (5×5)</span><span class="params-val">25</span></div>
+                </div>
+
+              </div><!-- /paramsTraffic -->
 
               <!-- ── Right: geometry diagrams ── -->
               <div class="params-diagrams">
@@ -1830,6 +1934,30 @@
           </div>
         </div>
 
+        <!-- ══ Decision Tree Explorer ═══════════════════════════════════════ -->
+        <div id="treeExploreOverlay" class="params-overlay" style="display:none;">
+          <div class="params-backdrop" id="treeExploreBackdrop"></div>
+          <div class="params-box" id="treeExploreBox" style="max-width:95vw;width:1400px;" tabindex="-1">
+            <div class="params-header">
+              <span class="params-header-title">🌳 Decision Tree Explorer</span>
+              <span class="params-header-hint">↑↓ select path · Esc close</span>
+              <button class="params-close" id="treeExploreClose">✕</button>
+            </div>
+            <div id="treeIntTabs" style="display:flex;gap:8px;padding:8px 16px;"></div>
+            <div id="treeExploreBody" style="display:flex;flex:1;overflow:hidden;padding:0 16px 16px;">
+              <!-- Left: SVG tree -->
+              <div style="flex:1;min-width:0;position:relative;">
+                <svg id="treeExploreSvg" style="width:100%;height:100%;"></svg>
+              </div>
+              <!-- Right: Gantt chart bubble -->
+              <div id="treeGanttPanel" style="width:420px;flex-shrink:0;margin-left:12px;background:rgba(255,255,255,0.04);border-radius:12px;padding:12px;overflow-y:auto;">
+                <div id="treeGanttTitle" style="color:#5a9fc0;font-weight:bold;font-size:14px;margin-bottom:8px;"></div>
+                <svg id="treeGanttSvg" style="width:100%;"></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ══ Bottom Control Bar ════════════════════════════════════════════ -->
         <div class="ctrl-bar" id="ctrlBar">
 
@@ -1886,12 +2014,14 @@
 
           <div class="ctrl-sep"></div>
 
-          <!-- Pause/Play + Replay -->
+          <!-- Pause/Play + Replay + Loop + Auto -->
           <div class="ctrl-group">
             <div class="ctrl-label">Control</div>
             <div class="ctrl-action-row">
               <button class="ctrl-action primary" id="togglePlay">⏸ Pause</button>
               <button class="ctrl-action" id="restart">↺ Replay</button>
+              <button class="ctrl-action" id="loopBtn" title="Loop current scenario">🔁 Loop</button>
+              <button class="ctrl-action" id="autoBtn" title="Auto-play all scenarios">⏭ Auto</button>
             </div>
           </div>
 
@@ -1908,14 +2038,10 @@
 
           <div class="ctrl-sep"></div>
 
-          <!-- Speed -->
+          <!-- Speed (cycle button) -->
           <div class="ctrl-group">
             <div class="ctrl-label">Speed</div>
-            <div class="speed-group">
-              <button class="speed-btn" data-speed="0.5">0.5×</button>
-              <button class="speed-btn active" data-speed="1">1×</button>
-              <button class="speed-btn" data-speed="2">2×</button>
-            </div>
+            <button class="ctrl-action" id="speedCycleBtn">1×</button>
           </div>
 
         </div>
@@ -2064,6 +2190,19 @@
           </div>
         </div>
 
+        <!-- Traffic-only action buttons (above cost panel, hidden in warehouse mode) -->
+        <div class="overlay traffic-action-btns" style="display:none;">
+          <button class="view-sched-btn" onclick="document.getElementById('viewSchedBtn').click()">
+            ▦ View Schedule
+          </button>
+          <button class="params-btn" onclick="document.getElementById('paramsBtn').click()">
+            ⊙ Parameters
+          </button>
+          <button class="params-btn" id="treeExploreBtnTr" title="Explore decision tree" style="display:none;" onclick="document.getElementById('treeExploreBtn').click()">
+            🌳 Tree
+          </button>
+        </div>
+
         <div class="overlay cost-panel">
           <div class="cost-head">
             <h3>Total Delay Cost</h3>
@@ -2106,6 +2245,28 @@
   <script src="schedules/tree_15r_S1_p4_optimal.js"  onerror=""></script>
   <script src="schedules/tree_15r_S2_optimal.js"     onerror=""></script>
   <script src="schedules/tree_20r_S1_optimal.js"     onerror=""></script>
+  <!-- Interactive tree data for decision tree explorer -->
+  <script src="schedules/interactive_tree_8r_S1.js"   onerror=""></script>
+  <script src="schedules/interactive_tree_10r_S1.js" onerror=""></script>
+  <script src="schedules/interactive_tree_10r_S2.js" onerror=""></script>
+  <script src="schedules/interactive_tree_10r_S3.js" onerror=""></script>
+  <script src="schedules/interactive_tree_15r_S1.js" onerror=""></script>
+  <script src="schedules/interactive_tree_15r_S2.js" onerror=""></script>
+  <script src="schedules/interactive_tree_20r_S1.js" onerror=""></script>
+  <!-- Traffic (5-int) interactive trees -->
+  <script src="schedules/interactive_tree_tr_10r_S1.js"  onerror=""></script>
+  <script src="schedules/interactive_tree_tr_15r_S1.js"  onerror=""></script>
+  <script src="schedules/interactive_tree_tr_15r_S2.js"  onerror=""></script>
+  <script src="schedules/interactive_tree_tr_15r_S3.js"  onerror=""></script>
+  <script src="schedules/interactive_tree_tr_20r_S1.js"  onerror=""></script>
+  <script src="schedules/interactive_tree_tr_20r_S2.js"  onerror=""></script>
+  <!-- Tree data for traffic mode (5-int, tr_ prefix keys) -->
+  <script src="schedules/tr_tree_10r_S1_optimal.js"  onerror=""></script>
+  <script src="schedules/tr_tree_15r_S1_optimal.js"  onerror=""></script>
+  <script src="schedules/tr_tree_15r_S2_optimal.js"  onerror=""></script>
+  <script src="schedules/tr_tree_15r_S3_optimal.js"  onerror=""></script>
+  <script src="schedules/tr_tree_20r_S1_optimal.js"  onerror=""></script>
+  <script src="schedules/tr_tree_20r_S2_optimal.js"  onerror=""></script>
 
   <script>
     const CB = '?v=' + Date.now(); // cache-bust: forces fresh load of modified PNGs
@@ -2243,26 +2404,32 @@
         // Normalize: MATLAB may encode single-intersection keyframes as flat [id,β,γ]
         const kfs = Array.isArray(vj.keyframes[0]) ? vj.keyframes : [vj.keyframes];
         const ints = kfs.map(kf => kf[0]);  // intersection id sequence
-        // Derive routeIds from geometry
+        // Use exported MATLAB routeId if available (kf[3]), else derive from geometry.
+        // After fixing generateTrafficSystem_5int.m, MATLAB routeIds directly match HTML convention:
+        //   1-3=dir1(S-entry), 4-6=dir2(E-entry), 7-9=dir3(N-entry), 10-12=dir4(W-entry)
+        const hasRouteId = kfs[0].length >= 4;
         const routeIds = [];
-        let entryDir = headingToDir(_entH[vj.entrance]);
-        for (let k = 0; k < ints.length; k++) {
-          const intId = ints[k];
-          const fc = _zoneCentre(intId);
-          // Where does this vehicle go after this intersection?
-          let toPos;
-          if (k + 1 < ints.length) {
-            toPos = _zoneCentre(ints[k + 1]);
-          } else {
-            toPos = _exitPos[vj.exit];
+        if (hasRouteId) {
+          kfs.forEach(kf => routeIds.push(kf[3]));
+        } else {
+          let entryDir = headingToDir(_entH[vj.entrance]);
+          for (let k = 0; k < ints.length; k++) {
+            const intId = ints[k];
+            const fc = _zoneCentre(intId);
+            let toPos;
+            if (k + 1 < ints.length) {
+              toPos = _zoneCentre(ints[k + 1]);
+            } else {
+              toPos = _exitPos[vj.exit];
+            }
+            const exitDir = neededExitDir(fc, toPos);
+            const turn    = deriveTurn(entryDir, exitDir);
+            routeIds.push(makeRouteId(entryDir, turn));
+            entryDir = exitDir;
           }
-          const exitDir = neededExitDir(fc, toPos);
-          const turn    = deriveTurn(entryDir, exitDir);
-          routeIds.push(makeRouteId(entryDir, turn));
-          entryDir = exitDir; // next intersection entry direction = this exit direction
         }
         return {
-          id:            'R' + vj.id,
+          id:            (isTrafficMode ? 'V' : 'R') + vj.id,
           matlab_n:      vj.id,
           color:         V_COLORS[(i) % V_COLORS.length],
           entrance:      vj.entrance,
@@ -2320,8 +2487,7 @@
           4:[0,  0,  135, Math.PI/2,  -1] },
     };
 
-    // ── Traffic-mode geometry — lanes aligned with white dashed lines (±33px from road centre)
-    //    In zone-local coords, lane centre = 57 (inner) or 123 (outer), matching x/y=road_centre±33.
+    // ── Traffic-mode zone geometry — lanes at ±33px from road centre (offset 57/123 in zone)
     //    Right-turn radius = 57; Left-turn radius = 123.
     const DIR_ENTRY_TR = { 1:[123,180], 2:[180,57], 3:[57,0], 4:[0,123] };
     const DIR_EXIT_TR = {
@@ -2416,16 +2582,21 @@
       const [ex,ey]=_de[dir], h=DIR_H[dir];
       if (turn==='S') {
         const [xx,xy]=_dx[dir].S, pts=[];
-        // Bow path: entry/exit at normal position, rightward peak at center (sin bow).
-        const rightRad = (h + 90) * Math.PI / 180;
-        for(let i=0;i<=N;i++){
-          const t = i/N;
-          const bow = STR_BOW * Math.sin(Math.PI * t);   // 0 at edges, peak at center
-          pts.push({
-            x: zx+ex+(xx-ex)*t + bow*Math.cos(rightRad),
-            y: zy+ey+(xy-ey)*t + bow*Math.sin(rightRad),
-            angle: h
-          });
+        if (isTrafficMode) {
+          // Traffic mode: straight line through intersection (no bow)
+          pts.push({x:zx+ex, y:zy+ey, angle:h}, {x:zx+xx, y:zy+xy, angle:h});
+        } else {
+          // Warehouse mode: rightward bow to avoid M5 left-turn robots
+          const rightRad = (h + 90) * Math.PI / 180;
+          for(let i=0;i<=N;i++){
+            const t = i/N;
+            const bow = STR_BOW * Math.sin(Math.PI * t);
+            pts.push({
+              x: zx+ex+(xx-ex)*t + bow*Math.cos(rightRad),
+              y: zy+ey+(xy-ey)*t + bow*Math.sin(rightRad),
+              angle: h
+            });
+          }
         }
         return pts;
       }
@@ -2615,16 +2786,18 @@
     // Run the MATLAB export script to generate the .js files, then set flags below.
     const SCENARIO_GROUPS_TR = {
       '10r': { label:'10 Vehicles', scenes:['S1'] },
-      '15r': { label:'15 Vehicles', scenes:['S1','S2'] },
+      '15r': { label:'15 Vehicles', scenes:['S1','S2','S3'] },
       '20r': { label:'20 Vehicles', scenes:['S1','S2'] },
     };
     const AVAILABLE_TR = {
-      // Generated by export_scenario_to_demo_5int.m — set true after each MATLAB export:
-      // '10r_S1_optimal': true, '10r_S1_fcfs': true,  // 5int_manual_10r
-      // '15r_S1_optimal': true, '15r_S1_fcfs': true,  // 5int_seed42005_N15
-      // '15r_S2_optimal': true, '15r_S2_fcfs': true,  // 5int_seed42001_N15
-      // '20r_S1_optimal': true, '20r_S1_fcfs': true,  // 5int_seed42003_N20
-      // '20r_S2_optimal': true, '20r_S2_fcfs': true,  // 5int_seed42005_N20
+      // Generated by export_scenario_to_demo_5int.m — files have tr_ prefix on disk.
+      // Keys here match schedKey() output; tr_ prefix added by schedPath()/schedImgPath().
+      '10r_S1_optimal': true, '10r_S1_fcfs': true,  // 5int_manual_10r_S1
+      '15r_S1_optimal': true, '15r_S1_fcfs': true,  // 5int_seed41403_N15_S1
+      '15r_S2_optimal': true, '15r_S2_fcfs': true,  // 5int_seed41405_N15_S2
+      '15r_S3_optimal': true, '15r_S3_fcfs': true,  // 5int_seed41406_N15_S3
+      '20r_S1_optimal': true, '20r_S1_fcfs': true,  // 5int_seed41408_N20_S1
+      '20r_S2_optimal': true, '20r_S2_fcfs': true,  // 5int_seed41409_N20_S2
     };
 
     // Active set — switched by the Map toggle
@@ -2635,7 +2808,8 @@
       return group + '_' + scene + '_' + policy;
     }
     function schedPath(group, scene, policy) {
-      return 'schedules/' + schedKey(group, scene, policy) + '.js';
+      const prefix = isTrafficMode ? 'tr_' : '';
+      return 'schedules/' + prefix + schedKey(group, scene, policy) + '.js';
     }
     let robotEls = {};
     let recorded = new Set();   // ids of robots whose delay has been revealed
@@ -2643,10 +2817,16 @@
     let finished = 0;
     let currentLocal = 'P1';
 
-    // Image cycling: 4 robot images for 6 vehicles
-    const imgCycle = ['images/robot1.png','images/robot2.png','images/robot3.png','images/robot4.png'];
+    // Image cycling: robot images for warehouse, car images for traffic
+    const imgCycleWH = ['images/robot1.png','images/robot2.png','images/robot3.png','images/robot4.png'];
+    const imgCycleTR = [
+      'images_traffic/car1.png','images_traffic/car2.png','images_traffic/car3.png',
+      'images_traffic/car4.png','images_traffic/car5.png','images_traffic/car6.png',
+      'images_traffic/car7.png','images_traffic/car3.png','images_traffic/car9.png',
+    ];
+    function currentImgCycle() { return isTrafficMode ? imgCycleTR : imgCycleWH; }
     const robotImageMap = {};
-    VEHICLE_CONFIG.forEach((vc,i)=>{ robotImageMap[vc.id]=imgCycle[i%imgCycle.length]; });
+    VEHICLE_CONFIG.forEach((vc,i)=>{ robotImageMap[vc.id]=currentImgCycle()[i%currentImgCycle().length]; });
 
     function createRobots() {
       for (const r of VEHICLE_CONFIG) {
@@ -2709,7 +2889,7 @@
         const kfs0   = Array.isArray(vj0.keyframes[0]) ? vj0.keyframes : [vj0.keyframes];
         const [, b0, g0] = kfs0[0];
         const v_int_px = (miles0[0].exitDist - miles0[0].enterDist) / Math.max(g0 - b0, 0.1);
-        v_approach_px  = 1.5 * v_int_px;
+        v_approach_px  = (isTrafficMode ? 1.1 : 1.5) * v_int_px;
       }
 
 
@@ -2936,9 +3116,12 @@
         const done = rawPos[r.id].t >= 1;
         robotState[r.id] = { x:rx, y:ry, angle:pos.angle, color:r.color, imgSrc:robotImageMap[r.id], done };
 
-        el.style.left = `${rx - 17}px`;
-        el.style.top  = `${ry - 17}px`;
-        el.querySelector('.robot-img').style.transform = `rotate(${pos.angle - 90}deg)`;
+        const halfW = isTrafficMode ? 13 : 17;
+        const halfH = isTrafficMode ? 20 : 17;
+        el.style.left = `${rx - halfW}px`;
+        el.style.top  = `${ry - halfH}px`;
+        const rotOff = isTrafficMode ? 90 : -90;  // car faces UP, robot faces DOWN
+        el.querySelector('.robot-img').style.transform = `rotate(${pos.angle + rotOff}deg)`;
       }
 
       // ── Pass 4: reveal delay penalty when robot leaves its last intersection ──
@@ -2982,7 +3165,7 @@
         const imgY = (cy - size/2).toFixed(1);
         groups.push(`
           <image href="${s.imgSrc+CB}" x="${imgX}" y="${imgY}" width="${size}" height="${size}"
-            transform="rotate(${(s.angle - 90).toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})"
+            transform="rotate(${(s.angle + (isTrafficMode ? 90 : -90)).toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})"
             style="filter:drop-shadow(0 2px 5px rgba(0,0,0,0.55))"/>
           <text x="${cx.toFixed(1)}" y="${(parseFloat(imgY)-3).toFixed(1)}"
             text-anchor="middle" font-size="8" font-weight="900" fill="${s.color}"
@@ -3017,7 +3200,31 @@
       const s = sceneName;                                    // "S1"
       const p = currentPolicy;                               // "optimal" | "fcfs"
       const tag = slide === 0 ? 'macro' : 'local';
-      return `schedules/images/${g}_${s}_${p}_${tag}.png`;
+      const prefix = isTrafficMode ? 'tr_' : '';
+      return `schedules/images/${prefix}${g}_${s}_${p}_${tag}.png`;
+    }
+
+    function updateMzLabels() {
+      const label = isTrafficMode ? 'Intersection' : 'Merging Zone';
+      if (isTrafficMode) {
+        // 3×2 layout: row1=[I1, I2, I5], row2=[I3, I4, —]
+        const pos = {1:'left:2%;top:13%', 2:'left:35%;top:13%', 3:'left:2%;top:50%',
+                     4:'left:35%;top:50%', 5:'left:68%;top:13%'};
+        const ids = [1,2,3,4,5];
+        ids.forEach(i => {
+          const el = document.getElementById('mzLabel' + i);
+          if (el) { el.textContent = label + ' ' + i; el.style.cssText = pos[i]; el.style.display = ''; }
+        });
+      } else {
+        // 2×2 layout: row1=[MZ1, MZ2], row2=[MZ3, MZ4]
+        const pos = {1:'left:4%;top:6%', 2:'left:52%;top:6%', 3:'left:4%;top:54%', 4:'left:52%;top:54%'};
+        [1,2,3,4].forEach(i => {
+          const el = document.getElementById('mzLabel' + i);
+          if (el) { el.textContent = label + ' ' + i; el.style.cssText = pos[i]; }
+        });
+        const el5 = document.getElementById('mzLabel5');
+        if (el5) el5.style.display = 'none';
+      }
     }
 
     function openSchedViewer() {
@@ -3026,6 +3233,7 @@
       document.getElementById('schedViewer').style.display = 'flex';
       document.getElementById('schedViewerTitle').textContent =
         `Schedule — ${robotGroup} · ${sceneName} · ${currentPolicy === 'optimal' ? 'Optimal' : 'FCFS'}`;
+      updateMzLabels();
       schedGoTo(1);
     }
 
@@ -3036,7 +3244,8 @@
 
     // ── Tree slide availability ───────────────────────────────────────────────
     function currentTreeData() {
-      const key = robotGroup + '_' + sceneName;
+      const prefix = isTrafficMode ? 'tr_' : '';
+      const key = prefix + robotGroup + '_' + sceneName;
       return (window.ALL_TREE_DATA && window.ALL_TREE_DATA[key]) || null;
     }
 
@@ -3063,7 +3272,33 @@
     // ── Decision-tree SVG renderer ───────────────────────────────────────────
     function drawTreePanel() {
       const treeData = currentTreeData();
-      for (let ai = 1; ai <= 4; ai++) {
+      const numAgents = isTrafficMode ? 5 : 4;
+      // Show/hide 5th cell and adjust grid layout
+      const cell5 = document.getElementById('treeCell5');
+      const grid  = document.getElementById('treeGrid');
+      if (cell5) cell5.style.display = isTrafficMode ? '' : 'none';
+      if (grid) {
+        if (isTrafficMode) {
+          grid.style.gridTemplateColumns = '1fr 1fr 1fr';
+          grid.style.gridTemplateRows    = '1fr 1fr';
+          // Reorder: row1=[I1, I2, I5], row2=[I3, I4]
+          document.getElementById('treeSvg1').parentElement.style.order = '1';
+          document.getElementById('treeSvg2').parentElement.style.order = '2';
+          document.getElementById('treeSvg3').parentElement.style.order = '4'; // I3 → bottom-left
+          document.getElementById('treeSvg4').parentElement.style.order = '5'; // I4 → bottom-center
+          cell5.style.order = '3';                                             // I5 → top-right
+        } else {
+          grid.style.gridTemplateColumns = '1fr 1fr';
+          grid.style.gridTemplateRows    = '1fr 1fr';
+          // Reset order for warehouse mode
+          document.getElementById('treeSvg1').parentElement.style.order = '';
+          document.getElementById('treeSvg2').parentElement.style.order = '';
+          document.getElementById('treeSvg3').parentElement.style.order = '';
+          document.getElementById('treeSvg4').parentElement.style.order = '';
+          cell5.style.order = '';
+        }
+      }
+      for (let ai = 1; ai <= numAgents; ai++) {
         const svgEl = document.getElementById('treeSvg' + ai);
         if (!svgEl) continue;
         svgEl.innerHTML = '';
@@ -3091,8 +3326,9 @@
       };
 
       // Panel title
+      const zoneLabel = isTrafficMode ? 'Intersection' : 'Merging Zone';
       svgEl.appendChild(mkText(VW / 2, 15,
-        `Merging Zone ${intIdx}  —  Decision Tree  (branching nodes)`,
+        `${zoneLabel} ${intIdx}  —  Decision Tree  (branching nodes)`,
         { size: 11, fill: '#5a9fc0', weight: 'bold' }));
 
       if (!data || !data.nodes || data.nodes.length === 0) {
@@ -3229,6 +3465,9 @@
     function openParams() {
       paramsOpen = true;
       document.getElementById('paramsOverlay').style.display = 'flex';
+      // Toggle parameter tables by mode
+      document.getElementById('paramsWarehouse').style.display = isTrafficMode ? 'none' : '';
+      document.getElementById('paramsTraffic').style.display   = isTrafficMode ? ''     : 'none';
     }
     function closeParams() {
       paramsOpen = false;
@@ -3243,6 +3482,562 @@
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P' || e.key === 'b' || e.key === 'B') {
         e.stopPropagation();
         closeParams();
+      }
+    }, true);
+
+    // ── Decision Tree Explorer ──────────────────────────────────────────────
+    let treeExploreOpen = false;
+    let treeCurrentInt = '1';
+    let treeCurrentLeaf = 0;
+
+    const SPACE_COLORS = [
+      'rgb(41, 242, 41)',    // Space 1: green
+      'rgb(250, 214, 0)',    // Space 2: yellow
+      'rgb(255, 140, 0)',    // Space 3: orange
+      'rgb(31, 168, 214)',   // Space 4: cyan
+      'rgb(242, 26, 26)'    // Space 5: red
+    ];
+
+    function getTreeData() {
+      const prefix = isTrafficMode ? 'tr_' : '';
+      const key = prefix + robotGroup + '_' + baseScene();
+      return window.ALL_INTERACTIVE_TREES && window.ALL_INTERACTIVE_TREES[key] || null;
+    }
+
+    // Show/hide tree button based on data availability
+    function updateTreeBtnVisibility() {
+      const hasData = !!getTreeData();
+      document.getElementById('treeExploreBtn').style.display = hasData ? '' : 'none';
+      const trBtn = document.getElementById('treeExploreBtnTr');
+      if (trBtn) trBtn.style.display = hasData ? '' : 'none';
+    }
+    updateTreeBtnVisibility();
+
+    function openTreeExplore() {
+      if (!getTreeData()) return;
+      treeExploreOpen = true;
+      document.getElementById('treeExploreOverlay').style.display = 'flex';
+      buildIntTabs();
+      const keys = Object.keys(getTreeData().intersections);
+      treeCurrentInt = keys[0] || '1';
+      activateIntTab(treeCurrentInt);
+    }
+
+    function closeTreeExplore() {
+      treeExploreOpen = false;
+      document.getElementById('treeExploreOverlay').style.display = 'none';
+    }
+
+    function buildIntTabs() {
+      const container = document.getElementById('treeIntTabs');
+      container.innerHTML = '';
+      const data = getTreeData();
+      if (!data) return;
+      const keys = Object.keys(data.intersections).sort((a, b) => +a - +b);
+      keys.forEach((k, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'sched-tab' + (i === 0 ? ' active' : '');
+        btn.dataset.treeInt = k;
+        btn.textContent = 'Int ' + k;
+        btn.addEventListener('click', () => activateIntTab(k));
+        container.appendChild(btn);
+      });
+    }
+
+    function activateIntTab(intKey) {
+      treeCurrentInt = intKey;
+      document.querySelectorAll('#treeIntTabs .sched-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.treeInt === intKey);
+      });
+      const intData = getTreeData().intersections[intKey];
+      treeCurrentLeaf = intData.optimalLeaf != null ? intData.optimalLeaf - 1 : 0;
+      renderInteractiveTree(intKey);
+      selectLeafPath(treeCurrentLeaf);
+    }
+
+    /* ── Tree layout algorithm ── */
+    function layoutTree(nodes, edges) {
+      // Build adjacency (directed: parent -> children)
+      const children = {};
+      const hasParent = {};
+      nodes.forEach(n => { children[n.id] = []; });
+      edges.forEach(([s, d]) => {
+        if (children[s]) children[s].push(d);
+        hasParent[d] = true;
+      });
+      // Find root
+      const rootNode = nodes.find(n => n.isRoot) || nodes.find(n => !hasParent[n.id]) || nodes[0];
+      // Assign depth via BFS
+      const depth = {};
+      const nodeMap = {};
+      nodes.forEach(n => { nodeMap[n.id] = n; });
+      const queue = [rootNode.id];
+      depth[rootNode.id] = 0;
+      let maxDepth = 0;
+      while (queue.length) {
+        const id = queue.shift();
+        (children[id] || []).forEach(cid => {
+          if (depth[cid] === undefined) {
+            depth[cid] = depth[id] + 1;
+            if (depth[cid] > maxDepth) maxDepth = depth[cid];
+            queue.push(cid);
+          }
+        });
+      }
+      // Assign y positions using recursive subtree sizing
+      const pos = {};
+      let leafCounter = 0;
+      function assignY(id) {
+        const ch = (children[id] || []).filter(c => depth[c] !== undefined);
+        if (ch.length === 0) {
+          pos[id] = { x: depth[id], y: leafCounter };
+          leafCounter++;
+          return;
+        }
+        ch.forEach(c => assignY(c));
+        const ys = ch.map(c => pos[c].y);
+        pos[id] = { x: depth[id], y: (Math.min(...ys) + Math.max(...ys)) / 2 };
+      }
+      assignY(rootNode.id);
+      return { pos, maxDepth, leafCount: leafCounter, rootId: rootNode.id, children, nodeMap };
+    }
+
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    function renderInteractiveTree(intKey) {
+      const intData = getTreeData().intersections[intKey];
+      if (!intData) return;
+      const svg = document.getElementById('treeExploreSvg');
+      svg.innerHTML = '';
+
+      const { pos, maxDepth, leafCount, rootId, children, nodeMap } = layoutTree(intData.nodes, intData.edges);
+
+      const R = 18;
+      const xGap = 100;
+      const yGap = 50;
+      const padX = 40;
+      const padY = 30;
+      const W = padX * 2 + maxDepth * xGap;
+      const H = padY * 2 + Math.max(leafCount - 1, 0) * yGap;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+      function cx(id) { return padX + pos[id].x * xGap; }
+      function cy(id) { return padY + pos[id].y * yGap; }
+
+      // Optimal path edges (persistent red, drawn first as background)
+      const optPath = intData.optimalPath || [];
+      const optEdgeSet = new Set();
+      for (let i = 0; i < optPath.length - 1; i++) {
+        optEdgeSet.add(optPath[i] + '->' + optPath[i + 1]);
+      }
+      const optNodeSet = new Set(optPath);
+      const optGroup = document.createElementNS(SVG_NS, 'g');
+      optGroup.setAttribute('id', 'treeOptimal');
+      intData.edges.forEach(([s, d]) => {
+        if (!pos[s] || !pos[d]) return;
+        if (optEdgeSet.has(s + '->' + d)) {
+          const line = document.createElementNS(SVG_NS, 'line');
+          line.setAttribute('x1', cx(s)); line.setAttribute('y1', cy(s));
+          line.setAttribute('x2', cx(d)); line.setAttribute('y2', cy(d));
+          line.setAttribute('stroke', '#e53935');
+          line.setAttribute('stroke-width', '5');
+          line.setAttribute('opacity', '0.5');
+          optGroup.appendChild(line);
+        }
+      });
+      svg.appendChild(optGroup);
+
+      // Draw edges
+      const edgeGroup = document.createElementNS(SVG_NS, 'g');
+      edgeGroup.setAttribute('id', 'treeEdges');
+      intData.edges.forEach(([s, d]) => {
+        if (!pos[s] || !pos[d]) return;
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', cx(s)); line.setAttribute('y1', cy(s));
+        line.setAttribute('x2', cx(d)); line.setAttribute('y2', cy(d));
+        line.setAttribute('stroke', '#555');
+        line.setAttribute('stroke-width', '2');
+        line.dataset.src = s; line.dataset.dst = d;
+        edgeGroup.appendChild(line);
+      });
+      svg.appendChild(edgeGroup);
+
+      // Draw nodes
+      const nodeGroup = document.createElementNS(SVG_NS, 'g');
+      nodeGroup.setAttribute('id', 'treeNodes');
+      intData.nodes.forEach(n => {
+        if (!pos[n.id]) return;
+        const g = document.createElementNS(SVG_NS, 'g');
+        g.dataset.nodeId = n.id;
+        const circle = document.createElementNS(SVG_NS, 'circle');
+        circle.setAttribute('cx', cx(n.id));
+        circle.setAttribute('cy', cy(n.id));
+        circle.setAttribute('r', R);
+        let fill = '#888';
+        if (n.isRoot) fill = '#f0a030';
+        else if (n.isLeaf) fill = '#4db8a0';
+        circle.setAttribute('fill', fill);
+        // Persistent red ring for optimal path nodes
+        if (optNodeSet.has(n.id)) {
+          circle.setAttribute('stroke', '#e53935');
+          circle.setAttribute('stroke-width', '3');
+        } else {
+          circle.setAttribute('stroke', 'none');
+          circle.setAttribute('stroke-width', '3');
+        }
+        g.appendChild(circle);
+
+        const txt = document.createElementNS(SVG_NS, 'text');
+        txt.setAttribute('x', cx(n.id));
+        txt.setAttribute('y', cy(n.id));
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('dominant-baseline', 'central');
+        txt.setAttribute('fill', '#fff');
+        txt.setAttribute('font-size', '12');
+        txt.setAttribute('font-weight', '700');
+        txt.textContent = n.id;
+        g.appendChild(txt);
+
+        // Make leaf nodes clickable
+        if (n.isLeaf) {
+          g.style.cursor = 'pointer';
+          g.addEventListener('click', () => {
+            const leafIdx = intData.leafPaths.findIndex(p => p[p.length - 1] === n.id);
+            if (leafIdx >= 0) {
+              treeCurrentLeaf = leafIdx;
+              selectLeafPath(leafIdx);
+            }
+          });
+        }
+
+        nodeGroup.appendChild(g);
+      });
+      svg.appendChild(nodeGroup);
+    }
+
+    function selectLeafPath(leafIdx) {
+      const intData = getTreeData().intersections[treeCurrentInt];
+      if (!intData) return;
+      const paths = intData.leafPaths;
+      if (leafIdx < 0 || leafIdx >= paths.length) return;
+      treeCurrentLeaf = leafIdx;
+      const path = paths[leafIdx];
+      const pathSet = new Set(path);
+
+      // Build set of edges on the path
+      const pathEdges = new Set();
+      for (let i = 0; i < path.length - 1; i++) {
+        pathEdges.add(path[i] + '->' + path[i + 1]);
+      }
+
+      // Update edge highlighting
+      const svg = document.getElementById('treeExploreSvg');
+      svg.querySelectorAll('#treeEdges line').forEach(line => {
+        const key = line.dataset.src + '->' + line.dataset.dst;
+        if (pathEdges.has(key)) {
+          line.setAttribute('stroke', '#4CAF50');
+          line.setAttribute('stroke-width', '4');
+        } else {
+          line.setAttribute('stroke', '#555');
+          line.setAttribute('stroke-width', '2');
+        }
+      });
+
+      // Update node highlighting (green selection on top of red optimal)
+      const optPathData = intData.optimalPath || [];
+      const optNodeSetSel = new Set(optPathData);
+      svg.querySelectorAll('#treeNodes g').forEach(g => {
+        const nid = +g.dataset.nodeId;
+        const circle = g.querySelector('circle');
+        if (pathSet.has(nid)) {
+          circle.setAttribute('stroke', '#4CAF50');
+        } else if (optNodeSetSel.has(nid)) {
+          circle.setAttribute('stroke', '#e53935');
+        } else {
+          circle.setAttribute('stroke', 'none');
+        }
+      });
+
+      // Update gantt
+      if (intData.leafGantts && intData.leafGantts[leafIdx]) {
+        const isOptimal = intData.optimalLeaf != null && leafIdx === intData.optimalLeaf - 1;
+        renderGanttBubble(intData.leafGantts[leafIdx], leafIdx, isOptimal);
+      } else {
+        document.getElementById('treeGanttTitle').textContent = 'Path ' + (leafIdx + 1) + ' — no Gantt data';
+        document.getElementById('treeGanttSvg').innerHTML = '';
+      }
+    }
+
+    function renderGanttBubble(ganttData, leafIdx, isOptimal) {
+      const titleEl = document.getElementById('treeGanttTitle');
+      const star = isOptimal ? ' ⭐ optimal' : '';
+      titleEl.textContent = 'Path ' + (leafIdx + 1) + ' — f = ' + ganttData.fCost.toFixed(2) + star;
+
+      const svg = document.getElementById('treeGanttSvg');
+      svg.innerHTML = '';
+
+      const vehicles = ganttData.vehicles || [];
+      if (vehicles.length === 0) return;
+
+      const numSpaces = ganttData.numSpaces || 5;
+      const rowH = 26;
+      const labelW = 64;
+      const padR = 20;
+      const padTop = 10;
+      const vehRows = vehicles.length;
+      const zoneRows = numSpaces;
+      const gapBetween = 16;
+      const totalH = padTop + vehRows * rowH + gapBetween + zoneRows * rowH + 30;
+
+      // Find time range (include genTime in range)
+      let tMin = Infinity, tMax = -Infinity;
+      vehicles.forEach(v => {
+        if (isFinite(v.genTime) && v.genTime < tMin) tMin = v.genTime;
+        if (isFinite(v.actualGenTime) && v.actualGenTime < tMin) tMin = v.actualGenTime;
+        v.segStart.forEach(t => { if (t < tMin) tMin = t; });
+        v.segEnd.forEach(t => { if (t > tMax) tMax = t; });
+      });
+      if (!isFinite(tMin)) { tMin = 0; tMax = 10; }
+      const pad = Math.max(0.3, (tMax - tMin) * 0.03);
+      tMin -= pad; tMax += pad;
+      const tRange = tMax - tMin || 1;
+      const chartW = 320;
+      const fullW = labelW + chartW + padR;
+
+      svg.setAttribute('viewBox', `0 0 ${fullW} ${totalH}`);
+      svg.setAttribute('height', totalH);
+
+      // Hatch pattern for delay (gray lines on white background)
+      const defs = document.createElementNS(SVG_NS, 'defs');
+      const pat = document.createElementNS(SVG_NS, 'pattern');
+      pat.setAttribute('id', 'delayHatch');
+      pat.setAttribute('patternUnits', 'userSpaceOnUse');
+      pat.setAttribute('width', '5'); pat.setAttribute('height', '5');
+      // White background
+      const patBg = document.createElementNS(SVG_NS, 'rect');
+      patBg.setAttribute('width','5'); patBg.setAttribute('height','5');
+      patBg.setAttribute('fill', 'rgba(220,220,220,0.35)');
+      pat.appendChild(patBg);
+      // Diagonal hatch line
+      const hLine = document.createElementNS(SVG_NS, 'line');
+      hLine.setAttribute('x1','0'); hLine.setAttribute('y1','5');
+      hLine.setAttribute('x2','5'); hLine.setAttribute('y2','0');
+      hLine.setAttribute('stroke', 'rgba(150,150,150,0.5)'); hLine.setAttribute('stroke-width','1.2');
+      pat.appendChild(hLine);
+      defs.appendChild(pat);
+      svg.appendChild(defs);
+
+      function tx(t) { return labelW + ((t - tMin) / tRange) * chartW; }
+
+      const lineColor = 'rgba(90,170,220,0.7)';
+      const genLineColor = '#8c1aff';
+
+      // ── Vehicle rows ──
+      vehicles.forEach((v, i) => {
+        const y = padTop + i * rowH;
+        const barY = y + 3;
+        const barH = rowH - 6;
+
+        // Label
+        const lbl = document.createElementNS(SVG_NS, 'text');
+        lbl.setAttribute('x', labelW - 6);
+        lbl.setAttribute('y', y + rowH / 2);
+        lbl.setAttribute('text-anchor', 'end');
+        lbl.setAttribute('dominant-baseline', 'central');
+        lbl.setAttribute('fill', '#b6c3d8');
+        lbl.setAttribute('font-size', '10');
+        lbl.setAttribute('font-weight', 'bold');
+        lbl.textContent = 'N' + v.veh + '-K' + v.k;
+        svg.appendChild(lbl);
+
+        // Baseline horizontal line
+        const yBot = y + rowH - 2;
+        const baseLine = document.createElementNS(SVG_NS, 'line');
+        baseLine.setAttribute('x1', tx(tMin)); baseLine.setAttribute('x2', tx(tMax));
+        baseLine.setAttribute('y1', yBot); baseLine.setAttribute('y2', yBot);
+        baseLine.setAttribute('stroke', lineColor); baseLine.setAttribute('stroke-width', '1.5');
+        svg.appendChild(baseLine);
+
+        // Gray hatched delay patch (genTime → t0)
+        if (isFinite(v.genTime) && v.t0 > v.genTime + 0.01) {
+          const dx1 = tx(v.genTime);
+          const dx2 = tx(v.t0);
+          const dr = document.createElementNS(SVG_NS, 'rect');
+          dr.setAttribute('x', dx1); dr.setAttribute('y', barY);
+          dr.setAttribute('width', Math.max(dx2 - dx1, 0.5));
+          dr.setAttribute('height', barH);
+          dr.setAttribute('fill', 'url(#delayHatch)');
+          svg.appendChild(dr);
+        }
+
+        // Colored segments
+        for (let s = 0; s < v.spaces.length; s++) {
+          const spIdx = Math.round(v.spaces[s]) - 1;
+          const x1 = tx(v.segStart[s]);
+          const x2 = tx(v.segEnd[s]);
+          const rect = document.createElementNS(SVG_NS, 'rect');
+          rect.setAttribute('x', x1); rect.setAttribute('y', barY);
+          rect.setAttribute('width', Math.max(x2 - x1, 1));
+          rect.setAttribute('height', barH);
+          rect.setAttribute('fill', SPACE_COLORS[spIdx] || '#888');
+          rect.setAttribute('opacity', '0.88');
+          svg.appendChild(rect);
+        }
+
+        // Purple dashed line: theoretical generation time (x_prev + Dt)
+        if (isFinite(v.genTime)) {
+          const gx = tx(v.genTime);
+          const gl = document.createElementNS(SVG_NS, 'line');
+          gl.setAttribute('x1', gx); gl.setAttribute('x2', gx);
+          gl.setAttribute('y1', barY - 1); gl.setAttribute('y2', barY + barH + 1);
+          gl.setAttribute('stroke', genLineColor);
+          gl.setAttribute('stroke-width', '1.8');
+          gl.setAttribute('stroke-dasharray', '4,3');
+          svg.appendChild(gl);
+        }
+
+        // Blue dashed line: actual generation time used by tree (ADMM averaged)
+        if (isFinite(v.actualGenTime)) {
+          const ax = tx(v.actualGenTime);
+          const al = document.createElementNS(SVG_NS, 'line');
+          al.setAttribute('x1', ax); al.setAttribute('x2', ax);
+          al.setAttribute('y1', barY - 1); al.setAttribute('y2', barY + barH + 1);
+          al.setAttribute('stroke', '#2196F3');
+          al.setAttribute('stroke-width', '1.8');
+          al.setAttribute('stroke-dasharray', '4,3');
+          svg.appendChild(al);
+        }
+      });
+
+      // ── Zone rows (M1..Mn) ──
+      const zoneStartY = padTop + vehRows * rowH + gapBetween;
+      const sep = document.createElementNS(SVG_NS, 'line');
+      sep.setAttribute('x1', labelW); sep.setAttribute('x2', labelW + chartW);
+      sep.setAttribute('y1', zoneStartY - gapBetween / 2);
+      sep.setAttribute('y2', zoneStartY - gapBetween / 2);
+      sep.setAttribute('stroke', '#555'); sep.setAttribute('stroke-width', '1');
+      svg.appendChild(sep);
+
+      for (let m = 0; m < numSpaces; m++) {
+        const y = zoneStartY + m * rowH;
+        const barY = y + 3;
+        const barH = rowH - 6;
+
+        // Label
+        const lbl = document.createElementNS(SVG_NS, 'text');
+        lbl.setAttribute('x', labelW - 6);
+        lbl.setAttribute('y', y + rowH / 2);
+        lbl.setAttribute('text-anchor', 'end');
+        lbl.setAttribute('dominant-baseline', 'central');
+        lbl.setAttribute('fill', '#b6c3d8');
+        lbl.setAttribute('font-size', '10');
+        lbl.setAttribute('font-weight', 'bold');
+        lbl.textContent = 'M' + (m + 1);
+        svg.appendChild(lbl);
+
+        // Baseline
+        const bl = document.createElementNS(SVG_NS, 'line');
+        bl.setAttribute('x1', tx(tMin)); bl.setAttribute('x2', tx(tMax));
+        bl.setAttribute('y1', y + rowH - 2); bl.setAttribute('y2', y + rowH - 2);
+        bl.setAttribute('stroke', lineColor); bl.setAttribute('stroke-width', '1.5');
+        svg.appendChild(bl);
+
+        // Vehicle occupancy blocks
+        vehicles.forEach(v => {
+          for (let s = 0; s < v.spaces.length; s++) {
+            if (Math.round(v.spaces[s]) === m + 1) {
+              const x1 = tx(v.segStart[s]);
+              const x2 = tx(v.segEnd[s]);
+              const rect = document.createElementNS(SVG_NS, 'rect');
+              rect.setAttribute('x', x1); rect.setAttribute('y', barY);
+              rect.setAttribute('width', Math.max(x2 - x1, 1));
+              rect.setAttribute('height', barH);
+              rect.setAttribute('fill', 'none');
+              rect.setAttribute('stroke', SPACE_COLORS[m]);
+              rect.setAttribute('stroke-width', '2');
+              svg.appendChild(rect);
+              const txt = document.createElementNS(SVG_NS, 'text');
+              txt.setAttribute('x', (x1 + x2) / 2);
+              txt.setAttribute('y', y + rowH / 2);
+              txt.setAttribute('text-anchor', 'middle');
+              txt.setAttribute('dominant-baseline', 'central');
+              txt.setAttribute('fill', '#ddd');
+              txt.setAttribute('font-size', '9');
+              txt.setAttribute('font-weight', 'bold');
+              txt.textContent = 'N' + v.veh;
+              svg.appendChild(txt);
+            }
+          }
+        });
+      }
+
+      // ── Time axis ──
+      const axisY = zoneStartY + numSpaces * rowH + 6;
+      const axLine = document.createElementNS(SVG_NS, 'line');
+      axLine.setAttribute('x1', labelW); axLine.setAttribute('x2', labelW + chartW);
+      axLine.setAttribute('y1', axisY); axLine.setAttribute('y2', axisY);
+      axLine.setAttribute('stroke', '#b6c3d8'); axLine.setAttribute('stroke-width', '1');
+      svg.appendChild(axLine);
+
+      const nTicks = 6;
+      for (let i = 0; i <= nTicks; i++) {
+        const t = tMin + pad + ((tMax - pad - (tMin + pad)) * i) / nTicks;
+        const x = tx(t);
+        const tick = document.createElementNS(SVG_NS, 'line');
+        tick.setAttribute('x1', x); tick.setAttribute('x2', x);
+        tick.setAttribute('y1', axisY - 3); tick.setAttribute('y2', axisY + 3);
+        tick.setAttribute('stroke', '#b6c3d8'); tick.setAttribute('stroke-width', '1');
+        svg.appendChild(tick);
+        const lbl = document.createElementNS(SVG_NS, 'text');
+        lbl.setAttribute('x', x);
+        lbl.setAttribute('y', axisY + 14);
+        lbl.setAttribute('text-anchor', 'middle');
+        lbl.setAttribute('fill', '#b6c3d8');
+        lbl.setAttribute('font-size', '9');
+        lbl.textContent = t.toFixed(1) + 's';
+        svg.appendChild(lbl);
+      }
+    }
+
+    // Event listeners
+    document.getElementById('treeExploreBtn').addEventListener('click', openTreeExplore);
+    document.getElementById('treeExploreClose').addEventListener('click', closeTreeExplore);
+    document.getElementById('treeExploreBackdrop').addEventListener('click', closeTreeExplore);
+
+    // Keyboard handling
+    document.addEventListener('keydown', e => {
+      if (!treeExploreOpen) return;
+      const intData = getTreeData()?.intersections[treeCurrentInt];
+      if (!intData) return;
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeTreeExplore();
+        return;
+      }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.stopPropagation();
+        const nLeaves = intData.leafPaths.length;
+        if (e.key === 'ArrowUp') {
+          treeCurrentLeaf = (treeCurrentLeaf - 1 + nLeaves) % nLeaves;
+        } else {
+          treeCurrentLeaf = (treeCurrentLeaf + 1) % nLeaves;
+        }
+        selectLeafPath(treeCurrentLeaf);
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        e.stopPropagation();
+        const treeData = getTreeData();
+        if (!treeData) return;
+        const intKeys = Object.keys(treeData.intersections).sort((a,b) => +a - +b);
+        let idx = intKeys.indexOf(treeCurrentInt);
+        if (e.key === 'ArrowLeft') {
+          idx = (idx - 1 + intKeys.length) % intKeys.length;
+        } else {
+          idx = (idx + 1) % intKeys.length;
+        }
+        activateIntTab(intKeys[idx]);
       }
     }, true);
     // ─────────────────────────────────────────────────────────────────────────
@@ -3296,6 +4091,7 @@
 
     function applySetup(group, scene, policy) {
       const key = schedKey(group, scene, policy);
+      console.log('[applySetup]', key, 'available =', !!activeAvailable[key], 'path =', schedPath(group, scene, policy));
       if (!activeAvailable[key]) {
         // No data yet — show placeholder message, don't change animation
         robotGroup    = group;
@@ -3318,6 +4114,7 @@
       s.id  = 'dynSched';
       s.src = schedPath(group, scene, policy) + '?v=' + Date.now();
       s.onload = () => {
+        console.log('[dynSched] onload fired, SCHEDULE_DATA =', !!window.SCHEDULE_DATA);
         if (window.SCHEDULE_DATA) {
           scheduleData = window.SCHEDULE_DATA;
           // Rebuild VEHICLE_CONFIG from new schedule
@@ -3336,7 +4133,8 @@
               enterDist: pathDists(pts)[m.enterIdx],
               exitDist:  pathDists(pts)[m.exitIdx]
             }));
-            robotImageMap[vc.id] = imgCycle[VEHICLE_CONFIG.indexOf(vc) % imgCycle.length];
+            const _cyc = currentImgCycle();
+            robotImageMap[vc.id] = _cyc[VEHICLE_CONFIG.indexOf(vc) % _cyc.length];
           }
           // Recreate robot DOM elements
           document.querySelectorAll('.robot-wrap').forEach(el => el.remove());
@@ -3347,16 +4145,19 @@
           animDuration = scheduleData.t_final - scheduleData.t_cut + 3;
           finishedCountEl.textContent = '0/' + VEHICLE_CONFIG.length;
           updateSetupCard();
+          updateTreeBtnVisibility();
           resetPlayback();
           // Auto-play when a new scenario/policy is selected
           playing = true;
           lastTs  = null;
-          const playBtn = document.getElementById('togglePlay');
-          playBtn.textContent = '⏸ Pause';
-          playBtn.classList.add('primary');
+          updatePlayBtnState();
         }
       };
-      s.onerror = () => console.warn('Failed to load:', s.src);
+      s.onerror = () => {
+        console.warn('Failed to load:', s.src);
+        // If auto mode, skip to next
+        if (autoMode) { advanceToNextScenario(); }
+      };
       document.head.appendChild(s);
       updateSetupCard();
       updateSchedSlides();
@@ -3371,9 +4172,18 @@
         elapsedSec = Math.max(0, Math.min(animDuration, elapsedSec + step));
         if ((playbackDir === 'forward'  && elapsedSec >= animDuration) ||
             (playbackDir === 'backward' && elapsedSec <= 0)) {
-          playing = false;
-          document.getElementById('togglePlay').textContent = '▶ Play';
-          document.getElementById('togglePlay').classList.remove('primary');
+          if (loopMode) {
+            // Loop: restart same scenario
+            resetPlayback();
+            lastTs = null;
+          } else if (autoMode) {
+            // Auto: pause now, advanceToNextScenario will auto-play via onload
+            playing = false;
+            advanceToNextScenario();
+          } else {
+            playing = false;
+            updatePlayBtnState();
+          }
         }
         try { updateFrame(); } catch(e) { console.error('updateFrame error:', e); }
       }
@@ -3394,16 +4204,40 @@
     });
 
     // ── Map toggle (Warehouse ↔ Traffic) ────────────────────────────────────
-    let currentMapMode = 'warehouse';
+    let currentMapMode = localStorage.getItem('demoMapMode') || 'warehouse';
     document.getElementById('mapToggleBtn').addEventListener('click', () => {
       const scene = document.getElementById('scene');
       const btn   = document.getElementById('mapToggleBtn');
       const title = document.querySelector('.title');
 
-      // Pause animation during switch
+      // Pause animation during switch; reset auto/loop
       playing = false;
-      document.getElementById('togglePlay').textContent = '▶ Play';
-      document.getElementById('togglePlay').classList.remove('primary');
+      autoMode = false;
+      loopMode = false;
+      updateModeButtons();
+      updatePlayBtnState();
+
+      // ── Full cleanup before switching ──
+      // 1. Stop animation & clear all vehicle DOM
+      playing = false;
+      lastTs  = null;
+      document.querySelectorAll('.robot-wrap').forEach(el => el.remove());
+      robotEls = {};
+      robotState = {};
+      VEHICLE_CONFIG.length = 0;
+      scheduleData = null;
+      window.SCHEDULE_DATA = undefined;
+      const oldDyn = document.getElementById('dynSched');
+      if (oldDyn) oldDyn.remove();
+      // 2. Reset counters
+      recorded   = new Set();
+      totalDelay = 0;
+      finished   = 0;
+      elapsedSec = 0;
+      totalCostEl.textContent    = '0.00 s';
+      totalCostLabel.textContent = '0.00 s';
+      finishedCountEl.textContent = '0/0';
+      totalBarFill.style.width   = '0%';
 
       if (currentMapMode === 'warehouse') {
         // ── Switch to Traffic ──
@@ -3412,20 +4246,27 @@
         btn.classList.add('traffic-active');
         title.textContent = '5-Intersection Traffic Map';
         currentMapMode = 'traffic';
+        localStorage.setItem('demoMapMode', 'traffic');
 
         isTrafficMode   = true;
         activeGroups    = SCENARIO_GROUPS_TR;
         activeAvailable = AVAILABLE_TR;
 
-        // Rebuild scenario dropdown with traffic groups
-        populateSceneLvl1();
+        buildScenarioMenu(Object.keys(activeGroups)[0]);
+        updateTreeBtnVisibility();
         const firstGroup = Object.keys(SCENARIO_GROUPS_TR)[0];
         if (firstGroup) {
           const firstScene = SCENARIO_GROUPS_TR[firstGroup].scenes[0];
           applySetup(firstGroup, firstScene, 'optimal');
+          // Fallback: ensure playback starts even if onload fires synchronously
+          setTimeout(() => {
+            if (!playing && scheduleData) {
+              playing = true;
+              lastTs = null;
+              updatePlayBtnState();
+            }
+          }, 500);
         } else {
-          // No traffic data yet — clear schedule display
-          scheduleData = null;
           document.getElementById('scenarioLabel').textContent = '— no data —';
           document.getElementById('policyBtnLabel').textContent = 'Optimal';
           document.getElementById('setupScenario').textContent = '—';
@@ -3439,27 +4280,113 @@
         btn.classList.remove('traffic-active');
         title.textContent = 'Warehouse AMR Merging Zone Demo';
         currentMapMode = 'warehouse';
+        localStorage.setItem('demoMapMode', 'warehouse');
 
         isTrafficMode   = false;
         activeGroups    = SCENARIO_GROUPS_WH;
         activeAvailable = AVAILABLE_WH;
 
-        // Rebuild scenario dropdown and reload default warehouse scenario
-        populateSceneLvl1();
+        buildScenarioMenu(Object.keys(activeGroups)[0]);
+        updateTreeBtnVisibility();
         const defGroup = Object.keys(SCENARIO_GROUPS_WH)[0];
         const defScene = SCENARIO_GROUPS_WH[defGroup].scenes[0];
         applySetup(defGroup, defScene, 'optimal');
+        setTimeout(() => {
+          if (!playing && scheduleData) {
+            playing = true;
+            lastTs = null;
+            updatePlayBtnState();
+          }
+        }, 500);
       }
     });
 
+    // ── Loop & Auto mode state ─────────────────────────────────────────────
+    let loopMode = false;
+    let autoMode = false;
+
+    function updateModeButtons() {
+      const loopBtn = document.getElementById('loopBtn');
+      const autoBtn = document.getElementById('autoBtn');
+      loopBtn.textContent = loopMode ? '🔁 Loop ✓' : '🔁 Loop';
+      loopBtn.classList.toggle('primary', loopMode);
+      autoBtn.textContent = autoMode ? '⏭ Auto ✓' : '⏭ Auto';
+      autoBtn.classList.toggle('primary', autoMode);
+    }
+
+    document.getElementById('loopBtn').addEventListener('click', () => {
+      loopMode = !loopMode;
+      if (loopMode) autoMode = false;  // mutually exclusive
+      updateModeButtons();
+    });
+
+    document.getElementById('autoBtn').addEventListener('click', () => {
+      autoMode = !autoMode;
+      if (autoMode) {
+        loopMode = false;  // mutually exclusive
+        // Resume playing if paused or at end
+        if (!playing) {
+          const atEnd = (playbackDir === 'forward' && elapsedSec >= animDuration) ||
+                        (playbackDir === 'backward' && elapsedSec <= 0);
+          if (atEnd) resetPlayback();
+          playing = true;
+          lastTs = null;
+          updatePlayBtnState();
+        }
+      }
+      updateModeButtons();
+    });
+
+    function advanceToNextScenario() {
+      // Build flat list: for each scenario, iterate policies first, then next scenario
+      // Order: (10r S1 optimal) → (10r S1 fcfs) → (10r S2 optimal) → (10r S2 fcfs) → (15r S1 ...) → ...
+      const list = [];
+      for (const [gid, gdata] of Object.entries(activeGroups)) {
+        for (const sc of gdata.scenes) {
+          for (const pol of ['optimal', 'fcfs']) {
+            const key = schedKey(gid, sc, pol);
+            if (activeAvailable[key]) list.push({ group: gid, scene: sc, policy: pol });
+          }
+        }
+      }
+      if (list.length === 0) { autoMode = false; updateModeButtons(); return; }
+
+      // Find current, advance to next (wrap around)
+      const curKey = schedKey(robotGroup, sceneName, currentPolicy);
+      let idx = list.findIndex(e => schedKey(e.group, e.scene, e.policy) === curKey);
+      idx = (idx + 1) % list.length;
+
+      const next = list[idx];
+      applySetup(next.group, next.scene, next.policy);
+    }
+
+    // ── Play button state helper ────────────────────────────────────────────
+    function updatePlayBtnState() {
+      const btn = document.getElementById('togglePlay');
+      if (playing) {
+        btn.textContent = '⏸ Pause';
+        btn.classList.add('primary');
+      } else {
+        btn.textContent = '▶ Play';
+        btn.classList.remove('primary');
+      }
+    }
+
     // ── Pause / Play ─────────────────────────────────────────────────────────
     document.getElementById('togglePlay').addEventListener('click', () => {
+      // If animation has ended, treat Play as Replay
+      const atEnd = (playbackDir === 'forward'  && elapsedSec >= animDuration) ||
+                    (playbackDir === 'backward' && elapsedSec <= 0);
+      if (!playing && atEnd) {
+        resetPlayback();
+        playing = true;
+        lastTs = null;
+        updatePlayBtnState();
+        return;
+      }
       playing = !playing;
-      lastTs = null;   // reset timestamp so first resumed frame has delta≈0
-      const btn = document.getElementById('togglePlay');
-      btn.textContent = playing ? '⏸ Pause' : '▶ Play';
-      btn.classList.toggle('primary', playing);
-      // Do NOT call requestAnimationFrame here — loop() already runs perpetually
+      lastTs = null;
+      updatePlayBtnState();
     });
 
     // ── Replay ───────────────────────────────────────────────────────────────
@@ -3467,20 +4394,17 @@
       resetPlayback();
       playing = true;
       lastTs = null;
-      const btn = document.getElementById('togglePlay');
-      btn.textContent = '⏸ Pause';
-      btn.classList.add('primary');
-      // Do NOT call requestAnimationFrame here — loop() already runs perpetually
+      updatePlayBtnState();
     });
 
-    // ── Speed buttons ────────────────────────────────────────────────────────
-    document.querySelectorAll('.speed-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        playbackSpeed = parseFloat(btn.dataset.speed);
-        document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        updateSetupCard();
-      });
+    // ── Speed cycle button ──────────────────────────────────────────────────
+    const SPEED_STEPS = [0.5, 1, 2];
+    let speedIdx = 1;  // default 1×
+    document.getElementById('speedCycleBtn').addEventListener('click', () => {
+      speedIdx = (speedIdx + 1) % SPEED_STEPS.length;
+      playbackSpeed = SPEED_STEPS[speedIdx];
+      document.getElementById('speedCycleBtn').textContent = playbackSpeed + '×';
+      updateSetupCard();
     });
 
     // ── Direction buttons ────────────────────────────────────────────────────
@@ -3546,6 +4470,7 @@
         btn.className = 'drop-item' + (gid === robotGroup && sid === sceneName ? ' selected' : '');
         btn.textContent = sid;
         btn.addEventListener('click', () => {
+          autoMode = false; updateModeButtons();  // manual selection cancels auto
           applySetup(gid, sid, 'optimal');  // reset policy to Optimal on scene change
           closeAllDrops();
           buildScenarioMenu(gid);
@@ -3575,7 +4500,7 @@
       const prioNums = [];
       Object.keys(activeAvailable).forEach(key => {
         const m = key.match(new RegExp('^' + robotGroup + '_' + base + '_p(\\d+)_optimal$'));
-        if (m && AVAILABLE[key]) prioNums.push(parseInt(m[1]));
+        if (m && activeAvailable[key]) prioNums.push(parseInt(m[1]));
       });
       prioNums.sort((a, b) => a - b);
 
@@ -3616,12 +4541,14 @@
     document.getElementById('policyMenu').addEventListener('click', e => e.stopPropagation());
     document.querySelectorAll('#policyMenu .drop-item[data-policy="optimal"]').forEach(btn => {
       btn.addEventListener('click', () => {
+        autoMode = false; updateModeButtons();
         applySetup(robotGroup, baseScene(), 'optimal');
         closeAllDrops(); buildPolicyMenu();
       });
     });
     document.querySelectorAll('#policyMenu .drop-item[data-policy="fcfs"]').forEach(btn => {
       btn.addEventListener('click', () => {
+        autoMode = false; updateModeButtons();
         applySetup(robotGroup, baseScene(), 'fcfs');
         closeAllDrops(); buildPolicyMenu();
       });
@@ -3673,6 +4600,11 @@
     }
 
     requestAnimationFrame(loop);
+
+    // Restore last map mode on page load
+    if (currentMapMode === 'traffic') {
+      document.getElementById('mapToggleBtn').click();
+    }
   </script>
 
   <!-- ══════════════════════════════════════════════════════════════════════
@@ -3712,6 +4644,45 @@
     `;
     document.head.appendChild(gpStyle);
 
+    // ── Gamepad cursor CSS ───────────────────────────────────────────────
+    const gpCursorStyle = document.createElement('style');
+    gpCursorStyle.textContent = `
+      @keyframes gpPulse {
+        0%   { box-shadow: 0 0 8px rgba(255,160,40,0.6), 0 0 20px rgba(255,120,0,0.4), 0 0 40px rgba(255,80,0,0.2); }
+        50%  { box-shadow: 0 0 14px rgba(255,180,60,0.9), 0 0 30px rgba(255,140,0,0.6), 0 0 60px rgba(255,100,0,0.35), 0 0 80px rgba(255,60,0,0.15); }
+        100% { box-shadow: 0 0 8px rgba(255,160,40,0.6), 0 0 20px rgba(255,120,0,0.4), 0 0 40px rgba(255,80,0,0.2); }
+      }
+      #gpCursor {
+        position: fixed;
+        width: 18px; height: 18px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, rgba(255,220,120,0.95), rgba(255,160,40,0.9) 50%, rgba(255,100,0,0.7));
+        border: 2px solid rgba(255,200,80,0.8);
+        animation: gpPulse 1.4s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 9999;
+        transition: width 0.1s, height 0.1s, opacity 0.15s, background 0.15s;
+        display: none;
+        will-change: transform;
+        margin-left: -11px;
+        margin-top: -11px;
+      }
+      #gpCursor.active { display: block; }
+      #gpCursor.clicking {
+        background: radial-gradient(circle at 40% 40%, #fff, rgba(255,200,80,1) 60%, rgba(255,120,0,0.9));
+        box-shadow: 0 0 24px rgba(255,200,80,1), 0 0 50px rgba(255,140,0,0.8), 0 0 80px rgba(255,80,0,0.4) !important;
+        width: 28px; height: 28px;
+        margin-left: -16px; margin-top: -16px;
+        animation: none;
+      }
+      .gp-hover {
+        outline: 2px solid rgba(255,170,40,0.9) !important;
+        outline-offset: 2px;
+        filter: brightness(1.15);
+      }
+    `;
+    document.head.appendChild(gpCursorStyle);
+
     // ════════════════════════════════════════════════════════════════════════
     // InputRepeatController
     // Edge detection + held-key repeat with initial delay + interval throttle
@@ -3748,9 +4719,9 @@
         { id:'map',      el:() => document.getElementById('mapToggleBtn') },
         { id:'scenario', el:() => document.getElementById('scenarioBtn') },
         { id:'policy',   el:() => document.getElementById('policyBtn')   },
-        { id:'control',  els:() => ['togglePlay','restart'].map(id => document.getElementById(id)) },
+        { id:'control',  els:() => ['togglePlay','restart','loopBtn','autoBtn'].map(id => document.getElementById(id)) },
         { id:'dir',      els:() => ['dirFwd','dirBwd'].map(id => document.getElementById(id)) },
-        { id:'speed',    els:() => [...document.querySelectorAll('.speed-btn')] },
+        { id:'speed',    els:() => [document.getElementById('speedCycleBtn')] },
       ];
 
       // Modes: 'bar' | 'scenario-l1' | 'scenario-l2' | 'policy'
@@ -3880,17 +4851,20 @@
       togglePlay() { document.getElementById('togglePlay').click(); },
       replay()     { document.getElementById('restart').click(); },
       speedDown() {
-        const steps = ['0.5','1','2'];
-        const cur   = String(playbackSpeed);
-        const idx   = steps.indexOf(cur);
-        if (idx > 0) document.querySelector(`.speed-btn[data-speed="${steps[idx-1]}"]`).click();
+        if (speedIdx > 0) {
+          speedIdx--;
+          playbackSpeed = SPEED_STEPS[speedIdx];
+          document.getElementById('speedCycleBtn').textContent = playbackSpeed + '×';
+          updateSetupCard();
+        }
       },
       speedUp() {
-        const steps = ['0.5','1','2'];
-        const cur   = String(playbackSpeed);
-        const idx   = steps.indexOf(cur);
-        if (idx < steps.length - 1)
-          document.querySelector(`.speed-btn[data-speed="${steps[idx+1]}"]`).click();
+        if (speedIdx < SPEED_STEPS.length - 1) {
+          speedIdx++;
+          playbackSpeed = SPEED_STEPS[speedIdx];
+          document.getElementById('speedCycleBtn').textContent = playbackSpeed + '×';
+          updateSetupCard();
+        }
       },
     };
 
@@ -3899,7 +4873,7 @@
     // ════════════════════════════════════════════════════════════════════════
     const GM = (() => {
       // Xbox button indices (standard mapping)
-      const B = { A:0, B:1, X:2, Y:3, LB:4, RB:5,
+      const B = { A:0, B:1, X:2, Y:3, LB:4, RB:5, LT:6, RT:7,
                   SEL:8, START:9, L3:10, R3:11,
                   DU:12, DD:13, DL:14, DR:15 };
 
@@ -3908,6 +4882,14 @@
       let prevBtns      = {};   // button index → bool (previous frame)
       let gpActive      = false;
       let prevRStickZone = null; // right stick zone edge detection
+
+      // ── Cursor state ──
+      let curX = window.innerWidth / 2, curY = window.innerHeight / 2;
+      let gpCursorEl = null;
+      let hoveredEl  = null;
+      let lastTickTs = 0;
+      const CURSOR_SPEED = 800;  // px per second
+      const CURSOR_DZ    = 0.15; // deadzone
 
       function gp() { return gpIdx !== null ? navigator.getGamepads()[gpIdx] : null; }
       function pressed(g, i) { return !!(g.buttons[i]?.pressed); }
@@ -3947,6 +4929,40 @@
         if (!kept || FM.mode() === 'bar') closeAllDrops();
       }
 
+      // ── Cursor helper: move + hover + optional click ──
+      function updateCursor(g, ax0, ax1, now, allowClick) {
+        if (!gpCursorEl) return;
+        const dt = lastTickTs ? (now - lastTickTs) / 1000 : 0.016;
+        lastTickTs = now;
+        const mx = Math.abs(ax0) > CURSOR_DZ ? ax0 : 0;
+        const my = Math.abs(ax1) > CURSOR_DZ ? ax1 : 0;
+        if (mx || my) {
+          curX += mx * CURSOR_SPEED * dt;
+          curY += my * CURSOR_SPEED * dt;
+          curX = Math.max(0, Math.min(window.innerWidth  - 1, curX));
+          curY = Math.max(0, Math.min(window.innerHeight - 1, curY));
+        }
+        gpCursorEl.style.transform = `translate(${curX}px, ${curY}px)`;
+
+        // Hit detection
+        const hitEl = document.elementFromPoint(curX, curY);
+        const clickable = hitEl ? hitEl.closest(
+          'button, .ctrl-btn, .drop-item, .speed-btn, .dir-btn, .sched-tab, .map-toggle-btn, .sched-close, .ctrl-action'
+        ) : null;
+        if (clickable !== hoveredEl) {
+          if (hoveredEl) hoveredEl.classList.remove('gp-hover');
+          hoveredEl = clickable;
+          if (hoveredEl) hoveredEl.classList.add('gp-hover');
+        }
+
+        // A button → click hovered element
+        if (allowClick && edge(g, B.A) && hoveredEl) {
+          hoveredEl.click();
+          gpCursorEl.classList.add('clicking');
+          setTimeout(() => gpCursorEl.classList.remove('clicking'), 150);
+        }
+      }
+
       function tick(now) {
         requestAnimationFrame(tick);
         if (!pageFocused || gpIdx === null) return;
@@ -3984,6 +5000,46 @@
             if (stickU || dpU) pBody.scrollTop -= 40;
             if (stickD || dpD) pBody.scrollTop += 40;
           }
+          updateCursor(g, ax0, ax1, now, true);
+          g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
+          prevRStickZone = null;
+          return;
+        }
+
+        // Tree explorer intercepts input when open
+        if (treeExploreOpen) {
+          if (edge(g, B.B))  closeTreeExplore();
+          // Left stick up/down cycles leaf paths
+          const tIntData = getTreeData() &&
+            getTreeData().intersections[treeCurrentInt];
+          if (tIntData) {
+            const nLeaves = tIntData.leafPaths.length;
+            InputRepeat.check('U', stickU, now, () => {
+              treeCurrentLeaf = (treeCurrentLeaf - 1 + nLeaves) % nLeaves;
+              selectLeafPath(treeCurrentLeaf);
+            });
+            InputRepeat.check('D', stickD, now, () => {
+              treeCurrentLeaf = (treeCurrentLeaf + 1) % nLeaves;
+              selectLeafPath(treeCurrentLeaf);
+            });
+          }
+          // Left stick left/right switches intersection tabs
+          const intKeys = getTreeData() ?
+            Object.keys(getTreeData().intersections).sort((a,b) => +a - +b) : [];
+          if (intKeys.length > 0) {
+            InputRepeat.check('L', stickL, now, () => {
+              let idx = intKeys.indexOf(treeCurrentInt);
+              idx = (idx - 1 + intKeys.length) % intKeys.length;
+              activateIntTab(intKeys[idx]);
+            });
+            InputRepeat.check('R', stickR, now, () => {
+              let idx = intKeys.indexOf(treeCurrentInt);
+              idx = (idx + 1) % intKeys.length;
+              activateIntTab(intKeys[idx]);
+            });
+          }
+          // No cursor in tree explorer
+          if (gpCursorEl) gpCursorEl.classList.remove('active');
           g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
           prevRStickZone = null;
           return;
@@ -3992,11 +5048,21 @@
         // Schedule viewer intercepts input when open
         if (schedViewerOpen) {
           if (edge(g, B.B))                      closeSchedViewer();
-          if (edge(g, B.LB) || dL)               schedGoTo(schedSlideIdx - 1);
-          if (edge(g, B.RB) || dR)               schedGoTo(schedSlideIdx + 1);
+          // D-pad (metal panel) switches slides; LB/RB also work
+          InputRepeat.check('L', dpL, now, () => schedGoTo(schedSlideIdx - 1));
+          InputRepeat.check('R', dpR, now, () => schedGoTo(schedSlideIdx + 1));
+          if (edge(g, B.LB))                     schedGoTo(schedSlideIdx - 1);
+          if (edge(g, B.RB))                     schedGoTo(schedSlideIdx + 1);
+          // Cursor disabled while schedule viewer is open
+          if (gpCursorEl) gpCursorEl.classList.remove('active');
           g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
           prevRStickZone = null;
           return;
+        }
+
+        // Restore cursor when back on main page
+        if (gpCursorEl && !gpCursorEl.classList.contains('active')) {
+          gpCursorEl.classList.add('active');
         }
 
         // D-pad → FM bar / dropdown navigation (metal panel control)
@@ -4019,7 +5085,9 @@
         if (edge(g, B.LB)) Actions.speedDown();
         if (edge(g, B.RB)) Actions.speedUp();
         if (edge(g, B.L3)) location.reload();
-        if (edge(g, B.R3)) document.getElementById('mapToggleBtn').click();  // R3 → switch map
+        if (edge(g, B.LT)) document.getElementById('mapToggleBtn').click();  // LT → switch map
+        if (edge(g, B.RT)) { treeExploreOpen ? closeTreeExplore() : openTreeExplore(); }  // RT → tree explorer
+        if (edge(g, B.R3)) document.getElementById('mapToggleBtn').click();  // R3 → switch map (kept as backup)
 
         // Right joystick → local zoom (P1-P4), spatial mapping matches map layout:
         //   P4(↖)  P3(↗)
@@ -4037,6 +5105,9 @@
         if (rZone && rZone !== prevRStickZone) setLocalView(rZone);
         prevRStickZone = rZone;
 
+        // ── Gamepad cursor (left stick) ──────────────────────────────────
+        updateCursor(g, ax0, ax1, now, true);
+
         // Save state for next frame
         g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
       }
@@ -4046,6 +5117,14 @@
         prevBtns = {};
         gpActive = true;
         FM.init();
+        // Init cursor
+        if (!gpCursorEl) gpCursorEl = document.getElementById('gpCursor');
+        if (gpCursorEl) {
+          curX = window.innerWidth / 2;
+          curY = window.innerHeight / 2;
+          gpCursorEl.classList.add('active');
+        }
+        lastTickTs = 0;
         console.log(`[Gamepad] Connected: index ${idx} — A=confirm B=back X=play Y=replay LB/RB=speed Select=schedule-view Start=params L3=reload`);
       }
       function disconnect(idx) {
@@ -4054,6 +5133,9 @@
         gpActive = false;
         FM.deinit();
         InputRepeat.reset();
+        // Hide cursor and clean up hover
+        if (gpCursorEl) gpCursorEl.classList.remove('active');
+        if (hoveredEl) { hoveredEl.classList.remove('gp-hover'); hoveredEl = null; }
         console.log(`[Gamepad] Disconnected`);
       }
 
@@ -4079,5 +5161,6 @@
 
   })(); // end GamepadModule
   </script>
+<div id="gpCursor"></div>
 </body>
 </html>

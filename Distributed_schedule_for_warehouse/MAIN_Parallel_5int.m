@@ -20,9 +20,9 @@ clear all;
 configMode = 'random';   % 'manual' | 'random'
 
 % ===================== Physical parameters =====================
-T_val           = 3.0;   % same-entrance headway (s)
-T_ent           = 0;   % cross-entrance stagger (s)
-Dt              = 5.0;   % road travel time between intersections (s)
+T_val           = 2.0;   % same-entrance headway (s)
+T_ent           = 1;   % cross-entrance stagger (s)
+Dt              = 3.0;   % road travel time between intersections (s)
 v_max_phys      = 20.0;  % vehicle speed on road (m/s)
 v_int           = 10.0;  % vehicle speed inside intersection (m/s)
 W               = 20.0;  % merging zone / intersection width (m)
@@ -37,13 +37,14 @@ if strcmp(configMode, 'manual')
     numVehiclesList = [10];
     seedList        = [0];
 else
-    numVehiclesList = [15];
-    seedList        = [42005];
+    numVehiclesList = [20];
+    seedList        = [41409];
 end
 
 % ===================== Run mode =====================
 runMode     = 'normal';   % 'normal' | 'priority'
 useParallel = true;
+priority_robots = [18];    % which robots get fixed priority (used when runMode='priority')
 
 skip_normal_run       = strcmp(runMode, 'priority');
 enable_priority_sweep = strcmp(runMode, 'priority');
@@ -74,9 +75,9 @@ for iS = 1:numel(seedList)
     seed = seedList(iS);
 
     if strcmp(configMode, 'manual')
-        caseName = sprintf('5int_manual_%dr', Nveh);
+        caseName = sprintf('5int_manual_%dr_%s', Nveh, demoScene);
     else
-        caseName = sprintf('5int_seed%d_N%d', seed, Nveh);
+        caseName = sprintf('5int_seed%d_N%d_%s', seed, Nveh, demoScene);
     end
 
     caseDir = fullfile(rootSaveDir, caseName);
@@ -88,7 +89,7 @@ for iS = 1:numel(seedList)
 
     %% ADMM parameters
     rho1 = 1; rho2 = 1; weight = 1.5; max_iter = 200;
-    tol_r = 0.05; tol_s = 0.05;
+    tol_r = 0.01; tol_s = 0.01;
     randInitScale = 0;
 
     %% Local intersection DB (I1..I5, same M1-M5 structure)
@@ -237,6 +238,15 @@ for iS = 1:numel(seedList)
     const.randInitScale    = randInitScale;
     const.useParallel      = useParallel;
     const.NUM_AGENTS       = NUM_AGENTS;
+    % Physical parameters (for reproducibility)
+    const.T_val            = T_val;
+    const.T_ent            = T_ent;
+    const.v_max_phys       = v_max_phys;
+    const.v_int            = v_int;
+    const.W                = W;
+    const.detect_range_val = detect_range_val;
+    const.configMode       = configMode;
+    const.demoScene        = demoScene;
 
     demoGroup = sprintf('%dr', Nveh);
     matFile   = fullfile(caseDir, sprintf('5int_ADMM_%s.mat', caseName));
@@ -256,7 +266,7 @@ for iS = 1:numel(seedList)
 
         %% ── Plot macro schedule ──────────────────────────────────────────
         figs_before = findall(0,'Type','figure');
-        plot_C_ADMM2(residual_r, residual_s, delay_costs, ...
+        plot_C_ADMM2_5int(residual_r, residual_s, delay_costs, ...
             x_prev, y_prev, const.pathInfo_agent_chain, N, k);
         drawnow;
         figs_after = findall(0,'Type','figure');
@@ -384,6 +394,105 @@ for iS = 1:numel(seedList)
 
         fprintf('Finished: %s\n', caseDir);
     end  % ~skip_normal_run
+
+    %% ── Priority Override (5-int) ────────────────────────────────────────
+    if enable_priority_sweep && ~isempty(priority_robots)
+        fprintf('\n========================================================\n');
+        fprintf('Priority Override: robots %s, scene base = %s\n', ...
+            mat2str(priority_robots), demoScene);
+        fprintf('========================================================\n');
+
+        % Load normal run result as baseline
+        matFile_base = fullfile(caseDir, sprintf('5int_ADMM_%s.mat', caseName));
+        if ~exist(matFile_base, 'file')
+            error('Normal run MAT not found: %s', matFile_base);
+        end
+        base = load(matFile_base);
+        const_base = base.const;
+
+        panelPos_p = {
+            [0.02 0.53 0.30 0.42], [0.35 0.53 0.30 0.42], [0.68 0.53 0.30 0.42], ...
+            [0.02 0.05 0.30 0.42], [0.35 0.05 0.30 0.42]};
+        int_order = [1 2 5 3 4];
+
+        for prio_n = priority_robots
+            fprintf('\n--- Priority Robot %d ---\n', prio_n);
+
+            const_p = const_base;
+            const_p.priority_n = prio_n;
+
+            [xp, yp, LCp, rr_p, rs_p, dc_p, kp, Tp] = ...
+                run_admm_5int(const_p, const_p.agent_participation, NUM_AGENTS);
+
+            % Folder
+            caseName_p = sprintf('%s_pR%d', caseName, prio_n);
+            caseDir_p  = fullfile(rootSaveDir, caseName_p);
+            if ~exist(caseDir_p, 'dir'), mkdir(caseDir_p); end
+
+            % Save
+            const          = const_p;
+            x_prev         = xp;
+            y_prev         = yp;
+            LocalTreeCache = LCp;
+            residual_r     = rr_p;
+            residual_s     = rs_p;
+            delay_costs    = dc_p;
+            k              = kp;
+            T_ADMM         = Tp;
+
+            matFile_p = fullfile(caseDir_p, sprintf('5int_ADMM_%s.mat', caseName_p));
+            save(matFile_p, 'const', 'x_prev', 'y_prev', 'LocalTreeCache', ...
+                'residual_r', 'residual_s', 'delay_costs', 'k', 'T_ADMM', ...
+                'seed', 'Nveh');
+
+            % Plot macro
+            figs_before = findall(0,'Type','figure');
+            plot_C_ADMM2_5int(residual_r, residual_s, delay_costs, ...
+                x_prev, y_prev, const_p.pathInfo_agent_chain, Nveh, k);
+            drawnow;
+            figs_after = findall(0,'Type','figure');
+            new_figs   = setdiff(figs_after, figs_before);
+            [~, ord2]  = sort(arrayfun(@(f) f.Number, new_figs));
+            new_figs   = new_figs(ord2);
+            fig_macro_p = new_figs(min(3, end));
+            macroBase_p = fullfile(caseDir_p, sprintf('macro_%s', caseName_p));
+            savefig(fig_macro_p, [macroBase_p '.fig']);
+            exportgraphics(fig_macro_p, [macroBase_p '.png'], 'Resolution', 300);
+
+            % Plot local schedule (2x3 grid)
+            fig_p = figure('Color','w','Position',[50 50 2200 1080]);
+            for pi = 1:5
+                agent_i = int_order(pi);
+                cache = LCp{agent_i};
+                if isempty(cache) || ~isstruct(cache), continue; end
+                p = uipanel('Parent', fig_p, 'Units','normalized', ...
+                    'Position', panelPos_p{pi}, ...
+                    'BackgroundColor',[0.97 0.97 0.97], 'BorderType','none');
+                plot_local_schedule_final_into_panel_1(p, ...
+                    cache.NODES, cache.Path, agent_i, cache.valid_systems, const_p, ...
+                    'x_prev', xp, ...
+                    'gap',0.004,'panelColor','w','axColor',[0.98 0.98 0.98], ...
+                    'marg_w',0.12,'marg_h',0.08,'title_pad',0);
+            end
+            drawnow; pause(0.3);
+            localBase_p = fullfile(caseDir_p, sprintf('local_%s', caseName_p));
+            savefig(fig_p, [localBase_p '.fig']);
+            exportapp(fig_p, [localBase_p '.png']);
+
+            % Export to demo
+            demoScene_p = sprintf('%s_p%d', demoScene, prio_n);
+            export_scenario_to_demo_5int(caseName_p, demoGroup, demoScene_p);
+
+            fprintf('Priority R%d done.\n', prio_n);
+            const = const_base;
+        end
+
+        fprintf('\n=== Priority Override Complete ===\n');
+        fprintf('Add to HTML AVAILABLE_TR:\n');
+        for prio_n = priority_robots
+            fprintf('  ''%s_%s_p%d_optimal'': true,\n', demoGroup, demoScene, prio_n);
+        end
+    end
 
 end  % iS
 end  % iN

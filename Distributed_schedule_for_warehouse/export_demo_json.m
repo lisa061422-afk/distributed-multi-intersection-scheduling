@@ -44,12 +44,13 @@ for n = 1:N
     chain      = const.pathInfo_agent_chain{n}{1};
     int_agents = chain(1:2:end-1);   % intersection agents：位置1,3,5,...
 
-    kf = zeros(length(int_agents), 3);
+    kf = zeros(length(int_agents), 4);
     for k = 1:length(int_agents)
         ag          = int_agents(k);
-        kf(k, 1)    = ag;                    % intersection id (1-4)
+        kf(k, 1)    = ag;                    % intersection id (1-5)
         kf(k, 2)    = x_prev{ag}{n}(1);     % β: 实际进入时刻
         kf(k, 3)    = y_prev{ag}{n}(1);     % γ: 离开时刻
+        kf(k, 4)    = const.pathInfo{n}(1).routeId(k);  % MATLAB routeId (1-12)
     end
 
     % 用 num2cell 按行拆分，保证 jsonencode 始终输出 [[...],[...]] 嵌套格式

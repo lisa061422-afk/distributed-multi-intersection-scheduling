@@ -287,6 +287,12 @@ const.agent_participation = agent_participation;
 const.IntSpaceDB   = IntSpaceDB;
 const.randInitScale = randInitScale;
 const.useParallel   = useParallel;
+% Physical parameters (for reproducibility)
+const.T_val            = T_val;
+const.T_ent            = T_ent;
+const.v_max_phys       = v_max_phys;
+const.W                = W;
+const.detect_range_val = detect_range_val;
 
 %% Demo export group label (needed in both branches below)
 demoGroup = sprintf('%dr', Nveh);   % e.g. 10 → '10r'
@@ -313,7 +319,8 @@ else
 
     caseConfigFile = fullfile(caseDir, 'case_config.mat');
     save(caseConfigFile, ...
-        'config', 'seed', 'Nveh', 'T_val', ...
+        'config', 'seed', 'Nveh', 'T_val', 'T_ent', ...
+        'v_max_phys', 'W', 'detect_range_val', 'Dt', ...
         'detect_range', 'v_max', ...
         'alpha_tilde', 'initial_position', ...
         'pathInfo', 'pathInfo_agent_chain', 'pathInfo_c');

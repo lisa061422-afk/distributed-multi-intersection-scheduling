@@ -1,0 +1,46 @@
+function fig = plot_local_schedule_panel_2x2_centralized(DATA, const, varargin)
+%PLOT_LOCAL_SCHEDULE_PANEL_2X2_CENTRALIZED
+% Draw 4 intersections in a 2x2 panel layout using
+% plot_local_schedule_final_into_panel_centralized.
+
+p = inputParser;
+addParameter(p, 'figColor', [1 1 1]);
+addParameter(p, 'panelColor', [1 1 1]);
+parse(p, varargin{:});
+opt = p.Results;
+
+P = const.numInt;
+if P ~= 4
+    warning('This 2x2 panel function assumes 4 intersections. Current numInt = %d.', P);
+end
+
+fig = figure('Color', opt.figColor, ...
+    'Units', 'normalized', ...
+    'Position', [0.03 0.05 0.94 0.88]);
+
+panelPos = { ...
+    [0.03 0.53 0.45 0.40], ... % Int 1
+    [0.52 0.53 0.45 0.40], ... % Int 2
+    [0.03 0.06 0.45 0.40], ... % Int 3
+    [0.52 0.06 0.45 0.40]};    % Int 4
+
+for agent_i = 1:min(P,4)
+    panel = uipanel('Parent', fig, ...
+        'Units', 'normalized', ...
+        'Position', panelPos{agent_i}, ...
+        'BackgroundColor', opt.panelColor, ...
+        'BorderType', 'none');
+
+    valid_systems = DATA.valid_systems{agent_i};
+
+    plot_local_schedule_final_into_panel_centralized( ...
+        panel, DATA, const, agent_i, valid_systems, ...
+        'panelColor', opt.panelColor, ...
+        'axColor', [1 1 1], ...
+        'gap', 0.004, ...
+        'marg_h', 0.07, ...
+        'marg_w', 0.10, ...
+        'title_pad', 0.05);
+end
+
+end

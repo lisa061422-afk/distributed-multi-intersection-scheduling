@@ -1,0 +1,40 @@
+{
+  "name": "warehouse-amr-demo",
+  "version": "1.0.0",
+  "description": "Warehouse AMR Scheduling Demo",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.warehouse.amr.demo",
+    "productName": "Warehouse AMR Demo",
+    "win": {
+      "target": "nsis",
+      "icon": "images/robot1.png",
+      "signAndEditExecutable": false,
+      "forceCodeSigning": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "files": [
+      "**/*",
+      "!node_modules/.cache",
+      "!*.py",
+      "!*.bat",
+      "!.git"
+    ]
+  }
+}

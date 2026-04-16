@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "Bash(ls -la \"c:/Users/robin/OneDrive/桌面/RES_Spring2026/Traffic_Demo/images/robot\"*.png)"
+    ]
+  }
+}

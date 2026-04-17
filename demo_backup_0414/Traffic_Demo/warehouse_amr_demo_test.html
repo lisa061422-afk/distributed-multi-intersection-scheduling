@@ -2247,6 +2247,7 @@
   <script src="schedules/tree_15r_S1_p4_optimal.js"  onerror=""></script>
   <script src="schedules/tree_15r_S2_optimal.js"     onerror=""></script>
   <script src="schedules/tree_20r_S1_optimal.js"     onerror=""></script>
+  <script src="schedules/tree_20r_S2_optimal.js"     onerror=""></script>
   <!-- Interactive tree data for decision tree explorer -->
   <script src="schedules/interactive_tree_8r_S1.js"   onerror=""></script>
   <script src="schedules/interactive_tree_10r_S1.js" onerror=""></script>
@@ -2259,6 +2260,7 @@
   <script src="schedules/interactive_tree_15r_S1.js" onerror=""></script>
   <script src="schedules/interactive_tree_15r_S2.js" onerror=""></script>
   <script src="schedules/interactive_tree_20r_S1.js" onerror=""></script>
+  <script src="schedules/interactive_tree_20r_S2.js" onerror=""></script>
   <!-- Traffic (5-int) interactive trees -->
   <script src="schedules/interactive_tree_tr_10r_S1.js"  onerror=""></script>
   <script src="schedules/interactive_tree_tr_15r_S1.js"  onerror=""></script>
@@ -2770,7 +2772,7 @@
       '8r':  { label:'8 Robots',  scenes:['S1'] },
       '10r': { label:'10 Robots', scenes:['S1','S2','S3','S5','S6','S7','S8'] },
       '15r': { label:'15 Robots', scenes:['S1','S2'] },
-      '20r': { label:'20 Robots', scenes:['S1'] },
+      '20r': { label:'20 Robots', scenes:['S1','S2'] },
     };
     const AVAILABLE_WH = {
       '8r_S1_optimal':  true,
@@ -2789,6 +2791,7 @@
       '15r_S1_p4_optimal': true,
       '15r_S2_optimal': true,  '15r_S2_fcfs': true,
       '20r_S1_optimal': true,  '20r_S1_fcfs': true,
+      '20r_S2_optimal': true,  '20r_S2_fcfs': true,
     };
 
     // ── Traffic scenarios (5-intersection map) ────────────────────────────────

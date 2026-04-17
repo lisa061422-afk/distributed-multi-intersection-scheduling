@@ -24,13 +24,13 @@ if strcmp(configMode, 'manual')
     seedList        = [0];   % seed unused in manual mode
 else
     numVehiclesList = [20];
-    seedList        = [41226];
+    seedList        = [41601];   % S2 random seed
 end
 
 % ===================== Demo export settings (random mode only) =====================
 % demoScene: HTML scene label for this run — change each time you run a new seed
 % demoGroup is auto-derived from Nveh (e.g. 10 robots → '10r')
-demoScene = 'S6';   % <-- change to 'S2', 'S3', etc. for each new seed
+demoScene = 'S3';   % <-- change to 'S2', 'S3', etc. for each new seed
 rootSaveDir = 'BatchRuns';
 
 % ===================== Run Mode =====================
@@ -76,7 +76,7 @@ for iN = 1:numel(numVehiclesList)
         if strcmp(configMode, 'manual')
             caseName = sprintf('manual_%dr_%s', Nveh, demoScene);
         else
-            caseName = sprintf('seed_%d_N_%d', seed, Nveh);
+            caseName = sprintf('seed_%d_N_%d_%s', seed, Nveh, demoScene);
         end
 
         caseDir = fullfile(rootSaveDir, caseName);
@@ -89,7 +89,7 @@ for iN = 1:numel(numVehiclesList)
         fprintf('====================================================\n');
 
 %% -----------------------ADMM penalty parameters-------------------------
-rho1 = 1; rho2 = 1; weight = 1.5; max_iter = 200;
+rho1 = 1; rho2 = 1; weight = 1.5; max_iter = 500;
 %tol_r = 0.1; tol_s = 0.1;
 tol_r = 1e-3; tol_s = 1e-3;
 

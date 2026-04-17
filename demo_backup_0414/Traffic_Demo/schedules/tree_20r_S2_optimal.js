@@ -7,7 +7,7 @@ window.ALL_TREE_DATA["20r_S2"] = {
     "1": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
-        {"id":2,"orig":40,"tw":53.111,"f":-0.000,"isPath":true}
+        {"id":2,"orig":39,"tw":29.467,"f":3.847,"isPath":true}
       ],
       "edges": [
         [1,2]
@@ -17,72 +17,32 @@ window.ALL_TREE_DATA["20r_S2"] = {
     "2": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
-        {"id":2,"orig":20,"tw":25.286,"f":-0.000,"isPath":true},
-        {"id":3,"orig":21,"tw":25.572,"f":-0.000,"isPath":true},
-        {"id":4,"orig":22,"tw":26.286,"f":0.286,"isPath":false},
-        {"id":5,"orig":27,"tw":28.643,"f":1.787,"isPath":false},
-        {"id":6,"orig":43,"tw":53.111,"f":0.573,"isPath":true}
+        {"id":2,"orig":33,"tw":29.220,"f":0.786,"isPath":true}
       ],
       "edges": [
-        [1,2],
-        [2,3],
-        [2,4],
-        [4,5],
-        [3,6]
+        [1,2]
       ],
-      "path": [1,2,3,6]
+      "path": [1,2]
     },
     "3": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
-        {"id":2,"orig":13,"tw":18.851,"f":-0.000,"isPath":true},
-        {"id":3,"orig":14,"tw":19.637,"f":-0.000,"isPath":false},
-        {"id":4,"orig":15,"tw":19.000,"f":-0.000,"isPath":true},
-        {"id":5,"orig":27,"tw":29.391,"f":0.303,"isPath":true},
-        {"id":6,"orig":28,"tw":30.391,"f":0.694,"isPath":false},
-        {"id":7,"orig":29,"tw":29.782,"f":0.303,"isPath":true},
-        {"id":8,"orig":52,"tw":58.896,"f":1.083,"isPath":true},
-        {"id":9,"orig":60,"tw":29.391,"f":1.791,"isPath":false},
-        {"id":10,"orig":61,"tw":30.391,"f":2.181,"isPath":false},
-        {"id":11,"orig":62,"tw":29.782,"f":1.791,"isPath":false},
-        {"id":12,"orig":81,"tw":58.896,"f":2.300,"isPath":false},
-        {"id":13,"orig":97,"tw":58.896,"f":2.571,"isPath":false},
-        {"id":14,"orig":109,"tw":58.896,"f":3.788,"isPath":false}
+        {"id":2,"orig":37,"tw":27.896,"f":5.057,"isPath":true}
       ],
       "edges": [
-        [1,2],
-        [2,3],
-        [2,4],
-        [4,5],
-        [5,6],
-        [5,7],
-        [7,8],
-        [3,9],
-        [9,10],
-        [9,11],
-        [6,12],
-        [11,13],
-        [10,14]
+        [1,2]
       ],
-      "path": [1,2,4,5,7,8]
+      "path": [1,2]
     },
     "4": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
-        {"id":2,"orig":5,"tw":12.571,"f":0.000,"isPath":true},
-        {"id":3,"orig":6,"tw":12.935,"f":0.000,"isPath":true},
-        {"id":4,"orig":7,"tw":13.356,"f":-0.000,"isPath":false},
-        {"id":5,"orig":11,"tw":15.356,"f":1.356,"isPath":false},
-        {"id":6,"orig":45,"tw":52.896,"f":0.299,"isPath":true}
+        {"id":2,"orig":36,"tw":33.253,"f":1.216,"isPath":true}
       ],
       "edges": [
-        [1,2],
-        [2,3],
-        [2,4],
-        [4,5],
-        [3,6]
+        [1,2]
       ],
-      "path": [1,2,3,6]
+      "path": [1,2]
     }
   }
 };

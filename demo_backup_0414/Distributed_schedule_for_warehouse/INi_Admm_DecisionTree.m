@@ -92,11 +92,15 @@ l = 1; %index of node
 g = 0;
 ni = zeros(1,N); %initialize all tasks index
 f = 0; 
-NODES = {{l,d,r,o,tw,ni,0,U_c,U,g,gamma,f,speed,ra_reset,x,alpha}}; 
-%initial node: l(index),ddl,remain,response,tw,ni,l(parentnode), V_c, V_past, g_cost,  
-OPEN = l; 
-LEAF = []; %record leaf node 
-c_node_index = l; 
+NODES = {{l,d,r,o,tw,ni,0,U_c,U,g,gamma,f,speed,ra_reset,x,alpha,zeros(1,M)}};
+%initial node: l(index),ddl,remain,response,tw,ni,l(parentnode), V_c, V_past, g_cost,
+%  {17} = priority_lock (1xM, 0=no priority established for that column)
+OPEN = l;
+LEAF = []; %record leaf node
+c_node_index = l;
+
+global WEAK_RULE_PRUNE_COUNT;
+WEAK_RULE_PRUNE_COUNT = 0;
 
 ctx = struct(); 
 ctx.agent_i = agent_i;
@@ -136,9 +140,9 @@ while any(ni <= NI_agent)
         %find out the node with min f cost
         [~, minIndex] = f_min(NODES,OPEN);
         c_node_index = minIndex;
-        % ni = NODES{c_node_index}{6}; % 6th is i
-        % tw_current = NODES{c_node_index}{5};
      else
+        fprintf('  [WeakRule] Agent %d: total nodes=%d, pruned branches=%d\n', ...
+            agent_i, size(NODES,1), WEAK_RULE_PRUNE_COUNT);
         [x, y,best_alpha,best_gamma,best_idx,NODES] ...
             = IN_Admm(NODES,LEAF,agent_i, entries,...
                 x_prev{agent_i}, y_prev{agent_i}, xi_prev_bar, yi_prev_bar, ai_x, ai_y...

@@ -1,5 +1,5 @@
 function NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,...
-    U_c,U_temp,g,gamma,speed,ra,ra_reset,x,Cmat,valid_systems,alpha,ddl,arrival_ref, const)
+    U_c,U_temp,g,gamma,speed,ra,ra_reset,x,Cmat,valid_systems,alpha,ddl,arrival_ref,const,priority_lock)
 
     N = const.N;
 
@@ -38,6 +38,11 @@ function NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,...
     NODES_new{12} = f_new; 
     NODES_new{13} = speed; 
     NODES_new{14} = ra_reset; 
-    NODES_new{15} = x; 
-    NODES_new{16} = alpha; 
+    NODES_new{15} = x;
+    NODES_new{16} = alpha;
+    if nargin >= 22 && ~isempty(priority_lock)
+        NODES_new{17} = priority_lock;
+    else
+        NODES_new{17} = [];
+    end
 

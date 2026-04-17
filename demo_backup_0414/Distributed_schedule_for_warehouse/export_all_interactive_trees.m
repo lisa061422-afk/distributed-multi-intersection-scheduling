@@ -2,7 +2,7 @@
 % One-click export of interactive decision tree data for ALL warehouse scenarios.
 % Run from Distributed_schedule_for_warehouse/ directory.
 
-DEMO_DIR = 'C:\Users\rwang26\Downloads\Research_Spring2026\CODE\Renke-project1-main\Traffic_Demo\schedules';
+DEMO_DIR = 'C:\Users\robin\OneDrive\Documents\Github_file\demo_backup_0414\Traffic_Demo\schedules';
 
 % Map: { caseFolderName, group, scene }
 scenarios = {
@@ -10,6 +10,8 @@ scenarios = {
     'manual_10r',       '10r', 'S1';
     'seed_41202_N_10',  '10r', 'S2';
     'seed_41206_N_10',  '10r', 'S3';
+    'manual_10r_S5',    '10r', 'S5';
+    'manual_10r_S6',    '10r', 'S6';
     'seed_41207_N_15',  '15r', 'S1';
     'seed_41218_N_15',  '15r', 'S2';
     'manual_20r',       '20r', 'S1';

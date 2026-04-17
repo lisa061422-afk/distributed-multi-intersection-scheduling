@@ -19,7 +19,7 @@ if nargin < 4 || isempty(priority_n), priority_n = 0; end
 % addpath('C:\Users\robin\OneDrive\桌面\RES_Spring2026\CODE\Traffic_Centralized\Centralized_FCFS_031426');  % 函数已复制到当前目录
 
 CASE_DIR  = fullfile('BatchRuns', caseName);
-DEMO_DIR  = 'C:\Users\rwang26\Downloads\Research_Spring2026\CODE\Renke-project1-main\Traffic_Demo\schedules';
+DEMO_DIR  = 'C:\Users\robin\OneDrive\Documents\Github_file\demo_backup_0414\Traffic_Demo\schedules';
 IMG_DIR   = fullfile(DEMO_DIR, 'images');
 if ~exist(IMG_DIR, 'dir'), mkdir(IMG_DIR); end
 
@@ -67,7 +67,7 @@ end
 drawnow; pause(0.3);
 localBase = fullfile(CASE_DIR, sprintf('local_%s', caseName));
 savefig(fig_local, [localBase '.fig']);
-exportapp(fig_local, [localBase '.png']);
+exportgraphics(fig_local, [localBase '.png'], 'Resolution', 150);
 copyfile([localBase '.png'], fullfile(IMG_DIR, sprintf('%s_optimal_local.png', pfx)));
 close(fig_local);
 fprintf('  -> local done\n');
@@ -103,7 +103,7 @@ if priority_n == 0 && exist(FCFS_MAT, 'file')
     drawnow; pause(0.3);
     fcfsBase = fullfile(CASE_DIR, sprintf('fcfs_%s', caseName));
     savefig(fig_fcfs, [fcfsBase '.fig']);
-    exportapp(fig_fcfs, [fcfsBase '.png']);
+    exportgraphics(fig_fcfs, [fcfsBase '.png'], 'Resolution', 150);
     copyfile([fcfsBase '.png'], fullfile(IMG_DIR, sprintf('%s_fcfs_local.png', pfx)));
     close(fig_fcfs);
     export_demo_json_fcfs(const_fcfs, DATA_fcfs, ...

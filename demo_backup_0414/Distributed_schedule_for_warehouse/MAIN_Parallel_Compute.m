@@ -7,20 +7,20 @@ clear all;
 % 'random' : generateBalancedTrafficConfig batch runs
 configMode = 'manual';
 % ===================== Physical parameters =====================
-T_val        = 7.0;    % headway between vehicles at the SAME entrance (s)
-T_ent        = 3.0;    % stagger between first vehicles at DIFFERENT entrances (s)
-Dt           = 5.0;    % road travel time between consecutive intersections (s)
+T_val        = 2.0;    % headway between vehicles at the SAME entrance (s)
+T_ent        = 0.0;    % stagger between first vehicles at DIFFERENT entrances (s)
+Dt           = 3.0;    % road travel time between consecutive intersections (s)
 v_max_phys   = 1.5;    % AMR speed on road (m/s)
 W            = 1.6;    % merging zone width (m)  — scale 1:12.5 from traffic W=20m
 detect_range_val = 7.6; % detection range (m): road(3m) + half-zone(0.8m), on each side
                         % => alpha_tilde base = (7.6/2 - 1.6/2) / 1.5 = 2.0 s
 
-DEMO_DIR     = 'C:\Users\rwang26\Downloads\Research_Spring2026\CODE\Renke-project1-main\Traffic_Demo\schedules';
+DEMO_DIR     = 'C:\Users\robin\OneDrive\Documents\Github_file\demo_backup_0414\Traffic_Demo\schedules';
 % FCFS functions are now in this folder (copied from Centralized_FCFS_031426).
 
 % ===================== Batch settings =====================
 if strcmp(configMode, 'manual')
-    numVehiclesList = [20];
+    numVehiclesList = [10];
     seedList        = [0];   % seed unused in manual mode
 else
     numVehiclesList = [20];
@@ -30,7 +30,7 @@ end
 % ===================== Demo export settings (random mode only) =====================
 % demoScene: HTML scene label for this run — change each time you run a new seed
 % demoGroup is auto-derived from Nveh (e.g. 10 robots → '10r')
-demoScene = 'S1';   % <-- change to 'S2', 'S3', etc. for each new seed
+demoScene = 'S7';   % <-- change to 'S2', 'S3', etc. for each new seed
 rootSaveDir = 'BatchRuns';
 
 % ===================== Run Mode =====================
@@ -55,11 +55,11 @@ end
 % ===================== Parallel pool (8 workers) =====================
 if useParallel && license('test','Distrib_Computing_Toolbox')
     p = gcp('nocreate');
-    if isempty(p) || p.NumWorkers ~= 8
+    if isempty(p) || p.NumWorkers ~= 10
         if ~isempty(p)
             delete(p);
         end
-        parpool('local', 8);
+        parpool('local', 10);
     end
 end
 
@@ -74,7 +74,7 @@ for iN = 1:numel(numVehiclesList)
         seed = seedList(iS);
 
         if strcmp(configMode, 'manual')
-            caseName = sprintf('manual_%dr', Nveh);
+            caseName = sprintf('manual_%dr_%s', Nveh, demoScene);
         else
             caseName = sprintf('seed_%d_N_%d', seed, Nveh);
         end
@@ -108,28 +108,27 @@ LocalTreeCache = cell(9,1);
 %% Config generation
 if strcmp(configMode, 'manual')
     % ── manual_10r S1 original ────────────────────────────────────────
-    % config_raw = {
-    %     struct('entrance', 1, 'exits', [7 3]),
-    %     struct('entrance', 4, 'exits', [1 3]),
-    %     struct('entrance', 6, 'exits', [1]),
-    %     struct('entrance', 7, 'exits', [4]),
-    %     struct('entrance', 5, 'exits', [3]),
-    %     struct('entrance', 3, 'exits', [2 4]),
-    %     struct('entrance', 2, 'exits', [5]),
-    % };
-
+    config_raw = {
+        struct('entrance', 1, 'exits', [7 3]),
+        struct('entrance', 4, 'exits', [1 3]),
+        struct('entrance', 6, 'exits', [1]),
+        struct('entrance', 7, 'exits', [4]),
+        struct('entrance', 5, 'exits', [3]),
+        struct('entrance', 3, 'exits', [2 4]),
+        struct('entrance', 2, 'exits', [5]),
+    };
 
     % ── seed_41220_N_20 config, entrance 2 exit 3→5 ───────────────────
-    config_raw = {
-        struct('entrance', 2, 'exits', [5 1]),   % was [3 1]
-        struct('entrance', 1, 'exits', [6 2 5]),
-        struct('entrance', 4, 'exits', [2 6]),
-        struct('entrance', 6, 'exits', [5 1 8]),
-        struct('entrance', 7, 'exits', [1 4]),
-        struct('entrance', 5, 'exits', [2 6 7]),
-        struct('entrance', 8, 'exits', [7 2]),
-        struct('entrance', 3, 'exits', [5 8 4]),
-    };
+    % config_raw = {
+    %     struct('entrance', 2, 'exits', [5 1]),   % was [3 1]
+    %     struct('entrance', 1, 'exits', [6 2 5]),
+    %     struct('entrance', 4, 'exits', [2 6]),
+    %     struct('entrance', 6, 'exits', [5 1 8]),
+    %     struct('entrance', 7, 'exits', [1 4]),
+    %     struct('entrance', 5, 'exits', [2 6 7]),
+    %     struct('entrance', 8, 'exits', [7 2]),
+    %     struct('entrance', 3, 'exits', [5 8 4]),
+    % };
     vehicleList = [];
     stats = struct();
 else
@@ -276,6 +275,7 @@ const.N      = N;
 const.Dt     = Dt;
 const.priority_n  = 0;        % 0 = no priority override (normal run)
 const.use_pruning = true;     % true = prune dominated nodes in local decision tree (faster for large N)
+const.use_weak_rule = false;  % true = weak-rule priority lock (fewer branches); false = original algorithm
 const.deadline     = deadline;
 const.alpha_tilde  = alpha_tilde;
 const.initial_position = initial_position;
@@ -379,10 +379,7 @@ drawnow; pause(0.3);
 localBase    = fullfile(caseDir, sprintf('local_%s', caseName));
 localPngFile = [localBase '.png'];
 savefig(fig, [localBase '.fig']);
-% Resize to 3× for high-res export (exportapp captures at screen DPI)
-fig.Position = [1 1 4500 2850];
-drawnow; pause(0.2);
-exportapp(fig, localPngFile);
+exportgraphics(fig, localPngFile, 'Resolution', 150);
 
 %% ══════════════════════════════════════════════════════════════════════════
 %%  FCFS (Centralized Branch-and-Bound) using the SAME const parameters
@@ -493,9 +490,7 @@ drawnow; pause(0.3);
     fcfsBase    = fullfile(caseDir, sprintf('fcfs_%s', caseName));
     fcfsPngFile = [fcfsBase '.png'];
     savefig(fig_fcfs, [fcfsBase '.fig']);
-    fig_fcfs.Position = [1 1 4500 2850];
-    drawnow; pause(0.2);
-    exportapp(fig_fcfs, fcfsPngFile);
+    exportgraphics(fig_fcfs, fcfsPngFile, 'Resolution', 150);
 
     %% ── Auto-export to HTML demo ─────────────────────────────────────────
     fprintf('\nAuto-exporting to demo: group=%s  scene=%s\n', demoGroup, demoScene);
@@ -564,9 +559,7 @@ if enable_priority_sweep && ~isempty(priority_robots)
         drawnow; pause(0.3);
         localBase_p = fullfile(caseDir_p, sprintf('local_%s', caseName_p));
         savefig(fig_p, [localBase_p '.fig']);
-        fig_p.Position = [1 1 4500 2850];
-        drawnow; pause(0.2);
-        exportapp(fig_p, [localBase_p '.png']);
+        exportgraphics(fig_p, [localBase_p '.png'], 'Resolution', 150);
         close(fig_p);
 
         % Export to HTML demo (priority_n passed → priorityRobot field in JS)

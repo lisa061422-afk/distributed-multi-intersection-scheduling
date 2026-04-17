@@ -2235,6 +2235,8 @@
   <script src="schedules/tree_8r_S1_optimal.js"       onerror=""></script>
   <script src="schedules/tree_10r_S1_optimal.js"      onerror=""></script>
   <script src="schedules/tree_10r_S1_p1_optimal.js"  onerror=""></script>
+  <script src="schedules/tree_10r_S5_optimal.js"      onerror=""></script>
+  <script src="schedules/tree_10r_S6_optimal.js"      onerror=""></script>
   <script src="schedules/tree_10r_S2_optimal.js"      onerror=""></script>
   <script src="schedules/tree_10r_S2_p7_optimal.js"   onerror=""></script>
   <script src="schedules/tree_10r_S3_optimal.js"      onerror=""></script>
@@ -2249,6 +2251,8 @@
   <script src="schedules/interactive_tree_8r_S1.js"   onerror=""></script>
   <script src="schedules/interactive_tree_10r_S1.js" onerror=""></script>
   <script src="schedules/interactive_tree_10r_S2.js" onerror=""></script>
+  <script src="schedules/interactive_tree_10r_S5.js" onerror=""></script>
+  <script src="schedules/interactive_tree_10r_S6.js" onerror=""></script>
   <script src="schedules/interactive_tree_10r_S3.js" onerror=""></script>
   <script src="schedules/interactive_tree_15r_S1.js" onerror=""></script>
   <script src="schedules/interactive_tree_15r_S2.js" onerror=""></script>
@@ -2762,7 +2766,7 @@
     // ── Warehouse scenarios ───────────────────────────────────────────────────
     const SCENARIO_GROUPS_WH = {
       '8r':  { label:'8 Robots',  scenes:['S1'] },
-      '10r': { label:'10 Robots', scenes:['S1','S2','S3'] },
+      '10r': { label:'10 Robots', scenes:['S1','S2','S3','S5','S6'] },
       '15r': { label:'15 Robots', scenes:['S1','S2'] },
       '20r': { label:'20 Robots', scenes:['S1'] },
     };
@@ -2774,6 +2778,8 @@
       '10r_S3_optimal': true,   '10r_S3_fcfs':    true,
       '10r_S3_p2_optimal': true,
       '10r_S3_p9_optimal': true,
+      '10r_S5_optimal': true,  '10r_S5_fcfs': true,
+      '10r_S6_optimal': true,  '10r_S6_fcfs': true,
       '15r_S1_optimal': true,  '15r_S1_fcfs': true,
       '15r_S1_p2_optimal': true,
       '15r_S1_p4_optimal': true,

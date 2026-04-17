@@ -28,7 +28,13 @@ function [NODES,OPEN,LEAF] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
     d = c_node{2}; r = c_node{3}; o = c_node{4};
     tw = c_node{5}; ni = c_node{6}; 
     g = c_node{10}; gamma = c_node{11}; speed = c_node{13}; ra_reset = c_node{14};
-    x = c_node{15}; alpha = c_node{16}; 
+    x = c_node{15}; alpha = c_node{16};
+    use_weak_rule = isfield(const,'use_weak_rule') && const.use_weak_rule;
+    if use_weak_rule && numel(c_node) >= 17 && ~isempty(c_node{17})
+        priority_lock = c_node{17};
+    else
+        priority_lock = zeros(1, M);
+    end
 
     parent_node_index = l; 
     OPEN(OPEN == parent_node_index) = []; 
@@ -66,9 +72,9 @@ function [NODES,OPEN,LEAF] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
        [d2,r2,o2,tw1] = NextSigM(tw,da,ra,oa,U_temp,valid_systems,ctx,const);  
        ra_reset = -1 * ones(S,N);
        NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,...
-           U_c,U_temp,g,gamma,speed,ra,ra_reset,x,Cmat,valid_systems,alpha,ddl,arrival_ref,const);
-       OPEN = [OPEN, NODES_new{1}]; %add the new produced node to OPEN set 
-       NODES = [NODES; {NODES_new}]; 
+           U_c,U_temp,g,gamma,speed,ra,ra_reset,x,Cmat,valid_systems,alpha,ddl,arrival_ref,const,priority_lock);
+       OPEN = [OPEN, NODES_new{1}]; %add the new produced node to OPEN set
+       NODES = [NODES; {NODES_new}];
     elseif any(ra(:, valid_systems) > 1e-5, 'all') % have tasks to execute
     % suppress floating-point noise before building U_c
     da = round(da, 6);
@@ -92,7 +98,9 @@ function [NODES,OPEN,LEAF] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
    % if strcmpi(scheduler_mode,'CR-MPC')
 
        if any(col_cnt > 1) % contention occurs, find all branches
-          V_valid = traverse_columns(U_c, priority_n);   % priority_n=0 → normal enumeration
+          [V_valid, n_pruned] = traverse_columns(U_c, priority_n, priority_lock, ra);
+          global WEAK_RULE_PRUNE_COUNT;
+          WEAK_RULE_PRUNE_COUNT = WEAK_RULE_PRUNE_COUNT + n_pruned;
           number_current_node = num_nodes;
 
           for i = 1:numel(V_valid) % compute each branch
@@ -100,26 +108,57 @@ function [NODES,OPEN,LEAF] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
               U_temp = V_valid{i};
 
               [ra_temp2, U_temp2, x2] = resetting_rule(ra,ra_temp,U_temp,U_c,...
-                  tw,da,NODES,l,x,ni2,ctx,const); 
+                  tw,da,NODES,l,x,ni2,ctx,const);
 
               ra_reset = ra_temp2;
 
-              [d2,r2,o2,tw1] = NextSigM(tw,da,ra_temp2,oa,U_temp2,valid_systems,ctx,const); 
+              % update priority_lock for this branch
+              if use_weak_rule
+                  new_priority_lock = priority_lock;
+                  for m_col = 1:M
+                      winner_n = find(U_temp2(:, m_col) > 0);
+                      if ~isempty(winner_n)
+                          new_priority_lock(m_col) = winner_n(1);
+                      end
+                  end
+                  for n_chk = active_systems
+                      if any(U_c(n_chk,:) > 0) && all(U_temp2(n_chk,:) == 0)
+                          new_priority_lock(new_priority_lock == n_chk) = 0;
+                      end
+                  end
+              else
+                  new_priority_lock = zeros(1, M);
+              end
+
+              [d2,r2,o2,tw1] = NextSigM(tw,da,ra_temp2,oa,U_temp2,valid_systems,ctx,const);
               NODES_new = NewNode(number_current_node,d2,r2,o2,tw1,ni2,parent_node_index,...
-                  U_c,U_temp2,g,gamma,speed,ra,ra_reset,x2,Cmat,valid_systems,alpha,ddl,arrival_ref,const);
+                  U_c,U_temp2,g,gamma,speed,ra,ra_reset,x2,Cmat,valid_systems,alpha,ddl,arrival_ref,const,new_priority_lock);
 
               OPEN = [OPEN, NODES_new{1}];
-              number_current_node = number_current_node + 1; 
-              NODES = [NODES; {NODES_new}]; 
+              number_current_node = number_current_node + 1;
+              NODES = [NODES; {NODES_new}];
           end
 
        else % no contention
-           U_temp = U_c; 
-           [d2,r2,o2,tw1] = NextSigM(tw,da,ra,oa,U_temp,valid_systems,ctx,const); 
+           U_temp = U_c;
+           [d2,r2,o2,tw1] = NextSigM(tw,da,ra,oa,U_temp,valid_systems,ctx,const);
            ra_reset = -1 * ones(S,N);
 
+           % update priority_lock (no contention: all winners keep/gain locks)
+           if use_weak_rule
+               new_priority_lock = priority_lock;
+               for m_col = 1:M
+                   assigned_n = find(U_temp(:, m_col) > 0);
+                   if ~isempty(assigned_n)
+                       new_priority_lock(m_col) = assigned_n(1);
+                   end
+               end
+           else
+               new_priority_lock = zeros(1, M);
+           end
+
            NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,...
-               U_c,U_temp,g,gamma,speed,ra,ra_reset,x,Cmat,valid_systems,alpha,ddl,arrival_ref,const);
+               U_c,U_temp,g,gamma,speed,ra,ra_reset,x,Cmat,valid_systems,alpha,ddl,arrival_ref,const,new_priority_lock);
 
            OPEN = [OPEN, NODES_new{1}];
            NODES = [NODES; {NODES_new}];

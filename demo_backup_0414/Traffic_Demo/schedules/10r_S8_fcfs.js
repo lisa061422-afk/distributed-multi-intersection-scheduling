@@ -1,5 +1,5 @@
 var SCHEDULE_DATA = {
-  "scenario": "10r · S7 · FCFS",
+  "scenario": "10r · S8 · FCFS",
   "policy": "fcfs",
   "t_cut": -2,
   "t_final": 13.926990816987239,

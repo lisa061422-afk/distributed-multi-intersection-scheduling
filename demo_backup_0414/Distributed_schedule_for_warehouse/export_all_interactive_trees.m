@@ -12,6 +12,8 @@ scenarios = {
     'seed_41206_N_10',  '10r', 'S3';
     'manual_10r_S5',    '10r', 'S5';
     'manual_10r_S6',    '10r', 'S6';
+    'manual_10r_S7',    '10r', 'S7';
+    'manual_10r_S8',    '10r', 'S8';
     'seed_41207_N_15',  '15r', 'S1';
     'seed_41218_N_15',  '15r', 'S2';
     'manual_20r',       '20r', 'S1';

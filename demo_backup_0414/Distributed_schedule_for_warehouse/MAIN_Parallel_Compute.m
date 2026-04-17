@@ -9,7 +9,7 @@ configMode = 'manual';
 % ===================== Physical parameters =====================
 T_val        = 2.0;    % headway between vehicles at the SAME entrance (s)
 T_ent        = 0.0;    % stagger between first vehicles at DIFFERENT entrances (s)
-Dt           = 3.0;    % road travel time between consecutive intersections (s)
+Dt           = 2.0;    % road travel time between consecutive intersections (s)
 v_max_phys   = 1.5;    % AMR speed on road (m/s)
 W            = 1.6;    % merging zone width (m)  — scale 1:12.5 from traffic W=20m
 detect_range_val = 7.6; % detection range (m): road(3m) + half-zone(0.8m), on each side
@@ -30,7 +30,7 @@ end
 % ===================== Demo export settings (random mode only) =====================
 % demoScene: HTML scene label for this run — change each time you run a new seed
 % demoGroup is auto-derived from Nveh (e.g. 10 robots → '10r')
-demoScene = 'S7';   % <-- change to 'S2', 'S3', etc. for each new seed
+demoScene = 'S8';   % <-- change to 'S2', 'S3', etc. for each new seed
 rootSaveDir = 'BatchRuns';
 
 % ===================== Run Mode =====================
@@ -275,7 +275,7 @@ const.N      = N;
 const.Dt     = Dt;
 const.priority_n  = 0;        % 0 = no priority override (normal run)
 const.use_pruning = true;     % true = prune dominated nodes in local decision tree (faster for large N)
-const.use_weak_rule = false;  % true = weak-rule priority lock (fewer branches); false = original algorithm
+const.use_weak_rule = true;   % true = weak-rule priority lock (fewer branches); false = original algorithm
 const.deadline     = deadline;
 const.alpha_tilde  = alpha_tilde;
 const.initial_position = initial_position;

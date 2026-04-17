@@ -127,9 +127,23 @@ ddl          = ctx.ddl;
 arrival_ref  = ctx.arrival_ref;
 
 
+% ── FUTURE: Parallel tree expansion ──────────────────────────────────────
+% Current: expand one OPEN node per iteration (A*-style, pick min f-cost).
+% Idea A (easy): parallelize LEAF solving in IN_Admm — each leaf's YALMIP
+%   solve is independent. Change "for i=1:length(LEAF)" to parfor there.
+%   Blocked by MATLAB nested-parfor limit: the 4 intersections already run
+%   inside parfeval workers, so inner parfor degrades to serial.
+% Idea B (batch BFS): each iteration expands ALL current OPEN nodes in
+%   parallel (parfor), then merges child nodes into NODES. Requires
+%   pre-allocating index ranges to avoid write conflicts.
+% Idea C (flat parallelism): dissolve outer intersection-level parfeval;
+%   instead build one flat task list of (intersection × leaf) pairs and
+%   run a single parfor across all of them. Most efficient but largest
+%   refactor.
+% ─────────────────────────────────────────────────────────────────────────
 while any(ni <= NI_agent)
     [NODES,OPEN,LEAF] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
-       ctx,const); 
+       ctx,const);
 
     %------------------PRUNE NODES (optional)-------------------
     if isfield(const,'use_pruning') && const.use_pruning && length(OPEN) > 1

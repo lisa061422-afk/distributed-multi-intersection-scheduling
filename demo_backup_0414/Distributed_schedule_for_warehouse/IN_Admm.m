@@ -8,6 +8,10 @@ best_cost = Inf; best_x = []; best_y = [];
 
 kn = 1; % per car per system, no recurring tasks
 
+% FUTURE: this loop is a parfor candidate — each leaf's YALMIP solve is
+% independent. Currently blocked by MATLAB nested-parfor restriction
+% (intersections already run inside parfeval workers). See Idea A/B/C in
+% INi_Admm_DecisionTree.m for the full parallelisation roadmap.
 for i = 1:length(LEAF)
     idx = LEAF(i);
     gamma = NODES{idx}{11}; alpha = NODES{idx}{16};

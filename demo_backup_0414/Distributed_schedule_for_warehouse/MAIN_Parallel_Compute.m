@@ -30,7 +30,7 @@ end
 % ===================== Demo export settings (random mode only) =====================
 % demoScene: HTML scene label for this run — change each time you run a new seed
 % demoGroup is auto-derived from Nveh (e.g. 10 robots → '10r')
-demoScene = 'S8';   % <-- change to 'S2', 'S3', etc. for each new seed
+demoScene = 'S6';   % <-- change to 'S2', 'S3', etc. for each new seed
 rootSaveDir = 'BatchRuns';
 
 % ===================== Run Mode =====================
@@ -91,7 +91,7 @@ for iN = 1:numel(numVehiclesList)
 %% -----------------------ADMM penalty parameters-------------------------
 rho1 = 1; rho2 = 1; weight = 1.5; max_iter = 200;
 %tol_r = 0.1; tol_s = 0.1;
-tol_r = 5e-3; tol_s = 5e-3;
+tol_r = 1e-3; tol_s = 1e-3;
 
 % ── Random initialisation switch ──────────────────────────────────────
 % 0   : deterministic earliest-time init (original)
@@ -275,7 +275,7 @@ const.N      = N;
 const.Dt     = Dt;
 const.priority_n  = 0;        % 0 = no priority override (normal run)
 const.use_pruning = true;     % true = prune dominated nodes in local decision tree (faster for large N)
-const.use_weak_rule = true;   % true = weak-rule priority lock (fewer branches); false = original algorithm
+const.use_weak_rule = false;  % true = weak-rule priority lock (fewer branches); false = original algorithm
 const.deadline     = deadline;
 const.alpha_tilde  = alpha_tilde;
 const.initial_position = initial_position;
@@ -379,7 +379,7 @@ drawnow; pause(0.3);
 localBase    = fullfile(caseDir, sprintf('local_%s', caseName));
 localPngFile = [localBase '.png'];
 savefig(fig, [localBase '.fig']);
-exportgraphics(fig, localPngFile, 'Resolution', 150);
+print(fig, localPngFile, '-dpng', '-r150');
 
 %% ══════════════════════════════════════════════════════════════════════════
 %%  FCFS (Centralized Branch-and-Bound) using the SAME const parameters
@@ -490,7 +490,7 @@ drawnow; pause(0.3);
     fcfsBase    = fullfile(caseDir, sprintf('fcfs_%s', caseName));
     fcfsPngFile = [fcfsBase '.png'];
     savefig(fig_fcfs, [fcfsBase '.fig']);
-    exportgraphics(fig_fcfs, fcfsPngFile, 'Resolution', 150);
+    print(fig_fcfs, fcfsPngFile, '-dpng', '-r150');
 
     %% ── Auto-export to HTML demo ─────────────────────────────────────────
     fprintf('\nAuto-exporting to demo: group=%s  scene=%s\n', demoGroup, demoScene);
@@ -559,7 +559,7 @@ if enable_priority_sweep && ~isempty(priority_robots)
         drawnow; pause(0.3);
         localBase_p = fullfile(caseDir_p, sprintf('local_%s', caseName_p));
         savefig(fig_p, [localBase_p '.fig']);
-        exportgraphics(fig_p, [localBase_p '.png'], 'Resolution', 150);
+        print(fig_p, [localBase_p '.png'], '-dpng', '-r150');
         close(fig_p);
 
         % Export to HTML demo (priority_n passed → priorityRobot field in JS)

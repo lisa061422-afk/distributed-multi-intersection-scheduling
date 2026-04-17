@@ -67,7 +67,7 @@ end
 drawnow; pause(0.3);
 localBase = fullfile(CASE_DIR, sprintf('local_%s', caseName));
 savefig(fig_local, [localBase '.fig']);
-exportgraphics(fig_local, [localBase '.png'], 'Resolution', 150);
+print(fig_local, [localBase '.png'], '-dpng', '-r150');
 copyfile([localBase '.png'], fullfile(IMG_DIR, sprintf('%s_optimal_local.png', pfx)));
 close(fig_local);
 fprintf('  -> local done\n');
@@ -103,7 +103,7 @@ if priority_n == 0 && exist(FCFS_MAT, 'file')
     drawnow; pause(0.3);
     fcfsBase = fullfile(CASE_DIR, sprintf('fcfs_%s', caseName));
     savefig(fig_fcfs, [fcfsBase '.fig']);
-    exportgraphics(fig_fcfs, [fcfsBase '.png'], 'Resolution', 150);
+    print(fig_fcfs, [fcfsBase '.png'], '-dpng', '-r150');
     copyfile([fcfsBase '.png'], fullfile(IMG_DIR, sprintf('%s_fcfs_local.png', pfx)));
     close(fig_fcfs);
     export_demo_json_fcfs(const_fcfs, DATA_fcfs, ...

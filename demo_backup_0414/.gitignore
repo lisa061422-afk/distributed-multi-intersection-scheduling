@@ -1,0 +1,13 @@
+# Node / Electron build artifacts
+Traffic_Demo/node_modules/
+Traffic_Demo/dist/
+
+# Zip archives
+*.zip
+
+# MATLAB checkpoint / temp
+Distributed_schedule_for_warehouse/admm_checkpoint.mat
+
+# BatchRuns binary MAT files (large)
+Distributed_schedule_for_warehouse/BatchRuns/**/*.mat
+Distributed_schedule_for_warehouse/BatchRuns/**/*.fig

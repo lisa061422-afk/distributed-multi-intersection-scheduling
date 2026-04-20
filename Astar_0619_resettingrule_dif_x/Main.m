@@ -4,13 +4,16 @@ tic;
 clear all;
 
 % ===================== Algorithm switches ====================================
-cfg.useWeakRule  = true;  % true  → apply resetting rule (weak rule)
-                          % false → disable resetting rule (compare optimality)
+cfg.useWeakRule  = true;   % 初始值无影响 — 下方循环自动跑 ON 和 OFF 两遍
 
 cfg.pruneNodes   = false; % true  → standard A*: prune branches with same ni,
                           %         keeps only cheapest → 1 optimal leaf
                           % false → no pruning: all branches survive → multiple
                           %         leaves visible in plotInteractiveTree
+
+cfg.timeout_s    = 20;   % max run time (s); 0 = no limit.
+                          % On timeout: output all branches found so far,
+                          % use best complete leaf if any, skip if none.
 
 % ===================== Physical parameters ===================================
 cfg.v_max        = 20;    % vehicle speed (m/s, consistent with Map/C scale)
@@ -33,13 +36,15 @@ cfg.W            = 30;    % merging zone width (m)
 %   [1 5 9 10]    — 4 systems on different arms/directions
 %   [2 2 5 5 8 8] — 6 systems, 2 per straight-through arm
 % cfg.routeAssignment = [1 4 11 8];   % ← set N and routes here
-cfg.routeAssignment = [2 2 5 4 1];   % ← set N and routes here
+% cfg.routeAssignment = [2 2 5 4 1];   % ← set N and routes here
+% cfg.routeAssignment = [1 2 4 5]; %exp in ccta
+cfg.routeAssignment = [1 2 4 5 11 8];
 
 % Initial arrival offset d1(n) for each system (length = N).
 % All zeros → all systems arrive simultaneously (max contention).
 cfg.d1 = zeros(1, numel(cfg.routeAssignment));
-% cfg.d1 = [0, 3, 6];   % N1在0s到，N2延迟3s，N3延迟6s
-cfg.d1 = [0.2, 0.5, 0.5, 0, 0]; 
+cfg.d1 = [0, 0, 0, 0, 0, 0];   % N1在0s到，N2延迟3s，N3延迟6s
+%cfg.d1 = [14.5, 15.2, 15.5, 15]; 
 
 % ===================== Intersection config ===================================
 intCfg   = makeIntersectionConfig(); 
@@ -55,89 +60,70 @@ cfg.T        = repmat({{cfg.T_period}}, cfg.N, 1);
 cfg.Ni       = ones(1, cfg.N);
 
 % ===================== Derived initial conditions ============================
-v_max = cfg.v_max * ones(1, cfg.N);
+cfg = buildCfgInitials(cfg);
 
-alpha_tilde      = cell(1, cfg.N);
-initial_position = zeros(cfg.N, max(cfg.Ni));
+% ===================== Run BOTH WeakRule=ON and OFF ==========================
+results_both = struct([]);
+for useWeak = [true, false]
+    cfg.useWeakRule = useWeak;
+    ruleStr = 'ON'; if ~useWeak, ruleStr = 'OFF'; end
+    fprintf('\n--- WeakRule %s ---\n', ruleStr);
 
-for n = 1:cfg.N
-    alpha_tilde{n}(1)     = (cfg.detect_range/2 - cfg.W/2) / v_max(n) + cfg.d1(n);
-    initial_position(n,1) = -(cfg.detect_range/2 - cfg.W/2 + cfg.d1(n)*v_max(n));
-    for i = 2:cfg.Ni(n)
-        alpha_tilde{n}(i)     = alpha_tilde{n}(i-1) + cfg.T{n}{i-1};
-        initial_position(n,i) = initial_position(n,i-1) - cfg.T{n}{i-1}*v_max(n);
-    end
-end
+    [NODES, LEAF, c_node_index, timed_out, elapsedTime] = runAstar(cfg);
 
-cfg.alpha_tilde      = alpha_tilde;
-cfg.initial_position = initial_position;
+    fprintf('useWeakRule : %d\n', useWeak);
+    fprintf('Total nodes : %d\n', size(NODES,1));
+    fprintf('Elapsed time: %.4f s\n', elapsedTime);
 
-% ===================== Initial node ==========================================
-d = zeros(1, cfg.N);
-for n = 1:cfg.N
-    d(n) = cfg.d1(n) + (cfg.detect_range/2 - cfg.W/2) / v_max(n);
-end
-
-r        = zeros(cfg.S, cfg.N);
-o        = zeros(1, cfg.N);
-V_c      = zeros(cfg.N, cfg.M);
-V        = zeros(cfg.N, cfg.M);
-gamma    = cell(1, cfg.N);
-speed    = zeros(cfg.N, max(cfg.Ni));
-ra_reset = zeros(cfg.S, cfg.N);
-x        = cell(cfg.N, 1);
-for n = 1:cfg.N
-    x{n} = cell(1, cfg.Ni(n));
-end
-
-ni   = zeros(1, cfg.N);
-tw   = 0;
-g    = 0;
-f    = 0;
-LEAF = [];
-
-NODES = {{1, d, r, o, tw, ni, 0, V_c, V, g, gamma, f, speed, ra_reset, x, zeros(1,cfg.M)}};
-OPEN  = 1;
-c_node_index = 1;
-
-% ===================== A* main loop ==========================================
-while any(ni <= cfg.Ni)
-    [NODES, OPEN, LEAF] = expand_array(NODES, OPEN, c_node_index, cfg.useWeakRule, cfg, LEAF);
-
-    if cfg.pruneNodes && length(OPEN) > 1
-        OPEN = prune_nodes_by_ni(NODES, OPEN);
-    end
-
-    if ~isempty(OPEN)
-        [~, c_node_index] = f_min(NODES, OPEN);
-        ni = NODES{c_node_index}{6};
+    if c_node_index > 0
+        resultNodes = [];
+        idx = c_node_index;
+        while idx > 0,  resultNodes = [idx, resultNodes];  idx = NODES{idx}{7};  end
+        fprintf('Optimal g-cost: %.4f\n', NODES{resultNodes(end)}{10});
+        log_cost = NODES{c_node_index}{10};
     else
-        [~, c_node_index] = f_min(NODES, LEAF);
-        break;
+        fprintf('(No complete path)\n');
+        log_cost = NaN;
     end
+
+    logResultCSV(cfg, log_cost, numel(LEAF), size(NODES,1), elapsedTime, timed_out);
+
+    ri = numel(results_both) + 1;
+    results_both(ri).NODES      = NODES;
+    results_both(ri).LEAF       = LEAF;
+    results_both(ri).c_node_idx = c_node_index;
+    results_both(ri).timed_out  = timed_out;
+    results_both(ri).elapsed    = elapsedTime;
+    results_both(ri).useWeak    = useWeak;
 end
 
-% ===================== Results ===============================================
-elapsedTime = toc;
-fprintf('\n=== Run complete ===\n');
-fprintf('useWeakRule : %d\n', cfg.useWeakRule);
-fprintf('Routes (N)  : %d\n', cfg.N);
-fprintf('Total nodes : %d\n', size(NODES, 1));
-fprintf('Elapsed time: %.4f s\n', elapsedTime);
+% Use ON result for MATLAB explorer (primary)
+cfg.useWeakRule = true;
+r_on  = results_both(1);   % WeakRule ON
+r_off = results_both(2);   % WeakRule OFF
 
-resultNodes = [];
-idx = c_node_index;
-while idx > 0
-    resultNodes = [idx, resultNodes];
-    idx = NODES{idx}{7};
+save('nodes.mat', 'NODES');   % saves last run (OFF)
+
+% ===================== HTML interactive demo (both ON+OFF in one file) =======
+has_on  = ~isempty(r_on.LEAF);
+has_off = ~isempty(r_off.LEAF);
+if has_on || has_off
+    exportHTML(r_on.NODES,  r_on.LEAF,  cfg, [], ...
+               r_off.NODES, r_off.LEAF);
+else
+    fprintf('(Skipping HTML export — no complete leaves in either run)\n');
 end
-fprintf('Optimal path:   '); disp(resultNodes);
-fprintf('Optimal g-cost: %.4f\n', NODES{resultNodes(end)}{10});
-
-save('nodes.mat', 'NODES');
 
 % ===================== Interactive tree explorer =============================
-% Shows decision tree (left) + resource allocation (right).
-% Navigate: click a leaf node  OR  press ← → arrow keys.
-% Selected path is highlighted red on the tree.
-plotInteractiveTree(NODES, LEAF, cfg);
+cfg.useWeakRule = true;
+if has_on
+    plotInteractiveTree(r_on.NODES, r_on.LEAF, cfg);
+else
+    fprintf('(Skipping plotInteractiveTree — no complete leaves for WeakRule ON)\n');
+end
+cfg.useWeakRule = false;
+if has_off
+    plotInteractiveTree(r_off.NODES, r_off.LEAF, cfg);
+else
+    fprintf('(Skipping plotInteractiveTree — no complete leaves for WeakRule OFF)\n');
+end

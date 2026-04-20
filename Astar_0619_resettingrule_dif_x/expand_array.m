@@ -9,10 +9,16 @@ function [NODES,OPEN,LEAF] = expand_array(NODES,OPEN,c_node_index,useWeakRule,cf
     tw = c_node{5}; ni = c_node{6};
     g = c_node{10}; gamma = c_node{11}; speed = c_node{13}; ra_reset = c_node{14};
     x = c_node{15};
+
+    % pair_lock: N×N matrix. pair_lock(i,j) = winner means i and j have
+    % competed before and winner won; 0 = never competed.
     if numel(c_node) >= 16 && ~isempty(c_node{16})
-        priority_lock = c_node{16};
+        pair_lock = c_node{16};
+        if ~isequal(size(pair_lock), [N, N])
+            pair_lock = zeros(N, N);   % convert old 1×M format on first run
+        end
     else
-        priority_lock = zeros(1, M);
+        pair_lock = zeros(N, N);
     end
 
     parent_node_index = l;
@@ -48,8 +54,8 @@ function [NODES,OPEN,LEAF] = expand_array(NODES,OPEN,c_node_index,useWeakRule,cf
        V_temp = zeros(N,M);
        [d2,r2,o2,tw1] = NextSigM(tw,da,ra,oa,V_temp,cfg);
        ra_reset = -1 * ones(S,N);
-       new_priority_lock = priority_lock;  % no contention, keep locks
-       NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,V_c,V_temp,g,gamma,speed,ra,ra_reset,x,cfg,new_priority_lock);
+       new_pair_lock = pair_lock;  % no contention, keep all locks
+       NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,V_c,V_temp,g,gamma,speed,ra,ra_reset,x,cfg,new_pair_lock);
        OPEN = [OPEN, NODES_new{1}];
        NODES = [NODES; {NODES_new}];
     elseif any(ra(:) > 0.00001)
@@ -62,35 +68,52 @@ function [NODES,OPEN,LEAF] = expand_array(NODES,OPEN,c_node_index,useWeakRule,cf
            end
        end
        if any(sum(V_c>0) > 1)
-          [V_valid, ~] = traverse_columns(V_c, 0, priority_lock, ra);
+          [V_valid, ~] = traverse_columns(V_c, 0, pair_lock, ra);
           number_current_node = num_nodes;
           for i = 1:numel(V_valid)
               ra_temp = ra;
               V_temp = V_valid{i};
 
-              [ra_temp2, V_temp2, x2] = resetting_rule2(ra,ra_temp,V_temp,V_c,tw,da,NODES,l,x,ni2,cfg);
+              % pass pair_lock into resetting rule so interrupt-unlock fires
+              if useWeakRule
+                  [ra_temp2, V_temp2, x2, pl_upd] = resetting_rule2(ra,ra_temp,V_temp,V_c,tw,da,NODES,l,x,ni2,cfg,pair_lock);
+              else
+                  [ra_temp2, V_temp2, x2] = resetting_rule2(ra,ra_temp,V_temp,V_c,tw,da,NODES,l,x,ni2,cfg);
+                  pl_upd = zeros(N, N);
+              end
               ra_reset = ra_temp2;
 
-              % weak rule: update priority_lock for this branch
+              % weak rule: update pair_lock for this branch
               if useWeakRule
-                  new_priority_lock = priority_lock;
+                  new_pair_lock = pl_upd;
+
+                  % record winner-loser pair only for genuinely contested spaces
                   for m_col = 1:M
-                      winner_n = find(V_temp2(:, m_col) > 0);
-                      if ~isempty(winner_n)
-                          new_priority_lock(m_col) = winner_n(1);
+                      contenders = find(V_c(:, m_col) > 0);
+                      if numel(contenders) >= 2
+                          winner_n = find(V_temp2(:, m_col) > 0);
+                          if ~isempty(winner_n)
+                              w = winner_n(1);
+                              for ci = 1:numel(contenders)
+                                  lsr = contenders(ci);
+                                  if lsr ~= w
+                                      % only write if unset or confirming same winner
+                                      if new_pair_lock(w, lsr) == 0 || new_pair_lock(w, lsr) == w
+                                          new_pair_lock(w,   lsr) = w;
+                                          new_pair_lock(lsr, w)   = w;
+                                      end
+                                  end
+                              end
+                          end
                       end
                   end
-                  for n_chk = 1:N
-                      if any(V_c(n_chk,:) > 0) && all(V_temp2(n_chk,:) == 0)
-                          new_priority_lock(new_priority_lock == n_chk) = 0;
-                      end
-                  end
+
               else
-                  new_priority_lock = zeros(1, M);
+                  new_pair_lock = zeros(N, N);
               end
 
               [d2,r2,o2,tw1] = NextSigM(tw,da,ra_temp2,oa,V_temp2,cfg);
-              NODES_new = NewNode(number_current_node,d2,r2,o2,tw1,ni2,parent_node_index,V_c,V_temp2,g,gamma,speed,ra,ra_reset,x2,cfg,new_priority_lock);
+              NODES_new = NewNode(number_current_node,d2,r2,o2,tw1,ni2,parent_node_index,V_c,V_temp2,g,gamma,speed,ra,ra_reset,x2,cfg,new_pair_lock);
               OPEN = [OPEN, NODES_new{1}];
               number_current_node = number_current_node + 1;
               NODES = [NODES; {NODES_new}];
@@ -99,12 +122,11 @@ function [NODES,OPEN,LEAF] = expand_array(NODES,OPEN,c_node_index,useWeakRule,cf
            V_temp = V_c;
            [d2,r2,o2,tw1] = NextSigM(tw,da,ra,oa,V_temp,cfg);
            ra_reset = -1 * ones(S,N);
-           if useWeakRule
-               new_priority_lock = priority_lock;  % no contention, keep locks
-           else
-               new_priority_lock = zeros(1, M);
+           new_pair_lock = pair_lock;  % no contention, keep locks
+           if ~useWeakRule
+               new_pair_lock = zeros(N, N);
            end
-           NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,V_c,V_temp,g,gamma,speed,ra,ra_reset,x,cfg,new_priority_lock);
+           NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,V_c,V_temp,g,gamma,speed,ra,ra_reset,x,cfg,new_pair_lock);
            OPEN = [OPEN, NODES_new{1}];
            NODES = [NODES; {NODES_new}];
        end

@@ -1,21 +1,21 @@
-function [V_valid, n_pruned] = traverse_columns(V_c, priority_n, priority_lock, ra)
+function [V_valid, n_pruned] = traverse_columns(V_c, priority_n, pair_lock, ra)
 % Enumerate selector matrices only over contended columns.
-% Non-contended columns are fixed directly.
 %
-% priority_n     : if > 0, that robot auto-wins any contended column.
-% priority_lock  : 1xM vector; priority_lock(m) = vehicle n with priority
-%                  for column m on this path (0 = none).
-%                  Weak rule: if n is still actively using m (ra(s,n)>0),
-%                  n wins automatically — no extra branch is created.
-% ra             : SxN remaining-time matrix (needed for weak rule check).
-% n_pruned       : number of branches skipped by the weak rule.
+% pair_lock : N×N matrix.  pair_lock(i,j) = winner (i or j) means i and j
+%             have previously competed and winner won.  0 = never competed.
+%             Weak rule: if one candidate beats ALL other contenders via
+%             established pairwise locks AND is actively mid-task (ra>0),
+%             that candidate auto-wins (no extra branch).
+% ra        : S×N remaining-time matrix.
+% n_pruned  : branches skipped by the weak rule.
 
-    if nargin < 2 || isempty(priority_n),    priority_n    = 0;                    end
-    if nargin < 3 || isempty(priority_lock), priority_lock = zeros(1,size(V_c,2)); end
-    if nargin < 4 || isempty(ra),            ra            = [];                   end
+    N = size(V_c, 1);
+    if nargin < 2 || isempty(priority_n),  priority_n = 0;           end
+    if nargin < 3 || isempty(pair_lock),   pair_lock  = zeros(N, N); end
+    if nargin < 4 || isempty(ra),          ra         = [];           end
 
-    n_pruned      = 0;
-    V_base        = zeros(size(V_c));
+    n_pruned       = 0;
+    V_base         = zeros(size(V_c));
     contended_cols = [];
 
     for m = 1:size(V_c, 2)
@@ -35,15 +35,38 @@ function [V_valid, n_pruned] = traverse_columns(V_c, priority_n, priority_lock, 
                 continue;
             end
 
-            % --- weak rule: locked vehicle actively using m wins automatically ---
-            locked_n = priority_lock(m);
-            if locked_n > 0 && any(rows == locked_n) && ~isempty(ra)
-                s_locked = V_c(locked_n, m);
-                if s_locked >= 1 && s_locked <= size(ra,1) && ra(s_locked, locked_n) > 1e-5
-                    V_base(locked_n, m) = V_c(locked_n, m);
-                    n_pruned = n_pruned + (numel(rows) - 1);
-                    continue;
+            % --- weak rule: find a candidate that beats ALL others via
+            %     established pairwise locks and is actively using m ---
+            winner_lock = 0;
+            if ~isempty(ra)
+                for ci = 1:numel(rows)
+                    candidate = rows(ci);
+                    s_cand    = V_c(candidate, m);
+                    if s_cand < 1 || s_cand > size(ra,1) || ra(s_cand, candidate) <= 1e-5
+                        continue;  % not actively mid-task on m
+                    end
+                    beats_all = true;
+                    for oi = 1:numel(rows)
+                        other = rows(oi);
+                        if other == candidate, continue; end
+                        % pair_lock(candidate,other) must equal candidate
+                        % (established and candidate won); 0 = never competed
+                        if pair_lock(candidate, other) ~= candidate
+                            beats_all = false;
+                            break;
+                        end
+                    end
+                    if beats_all
+                        winner_lock = candidate;
+                        break;
+                    end
                 end
+            end
+
+            if winner_lock > 0
+                V_base(winner_lock, m) = V_c(winner_lock, m);
+                n_pruned = n_pruned + (numel(rows) - 1);
+                continue;
             end
 
             contended_cols(end+1) = m; %#ok<AGROW>

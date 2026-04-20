@@ -162,17 +162,18 @@ function showPath(fig, leaf_idx, rank)
     end
     highlight(h, pathNodes, 'NodeColor', [0.85 0.12 0.12]);
 
-    % Time window
-    % xlim from actual schedule (alpha → gamma), plus 5% padding
+    % Time window: always start from earliest alpha_tilde so approach is visible
+    at_vals = cellfun(@(v) v(1), cfg.alpha_tilde);
+    tMin_at = min(at_vals);
     if ~isempty(space_blocks)
         blk_starts = cellfun(@(b) b{1}, space_blocks);
         blk_ends   = cellfun(@(b) b{2}, space_blocks);
-        tMin = min(blk_starts);
+        tMin = min(min(blk_starts), tMin_at);
         tMax = max(blk_ends);
     else
         alpha_vals = cell2mat(cellfun(@(a) a(~isnan(a)), alpha_arr, 'UniformOutput', false));
         tw_finite  = t_w(isfinite(t_w) & t_w < 1e6);
-        all_t = [alpha_vals, tw_finite];
+        all_t = [alpha_vals, tw_finite, tMin_at];
         all_t = all_t(isfinite(all_t));
         if isempty(all_t),  all_t = [0 20];  end
         tMin = min(all_t);  tMax = max(all_t);

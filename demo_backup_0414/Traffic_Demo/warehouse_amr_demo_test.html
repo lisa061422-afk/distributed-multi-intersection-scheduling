@@ -680,6 +680,7 @@
       display: flex; flex-direction: column; gap: 2px; min-width: 130px;
       border-left: 1px solid rgba(255,255,255,0.09);
       padding-left: 8px; margin-left: 4px;
+      min-height: 390px;
     }
     .scene-header {
       font-size: 10px; font-weight: 700; letter-spacing: 1px;
@@ -2237,17 +2238,22 @@
   <script src="schedules/tree_10r_S1_p1_optimal.js"  onerror=""></script>
   <script src="schedules/tree_10r_S5_optimal.js"      onerror=""></script>
   <script src="schedules/tree_10r_S6_optimal.js"      onerror=""></script>
+  <script src="schedules/tree_10r_S9_optimal.js"      onerror=""></script>
+  <script src="schedules/tree_10r_S10_optimal.js"     onerror=""></script>
   <script src="schedules/tree_10r_S2_optimal.js"      onerror=""></script>
   <script src="schedules/tree_10r_S2_p7_optimal.js"   onerror=""></script>
   <script src="schedules/tree_10r_S3_optimal.js"      onerror=""></script>
   <script src="schedules/tree_10r_S3_p2_optimal.js"   onerror=""></script>
   <script src="schedules/tree_10r_S3_p9_optimal.js"   onerror=""></script>
+  <script src="schedules/tree_10r_S8_optimal.js"      onerror=""></script>
   <script src="schedules/tree_15r_S1_optimal.js"      onerror=""></script>
   <script src="schedules/tree_15r_S1_p2_optimal.js"  onerror=""></script>
   <script src="schedules/tree_15r_S1_p4_optimal.js"  onerror=""></script>
   <script src="schedules/tree_15r_S2_optimal.js"     onerror=""></script>
   <script src="schedules/tree_20r_S1_optimal.js"     onerror=""></script>
   <script src="schedules/tree_20r_S2_optimal.js"     onerror=""></script>
+  <script src="schedules/tree_25r_S1_optimal.js"     onerror=""></script>
+  <script src="schedules/tree_30r_S1_optimal.js"     onerror=""></script>
   <!-- Interactive tree data for decision tree explorer -->
   <script src="schedules/interactive_tree_8r_S1.js"   onerror=""></script>
   <script src="schedules/interactive_tree_10r_S1.js" onerror=""></script>
@@ -2256,11 +2262,15 @@
   <script src="schedules/interactive_tree_10r_S6.js" onerror=""></script>
   <script src="schedules/interactive_tree_10r_S7.js" onerror=""></script>
   <script src="schedules/interactive_tree_10r_S8.js" onerror=""></script>
+  <script src="schedules/interactive_tree_10r_S9.js" onerror=""></script>
+  <script src="schedules/interactive_tree_10r_S10.js" onerror=""></script>
   <script src="schedules/interactive_tree_10r_S3.js" onerror=""></script>
   <script src="schedules/interactive_tree_15r_S1.js" onerror=""></script>
   <script src="schedules/interactive_tree_15r_S2.js" onerror=""></script>
   <script src="schedules/interactive_tree_20r_S1.js" onerror=""></script>
   <script src="schedules/interactive_tree_20r_S2.js" onerror=""></script>
+  <script src="schedules/interactive_tree_25r_S1.js" onerror=""></script>
+  <script src="schedules/interactive_tree_30r_S1.js" onerror=""></script>
   <!-- Traffic (5-int) interactive trees -->
   <script src="schedules/interactive_tree_tr_10r_S1.js"  onerror=""></script>
   <script src="schedules/interactive_tree_tr_15r_S1.js"  onerror=""></script>
@@ -2770,9 +2780,11 @@
     // ── Warehouse scenarios ───────────────────────────────────────────────────
     const SCENARIO_GROUPS_WH = {
       '8r':  { label:'8 Robots',  scenes:['S1'] },
-      '10r': { label:'10 Robots', scenes:['S1','S2','S3','S5','S6','S7','S8'] },
+      '10r': { label:'10 Robots', scenes:['S1','S2','S3','S5','S6','S7','S8','S9','S10'] },
       '15r': { label:'15 Robots', scenes:['S1','S2'] },
       '20r': { label:'20 Robots', scenes:['S1','S2'] },
+      '25r': { label:'25 Robots', scenes:['S1'] },
+      '30r': { label:'30 Robots', scenes:['S1'] },
     };
     const AVAILABLE_WH = {
       '8r_S1_optimal':  true,
@@ -2786,12 +2798,16 @@
       '10r_S6_optimal': true,  '10r_S6_fcfs': true,
       '10r_S7_optimal': true,  '10r_S7_fcfs': true,
       '10r_S8_optimal': true,  '10r_S8_fcfs': true,
+      '10r_S9_optimal': true,  '10r_S9_fcfs': true,
+      '10r_S10_optimal': true, '10r_S10_fcfs': true,
       '15r_S1_optimal': true,  '15r_S1_fcfs': true,
       '15r_S1_p2_optimal': true,
       '15r_S1_p4_optimal': true,
       '15r_S2_optimal': true,  '15r_S2_fcfs': true,
       '20r_S1_optimal': true,  '20r_S1_fcfs': true,
       '20r_S2_optimal': true,  '20r_S2_fcfs': true,
+      '25r_S1_optimal': true,  '25r_S1_fcfs': true,
+      '30r_S1_optimal': true,  '30r_S1_fcfs': true,
     };
 
     // ── Traffic scenarios (5-intersection map) ────────────────────────────────
@@ -4657,45 +4673,6 @@
     `;
     document.head.appendChild(gpStyle);
 
-    // ── Gamepad cursor CSS ───────────────────────────────────────────────
-    const gpCursorStyle = document.createElement('style');
-    gpCursorStyle.textContent = `
-      @keyframes gpPulse {
-        0%   { box-shadow: 0 0 8px rgba(255,160,40,0.6), 0 0 20px rgba(255,120,0,0.4), 0 0 40px rgba(255,80,0,0.2); }
-        50%  { box-shadow: 0 0 14px rgba(255,180,60,0.9), 0 0 30px rgba(255,140,0,0.6), 0 0 60px rgba(255,100,0,0.35), 0 0 80px rgba(255,60,0,0.15); }
-        100% { box-shadow: 0 0 8px rgba(255,160,40,0.6), 0 0 20px rgba(255,120,0,0.4), 0 0 40px rgba(255,80,0,0.2); }
-      }
-      #gpCursor {
-        position: fixed;
-        width: 18px; height: 18px;
-        border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, rgba(255,220,120,0.95), rgba(255,160,40,0.9) 50%, rgba(255,100,0,0.7));
-        border: 2px solid rgba(255,200,80,0.8);
-        animation: gpPulse 1.4s ease-in-out infinite;
-        pointer-events: none;
-        z-index: 9999;
-        transition: width 0.1s, height 0.1s, opacity 0.15s, background 0.15s;
-        display: none;
-        will-change: transform;
-        margin-left: -11px;
-        margin-top: -11px;
-      }
-      #gpCursor.active { display: block; }
-      #gpCursor.clicking {
-        background: radial-gradient(circle at 40% 40%, #fff, rgba(255,200,80,1) 60%, rgba(255,120,0,0.9));
-        box-shadow: 0 0 24px rgba(255,200,80,1), 0 0 50px rgba(255,140,0,0.8), 0 0 80px rgba(255,80,0,0.4) !important;
-        width: 28px; height: 28px;
-        margin-left: -16px; margin-top: -16px;
-        animation: none;
-      }
-      .gp-hover {
-        outline: 2px solid rgba(255,170,40,0.9) !important;
-        outline-offset: 2px;
-        filter: brightness(1.15);
-      }
-    `;
-    document.head.appendChild(gpCursorStyle);
-
     // ════════════════════════════════════════════════════════════════════════
     // InputRepeatController
     // Edge detection + held-key repeat with initial delay + interval throttle
@@ -4896,14 +4873,6 @@
       let gpActive      = false;
       let prevRStickZone = null; // right stick zone edge detection
 
-      // ── Cursor state ──
-      let curX = window.innerWidth / 2, curY = window.innerHeight / 2;
-      let gpCursorEl = null;
-      let hoveredEl  = null;
-      let lastTickTs = 0;
-      const CURSOR_SPEED = 800;  // px per second
-      const CURSOR_DZ    = 0.15; // deadzone
-
       function gp() { return gpIdx !== null ? navigator.getGamepads()[gpIdx] : null; }
       function pressed(g, i) { return !!(g.buttons[i]?.pressed); }
       function edge(g, i)    { return pressed(g, i) && !prevBtns[i]; }
@@ -4940,40 +4909,6 @@
       function handleBack() {
         const kept = FM.back();
         if (!kept || FM.mode() === 'bar') closeAllDrops();
-      }
-
-      // ── Cursor helper: move + hover + optional click ──
-      function updateCursor(g, ax0, ax1, now, allowClick) {
-        if (!gpCursorEl) return;
-        const dt = lastTickTs ? (now - lastTickTs) / 1000 : 0.016;
-        lastTickTs = now;
-        const mx = Math.abs(ax0) > CURSOR_DZ ? ax0 : 0;
-        const my = Math.abs(ax1) > CURSOR_DZ ? ax1 : 0;
-        if (mx || my) {
-          curX += mx * CURSOR_SPEED * dt;
-          curY += my * CURSOR_SPEED * dt;
-          curX = Math.max(0, Math.min(window.innerWidth  - 1, curX));
-          curY = Math.max(0, Math.min(window.innerHeight - 1, curY));
-        }
-        gpCursorEl.style.transform = `translate(${curX}px, ${curY}px)`;
-
-        // Hit detection
-        const hitEl = document.elementFromPoint(curX, curY);
-        const clickable = hitEl ? hitEl.closest(
-          'button, .ctrl-btn, .drop-item, .speed-btn, .dir-btn, .sched-tab, .map-toggle-btn, .sched-close, .ctrl-action'
-        ) : null;
-        if (clickable !== hoveredEl) {
-          if (hoveredEl) hoveredEl.classList.remove('gp-hover');
-          hoveredEl = clickable;
-          if (hoveredEl) hoveredEl.classList.add('gp-hover');
-        }
-
-        // A button → click hovered element
-        if (allowClick && edge(g, B.A) && hoveredEl) {
-          hoveredEl.click();
-          gpCursorEl.classList.add('clicking');
-          setTimeout(() => gpCursorEl.classList.remove('clicking'), 150);
-        }
       }
 
       function tick(now) {
@@ -5013,7 +4948,6 @@
             if (stickU || dpU) pBody.scrollTop -= 40;
             if (stickD || dpD) pBody.scrollTop += 40;
           }
-          updateCursor(g, ax0, ax1, now, true);
           g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
           prevRStickZone = null;
           return;
@@ -5022,37 +4956,35 @@
         // Tree explorer intercepts input when open
         if (treeExploreOpen) {
           if (edge(g, B.B))  closeTreeExplore();
-          // Left stick up/down cycles leaf paths
+          // D-pad up/down cycles leaf paths
           const tIntData = getTreeData() &&
             getTreeData().intersections[treeCurrentInt];
           if (tIntData) {
             const nLeaves = tIntData.leafPaths.length;
-            InputRepeat.check('U', stickU, now, () => {
+            InputRepeat.check('U', dpU, now, () => {
               treeCurrentLeaf = (treeCurrentLeaf - 1 + nLeaves) % nLeaves;
               selectLeafPath(treeCurrentLeaf);
             });
-            InputRepeat.check('D', stickD, now, () => {
+            InputRepeat.check('D', dpD, now, () => {
               treeCurrentLeaf = (treeCurrentLeaf + 1) % nLeaves;
               selectLeafPath(treeCurrentLeaf);
             });
           }
-          // Left stick left/right switches intersection tabs
+          // D-pad left/right switches intersection tabs
           const intKeys = getTreeData() ?
             Object.keys(getTreeData().intersections).sort((a,b) => +a - +b) : [];
           if (intKeys.length > 0) {
-            InputRepeat.check('L', stickL, now, () => {
+            InputRepeat.check('L', dpL, now, () => {
               let idx = intKeys.indexOf(treeCurrentInt);
               idx = (idx - 1 + intKeys.length) % intKeys.length;
               activateIntTab(intKeys[idx]);
             });
-            InputRepeat.check('R', stickR, now, () => {
+            InputRepeat.check('R', dpR, now, () => {
               let idx = intKeys.indexOf(treeCurrentInt);
               idx = (idx + 1) % intKeys.length;
               activateIntTab(intKeys[idx]);
             });
           }
-          // No cursor in tree explorer
-          if (gpCursorEl) gpCursorEl.classList.remove('active');
           g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
           prevRStickZone = null;
           return;
@@ -5066,16 +4998,9 @@
           InputRepeat.check('R', dpR, now, () => schedGoTo(schedSlideIdx + 1));
           if (edge(g, B.LB))                     schedGoTo(schedSlideIdx - 1);
           if (edge(g, B.RB))                     schedGoTo(schedSlideIdx + 1);
-          // Cursor disabled while schedule viewer is open
-          if (gpCursorEl) gpCursorEl.classList.remove('active');
           g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
           prevRStickZone = null;
           return;
-        }
-
-        // Restore cursor when back on main page
-        if (gpCursorEl && !gpCursorEl.classList.contains('active')) {
-          gpCursorEl.classList.add('active');
         }
 
         // D-pad → FM bar / dropdown navigation (metal panel control)
@@ -5118,9 +5043,6 @@
         if (rZone && rZone !== prevRStickZone) setLocalView(rZone);
         prevRStickZone = rZone;
 
-        // ── Gamepad cursor (left stick) ──────────────────────────────────
-        updateCursor(g, ax0, ax1, now, true);
-
         // Save state for next frame
         g.buttons.forEach((b, i) => { prevBtns[i] = b.pressed; });
       }
@@ -5130,14 +5052,6 @@
         prevBtns = {};
         gpActive = true;
         FM.init();
-        // Init cursor
-        if (!gpCursorEl) gpCursorEl = document.getElementById('gpCursor');
-        if (gpCursorEl) {
-          curX = window.innerWidth / 2;
-          curY = window.innerHeight / 2;
-          gpCursorEl.classList.add('active');
-        }
-        lastTickTs = 0;
         console.log(`[Gamepad] Connected: index ${idx} — A=confirm B=back X=play Y=replay LB/RB=speed Select=schedule-view Start=params L3=reload`);
       }
       function disconnect(idx) {
@@ -5146,9 +5060,6 @@
         gpActive = false;
         FM.deinit();
         InputRepeat.reset();
-        // Hide cursor and clean up hover
-        if (gpCursorEl) gpCursorEl.classList.remove('active');
-        if (hoveredEl) { hoveredEl.classList.remove('gp-hover'); hoveredEl = null; }
         console.log(`[Gamepad] Disconnected`);
       }
 
@@ -5174,6 +5085,5 @@
 
   })(); // end GamepadModule
   </script>
-<div id="gpCursor"></div>
 </body>
 </html>

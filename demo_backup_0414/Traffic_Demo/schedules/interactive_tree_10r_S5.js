@@ -33,17 +33,38 @@ window.ALL_INTERACTIVE_TREES["10r_S5"] = {
     "2": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.00,"isLeaf":false,"isRoot":true},
-        {"id":2,"orig":24,"tw":24.467,"f":0.57,"isLeaf":true,"isRoot":false}
+        {"id":2,"orig":13,"tw":8.071,"f":-0.00,"isLeaf":false,"isRoot":false},
+        {"id":3,"orig":14,"tw":8.356,"f":-0.00,"isLeaf":false,"isRoot":false},
+        {"id":4,"orig":15,"tw":8.356,"f":-0.00,"isLeaf":false,"isRoot":false},
+        {"id":5,"orig":23,"tw":11.498,"f":3.43,"isLeaf":true,"isRoot":false},
+        {"id":6,"orig":30,"tw":24.467,"f":0.57,"isLeaf":true,"isRoot":false}
       ],
       "edges": [
-        [1,2]
+        [1,2],
+        [2,3],
+        [2,4],
+        [3,5],
+        [4,6]
       ],
-      "optimalPath": [1,2],
-      "optimalLeaf": 1,
+      "optimalPath": [1,2,4,6],
+      "optimalLeaf": 2,
       "leafPaths": [
-        [1,2]
+        [1,2,3,5],
+        [1,2,4,6]
       ],
       "leafGantts": [
+        {
+          "fCost": 3.43,
+          "vehicles": [
+            {"veh":2,"k":2,"t0":7.0711,"tf":9.0711,"genTime":6.7854,"actualGenTime":7.0704,"spaces":[4.0000,1.0000],"segStart":[7.0711,8.0711],"segEnd":[8.0711,9.0711]},
+            {"veh":4,"k":2,"t0":8.3562,"tf":10.7124,"genTime":8.3561,"actualGenTime":8.3562,"spaces":[3.0000,5.0000,1.0000],"segStart":[8.3562,9.1416,9.9270],"segEnd":[9.1416,9.9270,10.7124]},
+            {"veh":7,"k":2,"t0":9.1416,"tf":11.4978,"genTime":5.9993,"actualGenTime":5.9992,"spaces":[3.0000,5.0000,1.0000],"segStart":[9.1416,9.9270,10.7124],"segEnd":[9.9270,10.7124,11.4978]},
+            {"veh":8,"k":1,"t0":2.0000,"tf":4.3562,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[2.0000,5.0000,4.0000],"segStart":[2.0000,2.7854,3.5708],"segEnd":[2.7854,3.5708,4.3562]},
+            {"veh":9,"k":1,"t0":4.0000,"tf":4.7854,"genTime":4.0000,"actualGenTime":4.0000,"spaces":[2.0000],"segStart":[4.0000],"segEnd":[4.7854]},
+            {"veh":10,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[1.0000,2.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]}
+          ],
+          "numSpaces": 5
+        },
         {
           "fCost": 0.57,
           "vehicles": [
@@ -61,17 +82,80 @@ window.ALL_INTERACTIVE_TREES["10r_S5"] = {
     "3": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.00,"isLeaf":false,"isRoot":true},
-        {"id":2,"orig":20,"tw":23.013,"f":1.04,"isLeaf":true,"isRoot":false}
+        {"id":2,"orig":10,"tw":6.902,"f":-0.00,"isLeaf":false,"isRoot":false},
+        {"id":3,"orig":11,"tw":7.402,"f":-0.00,"isLeaf":false,"isRoot":false},
+        {"id":4,"orig":12,"tw":7.015,"f":-0.00,"isLeaf":false,"isRoot":false},
+        {"id":5,"orig":13,"tw":7.688,"f":0.12,"isLeaf":false,"isRoot":false},
+        {"id":6,"orig":14,"tw":7.402,"f":-0.00,"isLeaf":false,"isRoot":false},
+        {"id":7,"orig":15,"tw":8.015,"f":0.01,"isLeaf":false,"isRoot":false},
+        {"id":8,"orig":16,"tw":7.800,"f":0.23,"isLeaf":false,"isRoot":false},
+        {"id":9,"orig":18,"tw":8.688,"f":0.80,"isLeaf":false,"isRoot":false},
+        {"id":10,"orig":19,"tw":8.688,"f":0.12,"isLeaf":false,"isRoot":false},
+        {"id":11,"orig":20,"tw":9.688,"f":3.49,"isLeaf":true,"isRoot":false},
+        {"id":12,"orig":23,"tw":9.188,"f":2.03,"isLeaf":true,"isRoot":false},
+        {"id":13,"orig":25,"tw":10.688,"f":3.49,"isLeaf":true,"isRoot":false},
+        {"id":14,"orig":30,"tw":23.013,"f":1.04,"isLeaf":true,"isRoot":false}
       ],
       "edges": [
-        [1,2]
+        [1,2],
+        [2,3],
+        [2,4],
+        [3,5],
+        [4,6],
+        [6,7],
+        [6,8],
+        [5,9],
+        [5,10],
+        [10,11],
+        [7,12],
+        [9,13],
+        [8,14]
       ],
-      "optimalPath": [1,2],
-      "optimalLeaf": 1,
+      "optimalPath": [1,2,4,6,8,14],
+      "optimalLeaf": 4,
       "leafPaths": [
-        [1,2]
+        [1,2,3,5,10,11],
+        [1,2,4,6,7,12],
+        [1,2,3,5,9,13],
+        [1,2,4,6,8,14]
       ],
       "leafGantts": [
+        {
+          "fCost": 3.49,
+          "vehicles": [
+            {"veh":3,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[2.0000,3.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":4,"k":1,"t0":4.0000,"tf":6.3562,"genTime":4.0000,"actualGenTime":4.0000,"spaces":[2.0000,5.0000,4.0000],"segStart":[4.0000,4.7854,5.5708],"segEnd":[4.7854,5.5708,6.3562]},
+            {"veh":6,"k":2,"t0":7.6876,"tf":9.6876,"genTime":6.0000,"actualGenTime":6.4011,"spaces":[4.0000,1.0000],"segStart":[7.6876,8.6876],"segEnd":[8.6876,9.6876]},
+            {"veh":7,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[3.0000,4.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":9,"k":2,"t0":6.9022,"tf":7.6876,"genTime":6.7855,"actualGenTime":6.9011,"spaces":[1.0000],"segStart":[6.9022],"segEnd":[7.6876]},
+            {"veh":10,"k":2,"t0":7.6876,"tf":9.6876,"genTime":6.0090,"actualGenTime":6.0128,"spaces":[1.0000,2.0000],"segStart":[7.6876,8.6876],"segEnd":[8.6876,9.6876]}
+          ],
+          "numSpaces": 5
+        },
+        {
+          "fCost": 2.03,
+          "vehicles": [
+            {"veh":3,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[2.0000,3.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":4,"k":1,"t0":4.0000,"tf":6.3562,"genTime":4.0000,"actualGenTime":4.0000,"spaces":[2.0000,5.0000,4.0000],"segStart":[4.0000,4.7854,5.5708],"segEnd":[4.7854,5.5708,6.3562]},
+            {"veh":6,"k":2,"t0":6.4022,"tf":8.4022,"genTime":6.0000,"actualGenTime":6.4011,"spaces":[4.0000,1.0000],"segStart":[6.4022,7.4022],"segEnd":[7.4022,8.4022]},
+            {"veh":7,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[3.0000,4.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":9,"k":2,"t0":8.4022,"tf":9.1876,"genTime":6.7855,"actualGenTime":6.9011,"spaces":[1.0000],"segStart":[8.4022],"segEnd":[9.1876]},
+            {"veh":10,"k":2,"t0":6.0146,"tf":8.0146,"genTime":6.0090,"actualGenTime":6.0128,"spaces":[1.0000,2.0000],"segStart":[6.0146,7.0146],"segEnd":[7.0146,8.0146]}
+          ],
+          "numSpaces": 5
+        },
+        {
+          "fCost": 3.49,
+          "vehicles": [
+            {"veh":3,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[2.0000,3.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":4,"k":1,"t0":4.0000,"tf":6.3562,"genTime":4.0000,"actualGenTime":4.0000,"spaces":[2.0000,5.0000,4.0000],"segStart":[4.0000,4.7854,5.5708],"segEnd":[4.7854,5.5708,6.3562]},
+            {"veh":6,"k":2,"t0":6.6876,"tf":8.6876,"genTime":6.0000,"actualGenTime":6.4011,"spaces":[4.0000,1.0000],"segStart":[6.6876,7.6876],"segEnd":[7.6876,8.6876]},
+            {"veh":7,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[3.0000,4.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":9,"k":2,"t0":6.9022,"tf":7.6876,"genTime":6.7855,"actualGenTime":6.9011,"spaces":[1.0000],"segStart":[6.9022],"segEnd":[7.6876]},
+            {"veh":10,"k":2,"t0":8.6876,"tf":10.6876,"genTime":6.0090,"actualGenTime":6.0128,"spaces":[1.0000,2.0000],"segStart":[8.6876,9.6876],"segEnd":[9.6876,10.6876]}
+          ],
+          "numSpaces": 5
+        },
         {
           "fCost": 1.04,
           "vehicles": [
@@ -89,17 +173,36 @@ window.ALL_INTERACTIVE_TREES["10r_S5"] = {
     "4": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.00,"isLeaf":false,"isRoot":true},
-        {"id":2,"orig":14,"tw":22.496,"f":0.76,"isLeaf":true,"isRoot":false}
+        {"id":2,"orig":8,"tw":7.170,"f":0.00,"isLeaf":false,"isRoot":false},
+        {"id":3,"orig":9,"tw":7.559,"f":0.00,"isLeaf":false,"isRoot":false},
+        {"id":4,"orig":10,"tw":7.956,"f":0.00,"isLeaf":false,"isRoot":false},
+        {"id":5,"orig":14,"tw":9.526,"f":1.55,"isLeaf":true,"isRoot":false},
+        {"id":6,"orig":17,"tw":22.496,"f":0.76,"isLeaf":true,"isRoot":false}
       ],
       "edges": [
-        [1,2]
+        [1,2],
+        [2,3],
+        [2,4],
+        [4,5],
+        [3,6]
       ],
-      "optimalPath": [1,2],
-      "optimalLeaf": 1,
+      "optimalPath": [1,2,3,6],
+      "optimalLeaf": 2,
       "leafPaths": [
-        [1,2]
+        [1,2,4,5],
+        [1,2,3,6]
       ],
       "leafGantts": [
+        {
+          "fCost": 1.55,
+          "vehicles": [
+            {"veh":1,"k":2,"t0":7.1702,"tf":9.5264,"genTime":5.9927,"actualGenTime":5.9894,"spaces":[1.0000,5.0000,3.0000],"segStart":[7.1702,7.9556,8.7410],"segEnd":[7.9556,8.7410,9.5264]},
+            {"veh":3,"k":2,"t0":6.3848,"tf":8.7410,"genTime":6.0001,"actualGenTime":6.3859,"spaces":[2.0000,5.0000,4.0000],"segStart":[6.3848,7.1702,7.9556],"segEnd":[7.1702,7.9556,8.7410]},
+            {"veh":5,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[3.0000,4.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":6,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[4.0000,1.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]}
+          ],
+          "numSpaces": 5
+        },
         {
           "fCost": 0.76,
           "vehicles": [

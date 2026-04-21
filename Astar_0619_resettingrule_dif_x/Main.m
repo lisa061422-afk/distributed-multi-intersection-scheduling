@@ -14,13 +14,13 @@ cfg.pruneNodes   = false; % true  → standard A*: prune branches with same ni,
 cfg.useBnB       = false; % true  → Branch-and-Bound: prune nodes with g > best complete path
                           %         → fewer leaves, faster, only optimal/near-optimal shown
                           % false → keep all valid paths → all scheduling results visible
-
+ 
 cfg.useTBound    = true;  % true  → prune nodes with tw > serial worst-case deadline
                           %         Only applied to WeakRule OFF (displacement invalidates
                           %         tw monotonicity for WeakRule ON — see runAstar.m)
                           % false → no T_bound pruning
 
-cfg.timeout_s    = 20;   % max run time (s); 0 = no limit.
+cfg.timeout_s    = 30;   % max run time (s); 0 = no limit.
                           % On timeout: output all branches found so far,
                           % use best complete leaf if any, skip if none.
  

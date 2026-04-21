@@ -78,6 +78,11 @@ function [NODES,OPEN,LEAF] = expand_array(NODES,OPEN,c_node_index,useWeakRule,cf
        [V_valid, ~, cb_updates] = traverse_columns(V_c, 0, pair_lock, ra);
           number_current_node = num_nodes;
           for i = 1:numel(V_valid)
+              % Check timeout and max_nodes inside the loop so a single
+              % high-contention expansion cannot block the outer safety checks.
+              if cfg.timeout_s > 0 && toc > cfg.timeout_s,  break;  end
+              if size(NODES,1) >= 30000,  break;  end
+
               ra_temp = ra;
               V_temp = V_valid{i};
 
@@ -90,6 +95,8 @@ function [NODES,OPEN,LEAF] = expand_array(NODES,OPEN,c_node_index,useWeakRule,cf
               end
 
               for bi_rr = 1:numel(branches_rr)
+                  if cfg.timeout_s > 0 && toc > cfg.timeout_s,  break;  end
+                  if size(NODES,1) >= 30000,  break;  end
                   br        = branches_rr{bi_rr};
                   ra_temp2  = br{1};  V_temp2      = br{2};
                   x2        = br{3};  pl_upd       = br{4};

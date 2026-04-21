@@ -64,7 +64,7 @@ if isnan(elapsedTime)
 else
     ttl_tree = sprintf('%d leaves  |  %d nodes  |  %.2fs   [%s]', length(LEAF_s), num_nodes, elapsedTime, rule_str);
 end
-title(ax_t, ttl_tree, 'FontSize', 9, 'Color', rule_col, 'FontWeight', 'bold');
+title(ax_t, ttl_tree, 'FontSize', 16, 'Color', rule_col, 'FontWeight', 'bold');
 axis(ax_t,'tight');  box(ax_t,'on');
 
 % ── Resource-allocation axes (right 56%, N+M rows) ───────────────────
@@ -78,16 +78,16 @@ for r = 1:nRows
     set(ra_axes(r), 'FontSize', 9);
     if r < nRows,  set(ra_axes(r), 'XTickLabel', {});  end
 end
-xlabel(ra_axes(nRows), 'Time (s)', 'FontSize', 11);
+xlabel(ra_axes(nRows), 'Time (s)', 'FontSize', 12);
 
 % Placeholder titles
 for r = 1:N
     ylabel(ra_axes(r), sprintf('N%d', r), ...
-        'FontSize', 8, 'Rotation', 0, 'HorizontalAlignment', 'right');
+        'FontSize', 10, 'Rotation', 0, 'HorizontalAlignment', 'right');
 end
 for m = 1:M
     ylabel(ra_axes(N+m), sprintf('M%d', m), ...
-        'FontSize', 8, 'Rotation', 0, 'HorizontalAlignment', 'right');
+        'FontSize', 10, 'Rotation', 0, 'HorizontalAlignment', 'right');
 end
 title(ra_axes(1), 'Select a leaf node on the tree', 'FontSize', 10);
 
@@ -207,7 +207,7 @@ function showPath(fig, leaf_idx, rank)
         for idx = 1:np-1
             xs = t_w(idx);  xe = t_w(idx+1);
             yv = route_usage(n, idx);
-            if yv > 0.7
+            if yv > 0.7 
                 ci = resc_occ(n, idx);
                 fill(ax, [xs xe xe xs], [0 0 yv yv], colors{ci}, 'EdgeColor','none');
             end
@@ -220,7 +220,7 @@ function showPath(fig, leaf_idx, rank)
             xline(ax, at, '-.', 'LineWidth', 1.5, 'Color', [1 0 0]);
         end
         ylabel(ax, sprintf('N%d', n), ...
-            'FontSize', 12, 'Rotation', 0, 'HorizontalAlignment', 'right');
+            'FontSize', 10, 'Rotation', 0, 'HorizontalAlignment', 'right');
         xlim(ax,[t1 tf]);  ylim(ax,[0 1.1]);  grid(ax,'on');
     end
 
@@ -236,12 +236,12 @@ function showPath(fig, leaf_idx, rank)
             ts = blk{1};  te = blk{2};  n_sys = blk{4};
             fill(ax, [ts te te ts], [0 0 1 1], [1 1 1], 'EdgeColor', col, 'LineWidth', 2);
             text(ax, (ts+te)/2, 0.55, sprintf('N%d', n_sys), ...
-                'FontSize', 13, 'FontWeight', 'bold', ...
+                'FontSize', 16, 'FontWeight', 'bold', ...
                 'HorizontalAlignment', 'center', 'Color', col);
         end
 
         ylabel(ax, sprintf('M%d', m), ...
-            'FontSize', 8, 'Rotation', 0, 'HorizontalAlignment', 'right');
+            'FontSize', 10, 'Rotation', 0, 'HorizontalAlignment', 'right');
         xlim(ax,[t1 tf]);  ylim(ax,[0 1.2]);  grid(ax,'on');
     end
 
@@ -286,10 +286,10 @@ function showPath(fig, leaf_idx, rank)
     gcost = ud.gcosts_s(rank);
     if rank == 1
         ttl = sprintf('Path %d  |  g = %.4f  ★ OPTIMAL', rank, gcost);
-        title(ra_axes(1), ttl, 'FontSize', 10, 'FontWeight','bold', 'Color',[0.1 0.5 0.1]);
+        title(ra_axes(1), ttl, 'FontSize', 16, 'FontWeight','bold', 'Color',[0.1 0.5 0.1]);
     else
         ttl = sprintf('Path %d  |  g = %.4f    (optimal: %.4f)', rank, gcost, ud.gcosts_s(1));
-        title(ra_axes(1), ttl, 'FontSize', 10, 'Color',[0.15 0.15 0.65]);
+        title(ra_axes(1), ttl, 'FontSize', 16, 'Color',[0.15 0.15 0.65]);
     end
 
     % Highlight selected leaf on tree
@@ -366,14 +366,13 @@ for idx = 1:num_pts
     nxt = NODES{pathNodes(idx+1)};
 
     for n = 1:N
-        d           = cur{2}(n);    d_next  = nxt{2}(n);
-        remain      = cur{3}(:,n);
-        ra_rst      = cur{14}(:,n); % ra_reset: remaining times before NextSigM (reliable for delay detection)
-        V_next      = nxt{9}(n,:);
-        gamma_cur   = cur{11}{n};
+        d            = cur{2}(n);    d_next  = nxt{2}(n);
+        remain       = cur{3}(:,n);  remain_next = nxt{3}(:,n);
+        V_next       = nxt{9}(n,:);
+        gamma_cur    = cur{11}{n};
         vehicle_done = ~isempty(gamma_cur) && numel(gamma_cur) >= Ni(n);
 
-        if abs(d) < 1e-5 && d_next < 100
+        if abs(d) < 1e-5 && d_next < 100 && ~vehicle_done
             if any(V_next > 0)
                 route_usage(n,idx) = 1;
                 resc_occ(n,idx)    = find(V_next > 0, 1);
@@ -384,11 +383,21 @@ for idx = 1:num_pts
         elseif abs(d) > 1e-5 && any(V_next > 0)
             route_usage(n,idx) = 1;
             resc_occ(n,idx)    = find(V_next > 0, 1);
+        elseif abs(d) > 1e-3 && all(V_next==0) && ...
+               sum(remain) > sum(remain_next) + 1e-5 && sum(remain_next) > 1e-5
+            if any(cur{9}(n,:) > 0)
+                % Currently in a space but not in next node: sub-task transition
+                route_usage(n,idx) = 1;
+                resc_occ(n,idx)    = find(cur{9}(n,:) > 0, 1);
+            else
+                % Not in any space, remain shrinking: extended wait window
+                route_usage(n,idx) = 0.5;
+            end
         elseif abs(d) > 1e-5 && abs(d_next) < 1e-5
             route_usage(n,idx) = double(sum(remain) > 1e-5) * 0.5;
         elseif abs(d) > 1e-3 && abs(d_next) > 1e-3 && abs(d) < 100 && ...
-               all(V_next==0) && sum(ra_rst) > 1e-3 && ~vehicle_done
-            % ra_reset > 0 and gamma not yet complete: vehicle is waiting (delayed)
+               all(V_next==0) && abs(sum(remain)) > 1e-3 && ~vehicle_done
+            % vehicle waiting (d>0), not yet in any space next step, still has remain
             route_usage(n,idx) = 0.5;
         end
     end

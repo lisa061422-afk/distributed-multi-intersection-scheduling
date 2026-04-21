@@ -9,7 +9,7 @@ elseif all(V_temp(:) == 0)
     Lw = min(da(da>0.00001));
     tw1 = tw + Lw;
 else
-    remain_time = zeros(1, N);
+    remain_time = zeros(1, N); 
     for n = 1:N
         if any(V_temp(n, :))
             [~, m] = find(V_temp(n, :), 1);

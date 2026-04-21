@@ -45,10 +45,7 @@ OPEN  = 1;
 c_node_index = 1;
 
 %% A* loop
-% T_bound assumes tw increases monotonically. Displacement (WeakRule ON)
-% can reset vehicles to earlier times, violating this assumption.
-% Only apply T_bound when WeakRule is OFF.
-apply_TBound = cfg.useTBound && ~cfg.useWeakRule;
+apply_TBound = cfg.useTBound;  % applies to both WeakRule ON and OFF
 
 max_nodes = 30000;  % hard safety cap — prevents single-call explosion
 

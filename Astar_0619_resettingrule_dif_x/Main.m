@@ -11,10 +11,19 @@ cfg.pruneNodes   = false; % true  → standard A*: prune branches with same ni,
                           % false → no pruning: all branches survive → multiple
                           %         leaves visible in plotInteractiveTree
 
+cfg.useBnB       = false; % true  → Branch-and-Bound: prune nodes with g > best complete path
+                          %         → fewer leaves, faster, only optimal/near-optimal shown
+                          % false → keep all valid paths → all scheduling results visible
+
+cfg.useTBound    = true;  % true  → prune nodes with tw > serial worst-case deadline
+                          %         Only applied to WeakRule OFF (displacement invalidates
+                          %         tw monotonicity for WeakRule ON — see runAstar.m)
+                          % false → no T_bound pruning
+
 cfg.timeout_s    = 20;   % max run time (s); 0 = no limit.
                           % On timeout: output all branches found so far,
                           % use best complete leaf if any, skip if none.
-
+ 
 % ===================== Physical parameters ===================================
 cfg.v_max        = 20;    % vehicle speed (m/s, consistent with Map/C scale)
 cfg.detect_range = 510;   % detection zone diameter (m)
@@ -38,19 +47,23 @@ cfg.W            = 30;    % merging zone width (m)
 % cfg.routeAssignment = [1 4 11 8];   % ← set N and routes here
 % cfg.routeAssignment = [2 2 5 4 1];   % ← set N and routes here
 % cfg.routeAssignment = [1 2 4 5]; %exp in ccta
-cfg.routeAssignment = [1 2 4 5 11 8];
+% cfg.routeAssignment = [1 2 4 5 11 8]; 
+% cfg.routeAssignment = [1 4 5]; 
+ cfg.routeAssignment = [1 2 1 7]; 
+% cfg.routeAssignment = [5 2 4 10]; 
 
 % Initial arrival offset d1(n) for each system (length = N).
 % All zeros → all systems arrive simultaneously (max contention).
 cfg.d1 = zeros(1, numel(cfg.routeAssignment));
-cfg.d1 = [0, 0, 0, 0, 0, 0];   % N1在0s到，N2延迟3s，N3延迟6s
-%cfg.d1 = [14.5, 15.2, 15.5, 15]; 
+% cfg.d1 = [0, 0, 0, 0, 0, 0];   % N1在0s到，N2延迟3s，N3延迟6s
+% cfg.d1 = [14.5, 15.2, 15.5, 15];  
+cfg.d1 = [0, 0, 0, 0]; 
 
 % ===================== Intersection config ===================================
 intCfg   = makeIntersectionConfig(); 
 cfg.N    = numel(cfg.routeAssignment);           % number of systems
-cfg.M    = intCfg.M;                             % 5 spaces (fixed by geometry)
-cfg.S    = intCfg.S;                             % 3 sub-tasks max
+cfg.M    = intCfg.M;                              % 5 spaces (fixed by geometry)
+cfg.S    = intCfg.S;                                % 3 sub-tasks max
 cfg.Map  = intCfg.Map(:, cfg.routeAssignment);   % one column per system (repeats allowed)
 cfg.C    = intCfg.C(:,   cfg.routeAssignment);
 
@@ -109,21 +122,14 @@ has_on  = ~isempty(r_on.LEAF);
 has_off = ~isempty(r_off.LEAF);
 if has_on || has_off
     exportHTML(r_on.NODES,  r_on.LEAF,  cfg, [], ...
-               r_off.NODES, r_off.LEAF);
+               r_off.NODES, r_off.LEAF, r_on.elapsed, r_off.elapsed);
 else
     fprintf('(Skipping HTML export — no complete leaves in either run)\n');
 end
 
 % ===================== Interactive tree explorer =============================
+% Always draw the tree (even without complete leaves) so we can see what happened.
 cfg.useWeakRule = true;
-if has_on
-    plotInteractiveTree(r_on.NODES, r_on.LEAF, cfg);
-else
-    fprintf('(Skipping plotInteractiveTree — no complete leaves for WeakRule ON)\n');
-end
+plotInteractiveTree(r_on.NODES, r_on.LEAF, cfg, r_on.elapsed);
 cfg.useWeakRule = false;
-if has_off
-    plotInteractiveTree(r_off.NODES, r_off.LEAF, cfg);
-else
-    fprintf('(Skipping plotInteractiveTree — no complete leaves for WeakRule OFF)\n');
-end
+plotInteractiveTree(r_off.NODES, r_off.LEAF, cfg, r_off.elapsed);

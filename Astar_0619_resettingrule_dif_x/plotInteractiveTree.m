@@ -1,4 +1,5 @@
-function plotInteractiveTree(NODES, LEAF, cfg)
+function plotInteractiveTree(NODES, LEAF, cfg, elapsedTime)
+if nargin < 4, elapsedTime = NaN; end
 % plotInteractiveTree  Click a leaf on the tree → resource allocation updates.
 %
 %   Left  : decision tree  (green=optimal, orange=other leaves, blue=rest)
@@ -39,18 +40,31 @@ h.YData = h.YData * 1.8;
 hold(ax_t, 'on');
 
 nc = repmat([0.55 0.78 0.95], num_nodes, 1);
-for i = 2:length(LEAF_s),  nc(LEAF_s(i),:) = [0.95 0.60 0.25];  end
-nc(LEAF_s(1),:) = [0.25 0.82 0.35];
+for i = 1:length(LEAF_s),  nc(LEAF_s(i),:) = [0.95 0.60 0.25];  end
+if ~isempty(LEAF_s),  nc(LEAF_s(1),:) = [0.25 0.82 0.35];  end
 h.NodeColor = nc;  h.MarkerSize = 6;
 
+% Label all nodes with tw and g
+for i = 1:num_nodes
+    tw_i = NODES{i}{5};
+    g_i  = NODES{i}{10};
+    text(ax_t, h.XData(i)+0.08, h.YData(i), ...
+        sprintf('#%d\ntw=%.2f\ng=%.2f', i, tw_i, g_i), ...
+        'FontSize', 7.5, 'Color', [0.25 0.25 0.25]);
+end
+% Overlay leaf rank labels on top
 max_labels = 30;
 for i = 1:min(length(LEAF_s), max_labels)
     l = LEAF_s(i);
     lbl = sprintf('#%d  g=%.2f', i, gcosts_s(i));
-    text(ax_t, h.XData(l)+0.12, h.YData(l)+0.22, lbl, 'FontSize', 7);
+    text(ax_t, h.XData(l)+0.12, h.YData(l)+0.22, lbl, 'FontSize', 7, 'FontWeight', 'bold');
 end
-title(ax_t, sprintf('Click a leaf  (%d total)   [%s]', length(LEAF_s), rule_str), ...
-    'FontSize', 9, 'Color', rule_col, 'FontWeight', 'bold');
+if isnan(elapsedTime)
+    ttl_tree = sprintf('%d leaves  |  %d nodes   [%s]', length(LEAF_s), num_nodes, rule_str);
+else
+    ttl_tree = sprintf('%d leaves  |  %d nodes  |  %.2fs   [%s]', length(LEAF_s), num_nodes, elapsedTime, rule_str);
+end
+title(ax_t, ttl_tree, 'FontSize', 9, 'Color', rule_col, 'FontWeight', 'bold');
 axis(ax_t,'tight');  box(ax_t,'on');
 
 % ── Resource-allocation axes (right 56%, N+M rows) ───────────────────
@@ -85,7 +99,7 @@ fig.WindowButtonDownFcn = @figClickCb;
 fig.KeyPressFcn         = @keyPressCb;    % ← → arrow keys to cycle leaves
 
 % Show optimal by default
-showPath(fig, LEAF_s(1), 1);
+if ~isempty(LEAF_s),  showPath(fig, LEAF_s(1), 1);  end
 figure(fig);   % bring to front and capture keyboard focus
 end
 
@@ -206,7 +220,7 @@ function showPath(fig, leaf_idx, rank)
             xline(ax, at, '-.', 'LineWidth', 1.5, 'Color', [1 0 0]);
         end
         ylabel(ax, sprintf('N%d', n), ...
-            'FontSize', 8, 'Rotation', 0, 'HorizontalAlignment', 'right');
+            'FontSize', 12, 'Rotation', 0, 'HorizontalAlignment', 'right');
         xlim(ax,[t1 tf]);  ylim(ax,[0 1.1]);  grid(ax,'on');
     end
 
@@ -222,7 +236,7 @@ function showPath(fig, leaf_idx, rank)
             ts = blk{1};  te = blk{2};  n_sys = blk{4};
             fill(ax, [ts te te ts], [0 0 1 1], [1 1 1], 'EdgeColor', col, 'LineWidth', 2);
             text(ax, (ts+te)/2, 0.55, sprintf('N%d', n_sys), ...
-                'FontSize', 9, 'FontWeight', 'bold', ...
+                'FontSize', 13, 'FontWeight', 'bold', ...
                 'HorizontalAlignment', 'center', 'Color', col);
         end
 
@@ -232,6 +246,9 @@ function showPath(fig, leaf_idx, rank)
     end
 
     % ── Resetting-rule rectangles (black border, semi-transparent) ────
+    % Only draw for sub-tasks NOT already shown by a colored bar (resc_occ match).
+    % This avoids stale/mismatched boxes when the wait-case estimate differs
+    % from the final V_temp schedule.
     for n = 1:N
         if isempty(xAlloc{n}),  continue;  end
         for k = 1:length(xAlloc{n})
@@ -245,10 +262,20 @@ function showPath(fig, leaf_idx, rank)
             for ky = keys(seen)
                 row = seen(ky{1});
                 ts  = xi{row,1};  te  = xi{row,2};
-                m   = xi{row,4};
+                m_x = xi{row,4};
                 if ts == te,  continue;  end
-                col = colors{m};
-                % system subplot only (reset rectangles not drawn in space rows)
+                % Skip x-record if a colored bar for the same space (m_x)
+                % starts AFTER this x-record ends — meaning the x estimate was
+                % too early and the actual schedule placed the system later.
+                % (This removes stale boxes without hiding correct ones.)
+                outdated = false;
+                for idx = 1:np-1
+                    if resc_occ(n,idx) == m_x && t_w(idx) > te + 1e-6
+                        outdated = true;  break;
+                    end
+                end
+                if outdated,  continue;  end
+                col = colors{m_x};
                 fill(ra_axes(n), [ts te te ts], [0 0 1 1], col, ...
                     'EdgeColor','k', 'LineWidth', 1.2, 'FaceAlpha', 0.7);
             end
@@ -339,9 +366,12 @@ for idx = 1:num_pts
     nxt = NODES{pathNodes(idx+1)};
 
     for n = 1:N
-        d           = cur{2}(n);    d_next      = nxt{2}(n);
-        remain      = cur{3}(:,n);  remain_next = nxt{3}(:,n);
+        d           = cur{2}(n);    d_next  = nxt{2}(n);
+        remain      = cur{3}(:,n);
+        ra_rst      = cur{14}(:,n); % ra_reset: remaining times before NextSigM (reliable for delay detection)
         V_next      = nxt{9}(n,:);
+        gamma_cur   = cur{11}{n};
+        vehicle_done = ~isempty(gamma_cur) && numel(gamma_cur) >= Ni(n);
 
         if abs(d) < 1e-5 && d_next < 100
             if any(V_next > 0)
@@ -357,8 +387,8 @@ for idx = 1:num_pts
         elseif abs(d) > 1e-5 && abs(d_next) < 1e-5
             route_usage(n,idx) = double(sum(remain) > 1e-5) * 0.5;
         elseif abs(d) > 1e-3 && abs(d_next) > 1e-3 && abs(d) < 100 && ...
-               ((sum(remain) < sum(remain_next) && all(V_next==0)) || ...
-                (sum(remain) == sum(remain_next) && abs(sum(remain)) > 1e-3))
+               all(V_next==0) && sum(ra_rst) > 1e-3 && ~vehicle_done
+            % ra_reset > 0 and gamma not yet complete: vehicle is waiting (delayed)
             route_usage(n,idx) = 0.5;
         end
     end

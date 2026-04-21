@@ -39,7 +39,7 @@ for ci = 1:nCases
         continue;
     end
 
-    for useWeak = [true, false]
+    for useWeak = [true]
         ruleStr = 'ON';  if ~useWeak, ruleStr = 'OFF'; end
         fprintf('\n=== %s  WeakRule=%s ===\n', caseName, ruleStr);
 

@@ -1,4 +1,4 @@
-function [V_valid, n_pruned] = traverse_columns(V_c, priority_n, pair_lock, ra)
+function [V_valid, n_pruned, cb_updates] = traverse_columns(V_c, priority_n, pair_lock, ra)
 % Enumerate selector matrices only over contended columns.
 %
 % pair_lock : N×N matrix.  pair_lock(i,j) = winner (i or j) means i and j
@@ -15,6 +15,7 @@ function [V_valid, n_pruned] = traverse_columns(V_c, priority_n, pair_lock, ra)
     if nargin < 4 || isempty(ra),          ra         = [];           end
 
     n_pruned       = 0;
+    cb_updates     = zeros(size(pair_lock));  % forced overwrites from cycle-break decisions
     V_base         = zeros(size(V_c));
     contended_cols = [];
 
@@ -66,6 +67,31 @@ function [V_valid, n_pruned] = traverse_columns(V_c, priority_n, pair_lock, ra)
             if winner_lock > 0
                 V_base(winner_lock, m) = V_c(winner_lock, m);
                 n_pruned = n_pruned + (numel(rows) - 1);
+                fprintf('[AUTO-WIN] space%d: N%d wins over N%s\n', m, winner_lock, mat2str(rows(rows~=winner_lock)'));
+                continue;
+            end
+
+            % Cycle-break: if pair_lock among contestants forms a cycle,
+            % no topological winner exists — break it deterministically.
+            if cycle_exists(pair_lock, rows)
+                win_count = zeros(1, numel(rows));
+                for ci = 1:numel(rows)
+                    for oi = 1:numel(rows)
+                        if ci ~= oi && pair_lock(rows(ci), rows(oi)) == rows(ci)
+                            win_count(ci) = win_count(ci) + 1;
+                        end
+                    end
+                end
+                [max_w, ~] = max(win_count);
+                candidates  = rows(win_count == max_w);
+                winner_cb   = min(candidates);  % lowest index breaks tie
+                V_base(winner_cb, m) = V_c(winner_cb, m);
+                n_pruned = n_pruned + (numel(rows) - 1);
+                % Force-overwrite pair_lock for all cycle members so cycle can't recur
+                losers_cb = rows(rows ~= winner_cb);
+                cb_updates(winner_cb, losers_cb) = winner_cb;
+                cb_updates(losers_cb, winner_cb) = winner_cb;
+                fprintf('[CYCLE-BREAK] space%d: N%d wins over N%s\n', m, winner_cb, mat2str(losers_cb'));
                 continue;
             end
 
@@ -83,17 +109,58 @@ end
 
 
 function V_list = recurse_contended(V_c, V_temp, contended_cols, k, V_list)
+% Recursively enumerate all winner assignments for contended spaces.
+% V_c           : original contention matrix (read-only)
+% V_temp        : assignment built so far (inherited from parent call)
+% contended_cols: spaces that still need a winner assigned
+% k             : index into contended_cols — current recursion depth
+% V_list        : accumulator of completed assignment matrices
+
+    % base case: all contended spaces assigned → save this assignment
     if k > numel(contended_cols)
         V_list{end+1} = V_temp;
         return;
     end
-    m    = contended_cols(k);
-    rows = find(V_c(:,m) > 0);
+
+    m    = contended_cols(k);      % current contended space
+    rows = find(V_c(:,m) > 0);    % systems competing for space m
+
     for ii = 1:numel(rows)
-        n      = rows(ii);
+        n      = rows(ii);         % try system n as winner of space m
         V_next = V_temp;
-        V_next(:, m) = 0;
-        V_next(n, m) = V_c(n, m);
+        V_next(:, m) = 0;          % clear any previous assignment for space m
+        V_next(n, m) = V_c(n, m); % assign space m to system n (with sub-task index)
         V_list = recurse_contended(V_c, V_next, contended_cols, k+1, V_list);
     end
+end
+
+%--------------------------------------------------------------------------
+function found = cycle_exists(pair_lock, rows)
+% Returns true if the pair_lock dominance graph on 'rows' contains a cycle.
+% Uses Kahn's algorithm (topological sort via in-degree).
+    n   = numel(rows);
+    in_deg = zeros(1, n);
+    for i = 1:n
+        for j = 1:n
+            if i ~= j && pair_lock(rows(i), rows(j)) == rows(j)
+                % rows(j) dominates rows(i): edge j→i, so in_deg(i)++
+                in_deg(i) = in_deg(i) + 1;
+            end
+        end
+    end
+    queue = find(in_deg == 0);
+    processed = 0;
+    while ~isempty(queue)
+        v = queue(1);  queue = queue(2:end);
+        processed = processed + 1;
+        for u = 1:n
+            if pair_lock(rows(v), rows(u)) == rows(v)  % v dominates u
+                in_deg(u) = in_deg(u) - 1;
+                if in_deg(u) == 0
+                    queue(end+1) = u; %#ok<AGROW>
+                end
+            end
+        end
+    end
+    found = (processed < n);
 end

@@ -1,4 +1,4 @@
-function NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,V_c,V_temp,g,gamma,speed,ra,ra_reset,x,cfg,priority_lock)
+function NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,V_c,V_temp,g,gamma,speed,ra,ra_reset,x,cfg,priority_lock,reset_since)
     N = cfg.N;  alpha_tilde = cfg.alpha_tilde;  initial_position = cfg.initial_position;  C = cfg.C;
 
     l = num_nodes + 1; %the number of all nodes
@@ -37,4 +37,8 @@ function NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,V_c,V_
     NODES_new{14} = ra_reset;
     NODES_new{15} = x;
     NODES_new{16} = priority_lock;
+    if nargin < 18 || isempty(reset_since)
+        reset_since = zeros(1, N);
+    end
+    NODES_new{17} = reset_since;
 

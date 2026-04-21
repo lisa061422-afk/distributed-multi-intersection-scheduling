@@ -1,4 +1,4 @@
-function exportHTML(NODES, LEAF, cfg, out_path, NODES2, LEAF2)
+function exportHTML(NODES, LEAF, cfg, out_path, NODES2, LEAF2, elapsed1, elapsed2)
 % exportHTML  Auto-generates a self-contained interactive HTML demo after Main.m.
 %
 %   exportHTML(NODES, LEAF, cfg)
@@ -12,40 +12,43 @@ function exportHTML(NODES, LEAF, cfg, out_path, NODES2, LEAF2)
 if nargin < 4 || isempty(out_path)
     out_path = fullfile(fileparts(mfilename('fullpath')), 'astar_demo.html');
 end
+if nargin < 7 || isempty(elapsed1), elapsed1 = NaN; end
+if nargin < 8 || isempty(elapsed2), elapsed2 = NaN; end
 has_off = nargin >= 6 && ~isempty(NODES2) && ~isempty(LEAF2);
 
 N = cfg.N;  M = cfg.M;  C = cfg.C;  Ni = cfg.Ni;  Map = cfg.Map;  S = cfg.S;
 useWeak = true;   % first dataset is always ON when called from Main.m
 
 %% Build dataset for one NODES/LEAF pair
-[tn, te, ls, nL] = buildDataset(NODES, LEAF, cfg);
+[tn, te, ls, nL, nN] = buildDataset(NODES, LEAF, cfg);
 
 %% Build second dataset (WeakRule OFF) if provided
 if has_off
     cfg2        = cfg;
     cfg2.useWeakRule = false;
-    [tn2, te2, ls2, nL2] = buildDataset(NODES2, LEAF2, cfg2);
+    [tn2, te2, ls2, nL2, nN2] = buildDataset(NODES2, LEAF2, cfg2);
 else
-    tn2 = []; te2 = []; ls2 = []; nL2 = 0;
+    tn2 = []; te2 = []; ls2 = []; nL2 = 0; nN2 = 0;
 end
 
 %% Write HTML file
 fid = fopen(out_path, 'w', 'n', 'UTF-8');
 if fid < 0,  error('exportHTML: cannot write to %s', out_path);  end
 
-writeHead(fid, N, M, nL, nL2, has_off);
+writeHead(fid, N, M, nL, nL2, nN, nN2, elapsed1, elapsed2, has_off);
 writeDataScript(fid, tn, te, ls, nL, tn2, te2, ls2, nL2, cfg, has_off);
 writeRenderScript(fid);
 
 fprintf(fid, '</body>\n</html>\n');
 fclose(fid);
-fprintf('HTML demo saved: %s  (ON:%d leaves  OFF:%d leaves)\n', out_path, nL, nL2);
+fprintf('HTML demo saved: %s  (ON:%d leaves/%d nodes  OFF:%d leaves/%d nodes)\n', out_path, nL, nN, nL2, nN2);
 end
 
 
 % =========================================================================
-function [tn_out, te_out, ls_out, nL] = buildDataset(NODES, LEAF, cfg)
+function [tn_out, te_out, ls_out, nL, nN] = buildDataset(NODES, LEAF, cfg)
 % Compress tree + pre-compute all leaf schedules for one WeakRule setting.
+nN = size(NODES, 1);
 if isempty(LEAF)
     tn_out = []; te_out = []; ls_out = {}; nL = 0;
     return;
@@ -163,7 +166,7 @@ end
 
 
 % =========================================================================
-function writeHead(fid, N, M, nL_on, nL_off, has_off)
+function writeHead(fid, N, M, nL_on, nL_off, nN_on, nN_off, elapsed1, elapsed2, has_off)
 
 fprintf(fid, '<!DOCTYPE html>\n<html lang="en">\n<head>\n');
 fprintf(fid, '<meta charset="UTF-8">\n');
@@ -204,10 +207,10 @@ fprintf(fid, '  <div id="topbar">\n');
 fprintf(fid, '    <b>A* Intersection Scheduler</b>\n');
 fprintf(fid, '    <span style="color:#6b7280">N=%d&nbsp;M=%d</span>\n', N, M);
 if has_off
-    fprintf(fid, '    <button class="rule-btn on active" onclick="switchRule(true)">WeakRule ON&nbsp;(%d leaves)</button>\n', nL_on);
-    fprintf(fid, '    <button class="rule-btn off" onclick="switchRule(false)">WeakRule OFF&nbsp;(%d leaves)</button>\n', nL_off);
+    fprintf(fid, '    <button class="rule-btn on active" onclick="switchRule(true)">WeakRule ON&nbsp;(%d leaves / %d nodes / %.2fs)</button>\n', nL_on, nN_on, elapsed1);
+    fprintf(fid, '    <button class="rule-btn off" onclick="switchRule(false)">WeakRule OFF&nbsp;(%d leaves / %d nodes / %.2fs)</button>\n', nL_off, nN_off, elapsed2);
 else
-    fprintf(fid, '    <button class="rule-btn on active">WeakRule ON&nbsp;(%d leaves)</button>\n', nL_on);
+    fprintf(fid, '    <button class="rule-btn on active">WeakRule ON&nbsp;(%d leaves / %d nodes / %.2fs)</button>\n', nL_on, nN_on, elapsed1);
 end
 fprintf(fid, '    <span id="sel-info">click a leaf &nbsp;|&nbsp; &larr;&rarr; to cycle</span>\n');
 fprintf(fid, '  </div>\n');

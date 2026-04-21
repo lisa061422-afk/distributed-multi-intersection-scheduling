@@ -1,22 +1,25 @@
-function [dt,rt,ot,tw1] = NextSigM(tw,da,ra,oa,V_temp,cfg)
+function [dt,rt,ot,tw1] = NextSigM(tw,da,ra,oa,V_temp,cfg,tw1_in)
 N = cfg.N;  S = cfg.S;
 rt = zeros(S,N); ot = zeros(1,N); dt = zeros(1,N);
 %--------------------------compute t_{w+1}---------------------------------
-if all(V_temp(:) == 0)
+if nargin >= 7 && ~isempty(tw1_in)
+    tw1 = tw1_in;
+    Lw  = tw1 - tw;
+elseif all(V_temp(:) == 0)
     Lw = min(da(da>0.00001));
+    tw1 = tw + Lw;
 else
     remain_time = zeros(1, N);
-    % check each row of V_temp
     for n = 1:N
-        if any(V_temp(n, :)) % only handle when this row has nonzero elements
-            [~, m] = find(V_temp(n, :), 1); % find the position of nonzero element
+        if any(V_temp(n, :))
+            [~, m] = find(V_temp(n, :), 1);
             s_temp = V_temp(n, m);
             remain_time(n) = ra(s_temp,n);
         end
     end
     Lw = min(min(da(da>0.00001 & da<1000)),min(remain_time(remain_time>0.00001)));
+    tw1 = tw + Lw;
 end
-tw1 = tw + Lw;
 %-------------------tw to tw+t------------------------------------
 t = Lw; 
 for n = 1:N

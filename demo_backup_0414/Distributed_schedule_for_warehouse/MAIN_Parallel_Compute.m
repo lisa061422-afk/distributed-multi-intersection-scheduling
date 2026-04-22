@@ -23,14 +23,14 @@ if strcmp(configMode, 'manual')
     numVehiclesList = [10];
     seedList        = [0];   % seed unused in manual mode
 else
-    numVehiclesList = [20];
-    seedList        = [41601];   % S2 random seed
+    numVehiclesList = [30];
+    seedList        = [41603];   % 30r S1 seed
 end
 
 % ===================== Demo export settings (random mode only) =====================
 % demoScene: HTML scene label for this run — change each time you run a new seed
 % demoGroup is auto-derived from Nveh (e.g. 10 robots → '10r')
-demoScene = 'S3';   % <-- change to 'S2', 'S3', etc. for each new seed
+demoScene = 'S6';   % <-- change to 'S2', 'S3', etc. for each new seed
 rootSaveDir = 'BatchRuns';
 
 % ===================== Run Mode =====================
@@ -90,7 +90,6 @@ for iN = 1:numel(numVehiclesList)
 
 %% -----------------------ADMM penalty parameters-------------------------
 rho1 = 1; rho2 = 1; weight = 1.5; max_iter = 500;
-%tol_r = 0.1; tol_s = 0.1;
 tol_r = 1e-3; tol_s = 1e-3;
 
 % ── Random initialisation switch ──────────────────────────────────────
@@ -275,7 +274,7 @@ const.N      = N;
 const.Dt     = Dt;
 const.priority_n  = 0;        % 0 = no priority override (normal run)
 const.use_pruning = true;     % true = prune dominated nodes in local decision tree (faster for large N)
-const.use_weak_rule = false;  % true = weak-rule priority lock (fewer branches); false = original algorithm
+const.use_weak_rule = false;  % true = weak-rule priority lock (fewer branches); false = original algorithm  [S6: OFF]
 const.deadline     = deadline;
 const.alpha_tilde  = alpha_tilde;
 const.initial_position = initial_position;
@@ -315,7 +314,9 @@ else
     fprintf('--- ADMM normal run (priority_n = 0) ---\n');
     [x_prev, y_prev, LocalTreeCache, residual_r, residual_s, delay_costs, k, T_ADMM_TOTAL] = ...
         run_admm_core(const, agent_participation);
+    T_TOTAL = toc(Time_begin) / 60;   % total wall-clock time incl. config + ADMM + FCFS
     fprintf('ADMM elapsed %.3f mins\n', T_ADMM_TOTAL);
+    fprintf('Total elapsed %.3f mins\n', T_TOTAL);
 
     caseConfigFile = fullfile(caseDir, 'case_config.mat');
     save(caseConfigFile, ...
@@ -334,7 +335,7 @@ else
         'x_hist', ...
         'x_prev', 'y_prev', ...
         'max_iter', 'k', 'delay_costs', 'LocalTreeCache', ...
-        'T_ADMM_TOTAL', 'seed', 'Nveh');
+        'T_ADMM_TOTAL', 'T_TOTAL', 'seed', 'Nveh');
 
     load(matFile);
 

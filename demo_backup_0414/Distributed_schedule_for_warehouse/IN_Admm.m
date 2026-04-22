@@ -25,7 +25,11 @@ for i = 1:length(LEAF)
     %% 提取 alpha_vec 和 gamma_vec
     % alpha_vec = NaN(N, I); gamma_vec = NaN(N, I);
     for n = valid_systems % traverse all routes that pass agent i
-        if isempty(entries{n}) continue; end
+        if isempty(entries{n}), continue; end
+        if isempty(xi_prev_bar{n}) || isempty(alpha{n}) || isempty(gamma{n})
+            fprintf('[IN_Admm] Agent %d sys %d leaf %d: empty bar/alpha/gamma — skipping system.\n', agent_i, n, idx);
+            continue;
+        end
 
         x_bar = xi_prev_bar{n}(kn);
         y_bar = yi_prev_bar{n}(kn);
@@ -80,12 +84,30 @@ for i = 1:length(LEAF)
         cost = value(Objective);
       
     end
-    if cost < best_cost
+    if ~isnan(cost) && cost < best_cost
         best_cost = cost;
         best_x = x_opt;
         best_y = y_opt;
         best_gamma = gamma;
         best_alpha = alpha;
         best_idx = idx;
+    end
+end
+
+% Fallback: if every leaf's solver failed, reuse previous x/y to avoid
+% returning empty best_x/best_y (which crashes the merge step).
+if isempty(best_x)
+    fprintf('[IN_Admm] Agent %d: all %d leaves infeasible — fallback to previous x/y.\n', agent_i, length(LEAF));
+    warning('IN_Admm: all %d leaves infeasible — using previous x/y as fallback.', length(LEAF));
+    best_x = zeros(N, 1);
+    best_y = zeros(N, 1);
+    best_alpha = cell(1, N);
+    best_gamma = cell(1, N);
+    best_idx = LEAF(1);
+    for nn = valid_systems
+        best_x(nn) = xi_prev{nn}(1);
+        best_y(nn) = yi_prev{nn}(1);
+        best_alpha{nn} = NODES{best_idx}{16}{nn};
+        best_gamma{nn} = NODES{best_idx}{11}{nn};
     end
 end

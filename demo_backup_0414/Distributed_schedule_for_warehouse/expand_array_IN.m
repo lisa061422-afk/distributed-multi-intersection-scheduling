@@ -144,15 +144,9 @@ function [NODES,OPEN,LEAF] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
            [d2,r2,o2,tw1] = NextSigM(tw,da,ra,oa,U_temp,valid_systems,ctx,const);
            ra_reset = -1 * ones(S,N);
 
-           % update priority_lock (no contention: all winners keep/gain locks)
+           % no contention: keep existing locks unchanged — no competition happened
            if use_weak_rule
                new_priority_lock = priority_lock;
-               for m_col = 1:M
-                   assigned_n = find(U_temp(:, m_col) > 0);
-                   if ~isempty(assigned_n)
-                       new_priority_lock(m_col) = assigned_n(1);
-                   end
-               end
            else
                new_priority_lock = zeros(1, M);
            end

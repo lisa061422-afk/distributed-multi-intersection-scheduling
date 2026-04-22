@@ -1392,75 +1392,213 @@
             <path d="M640,710 L640,730 L660,730" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
             <path d="M800,730 L820,730 L820,710" fill="none" stroke="rgba(255,200,40,0.65)" stroke-width="2.5" stroke-linecap="round"/>
 
-            <!-- 7. Double solid yellow center lines (no-pass, center ± 3px) -->
-            <!-- Horizontal y=310: P2-W, R6, R7, P9 -->
-            <line x1="0"    y1="307" x2="210"  y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="0"    y1="313" x2="210"  y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="390"  y1="307" x2="640"  y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="390"  y1="313" x2="640"  y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="820"  y1="307" x2="1070" y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="820"  y1="313" x2="1070" y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="1250" y1="307" x2="1480" y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="1250" y1="313" x2="1480" y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <!-- Horizontal y=640: P4-W, R10, P7 -->
-            <line x1="0"    y1="637" x2="210"  y2="637" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="0"    y1="643" x2="210"  y2="643" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="390"  y1="637" x2="640"  y2="637" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="390"  y1="643" x2="640"  y2="643" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="820"  y1="637" x2="1060" y2="637" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="820"  y1="643" x2="1060" y2="643" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <!-- Vertical x=300: P1-N, R8, P5-S -->
-            <line x1="297" y1="0"   x2="297" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="303" y1="0"   x2="303" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="297" y1="400" x2="297" y2="550" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="303" y1="400" x2="303" y2="550" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="297" y1="730" x2="297" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="303" y1="730" x2="303" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <!-- Vertical x=730: P3-N, R9, P6-S -->
-            <line x1="727" y1="0"   x2="727" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="733" y1="0"   x2="733" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="727" y1="400" x2="727" y2="550" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="733" y1="400" x2="733" y2="550" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="727" y1="730" x2="727" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="733" y1="730" x2="733" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <!-- Vertical x=1160: P8-N -->
-            <line x1="1157" y1="0"  x2="1157" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
-            <line x1="1163" y1="0"  x2="1163" y2="220" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- 7. Double solid yellow center lines — gaps at zebra crossings
+                 Crossing zones (depth 30px outside each intersection box edge):
+                   N crossings y=190-220  |  S crossings y=400-430
+                   P1/P3 W x=180-210, E x=390-420  |  P2/P4 W x=610-640, E x=820-850
+                   P5 W x=1040-1070, E x=1250-1280
+            -->
+            <!-- Horizontal y=310 row -->
+            <!-- P1-W port: 0→180 (gap 180-210 = P1-W crossing) -->
+            <line x1="0"    y1="307" x2="180"  y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="0"    y1="313" x2="180"  y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- R6: 420→610 (gaps 390-420=P1-E, 610-640=P2-W) -->
+            <line x1="420"  y1="307" x2="610"  y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="420"  y1="313" x2="610"  y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- R7: 850→1040 (gaps 820-850=P2-E, 1040-1070=P5-W) -->
+            <line x1="850"  y1="307" x2="1040" y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="850"  y1="313" x2="1040" y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- P9 port: 1280→1480 (gap 1250-1280=P5-E) -->
+            <line x1="1280" y1="307" x2="1480" y2="307" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="1280" y1="313" x2="1480" y2="313" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- Horizontal y=640 row -->
+            <!-- P3-W port: 0→180 -->
+            <line x1="0"    y1="637" x2="180"  y2="637" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="0"    y1="643" x2="180"  y2="643" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- R10: 420→610 -->
+            <line x1="420"  y1="637" x2="610"  y2="637" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="420"  y1="643" x2="610"  y2="643" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- P7 port: 850→1060 (gap 820-850=P4-E) -->
+            <line x1="850"  y1="637" x2="1060" y2="637" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="850"  y1="643" x2="1060" y2="643" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- Vertical x=300: P1-N port 0→190, R8 430→520, P5-S port 760→900 -->
+            <line x1="297" y1="0"   x2="297" y2="190" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="303" y1="0"   x2="303" y2="190" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="297" y1="430" x2="297" y2="520" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="303" y1="430" x2="303" y2="520" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="297" y1="760" x2="297" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="303" y1="760" x2="303" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- Vertical x=730: P2-N port 0→190, R9 430→520, P6-S port 760→900 -->
+            <line x1="727" y1="0"   x2="727" y2="190" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="733" y1="0"   x2="733" y2="190" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="727" y1="430" x2="727" y2="520" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="733" y1="430" x2="733" y2="520" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="727" y1="760" x2="727" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="733" y1="760" x2="733" y2="900" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <!-- Vertical x=1160: P5-N port 0→190 only -->
+            <line x1="1157" y1="0"  x2="1157" y2="190" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
+            <line x1="1163" y1="0"  x2="1163" y2="190" stroke="rgba(255,210,0,0.85)" stroke-width="2.5"/>
 
-            <!-- 8. White dashed lane markings (center ± 33px, midpoint of each half-lane) -->
+            <!-- 8. White dashed lane markings — same gaps as yellow lines above -->
             <!-- Horizontal y=310: dashes at y=277 and y=343 -->
-            <line x1="0"    y1="277" x2="210"  y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="0"    y1="343" x2="210"  y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="390"  y1="277" x2="640"  y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="390"  y1="343" x2="640"  y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="820"  y1="277" x2="1070" y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="820"  y1="343" x2="1070" y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="1250" y1="277" x2="1480" y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="1250" y1="343" x2="1480" y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="0"    y1="277" x2="180"  y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="0"    y1="343" x2="180"  y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="420"  y1="277" x2="610"  y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="420"  y1="343" x2="610"  y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="850"  y1="277" x2="1040" y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="850"  y1="343" x2="1040" y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="1280" y1="277" x2="1480" y2="277" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="1280" y1="343" x2="1480" y2="343" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
             <!-- Horizontal y=640: dashes at y=607 and y=673 -->
-            <line x1="0"    y1="607" x2="210"  y2="607" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="0"    y1="673" x2="210"  y2="673" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="390"  y1="607" x2="640"  y2="607" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="390"  y1="673" x2="640"  y2="673" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="820"  y1="607" x2="1060" y2="607" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="820"  y1="673" x2="1060" y2="673" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="0"    y1="607" x2="180"  y2="607" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="0"    y1="673" x2="180"  y2="673" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="420"  y1="607" x2="610"  y2="607" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="420"  y1="673" x2="610"  y2="673" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="850"  y1="607" x2="1060" y2="607" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="850"  y1="673" x2="1060" y2="673" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
             <!-- Vertical x=300: dashes at x=267 and x=333 -->
-            <line x1="267" y1="0"   x2="267" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="333" y1="0"   x2="333" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="267" y1="400" x2="267" y2="550" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="333" y1="400" x2="333" y2="550" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="267" y1="730" x2="267" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="333" y1="730" x2="333" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="267" y1="0"   x2="267" y2="190" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="333" y1="0"   x2="333" y2="190" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="267" y1="430" x2="267" y2="520" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="333" y1="430" x2="333" y2="520" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="267" y1="760" x2="267" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="333" y1="760" x2="333" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
             <!-- Vertical x=730: dashes at x=697 and x=763 -->
-            <line x1="697" y1="0"   x2="697" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="763" y1="0"   x2="763" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="697" y1="400" x2="697" y2="550" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="763" y1="400" x2="763" y2="550" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="697" y1="730" x2="697" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="763" y1="730" x2="763" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="697" y1="0"   x2="697" y2="190" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="763" y1="0"   x2="763" y2="190" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="697" y1="430" x2="697" y2="520" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="763" y1="430" x2="763" y2="520" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="697" y1="760" x2="697" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="763" y1="760" x2="763" y2="900" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
             <!-- Vertical x=1160: dashes at x=1127 and x=1193 -->
-            <line x1="1127" y1="0"  x2="1127" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
-            <line x1="1193" y1="0"  x2="1193" y2="220" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="1127" y1="0"  x2="1127" y2="190" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+            <line x1="1193" y1="0"  x2="1193" y2="190" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="18 14"/>
+
+            <!-- 8.5. Pedestrian zebra crossings
+                 N-S road → vertical stripes   w=8 h=30, 8 stripes step=15, span full road width.
+                 E-W road → horizontal stripes w=30 h=8, 8 stripes step=15, span full road height.
+                 Depth reduced to 30px (0.6× of 50); stripe thickness & spread unchanged.
+
+                 Stripe x-sets (vertical crossings, 8×8px step=15 → span 113px centred in road):
+                   P1/P3 centre x=300: x0=244 → 244,259,274,289,304,319,334,349
+                   P2/P4 centre x=730: x0=674 → 674,689,704,719,734,749,764,779
+                   P5    centre x=1160:x0=1104→ 1104,1119,1134,1149,1164,1179,1194,1209
+                 Stripe y-sets (horizontal crossings, 8×8px step=15 → span 113px centred in road):
+                   top-row centre y=310: y0=254 → 254,269,284,299,314,329,344,359
+                   bot-row centre y=640: y0=584 → 584,599,614,629,644,659,674,689
+            -->
+            <g fill="rgba(255,255,255,0.75)">
+
+              <!-- ══ N-S roads: vertical stripes w=8 h=30, spread full road width ══ -->
+
+              <!-- P1 N (boundary y=220 → crossing y=190-220) -->
+              <rect x="244" y="190" width="8" height="30"/><rect x="259" y="190" width="8" height="30"/>
+              <rect x="274" y="190" width="8" height="30"/><rect x="289" y="190" width="8" height="30"/>
+              <rect x="304" y="190" width="8" height="30"/><rect x="319" y="190" width="8" height="30"/>
+              <rect x="334" y="190" width="8" height="30"/><rect x="349" y="190" width="8" height="30"/>
+              <!-- P1 S (boundary y=400 → crossing y=400-430) -->
+              <rect x="244" y="400" width="8" height="30"/><rect x="259" y="400" width="8" height="30"/>
+              <rect x="274" y="400" width="8" height="30"/><rect x="289" y="400" width="8" height="30"/>
+              <rect x="304" y="400" width="8" height="30"/><rect x="319" y="400" width="8" height="30"/>
+              <rect x="334" y="400" width="8" height="30"/><rect x="349" y="400" width="8" height="30"/>
+
+              <!-- P2 N (boundary y=220 → crossing y=190-220) -->
+              <rect x="674" y="190" width="8" height="30"/><rect x="689" y="190" width="8" height="30"/>
+              <rect x="704" y="190" width="8" height="30"/><rect x="719" y="190" width="8" height="30"/>
+              <rect x="734" y="190" width="8" height="30"/><rect x="749" y="190" width="8" height="30"/>
+              <rect x="764" y="190" width="8" height="30"/><rect x="779" y="190" width="8" height="30"/>
+              <!-- P2 S (boundary y=400 → crossing y=400-430) -->
+              <rect x="674" y="400" width="8" height="30"/><rect x="689" y="400" width="8" height="30"/>
+              <rect x="704" y="400" width="8" height="30"/><rect x="719" y="400" width="8" height="30"/>
+              <rect x="734" y="400" width="8" height="30"/><rect x="749" y="400" width="8" height="30"/>
+              <rect x="764" y="400" width="8" height="30"/><rect x="779" y="400" width="8" height="30"/>
+
+              <!-- P5 N (boundary y=220 → crossing y=190-220) -->
+              <rect x="1104" y="190" width="8" height="30"/><rect x="1119" y="190" width="8" height="30"/>
+              <rect x="1134" y="190" width="8" height="30"/><rect x="1149" y="190" width="8" height="30"/>
+              <rect x="1164" y="190" width="8" height="30"/><rect x="1179" y="190" width="8" height="30"/>
+              <rect x="1194" y="190" width="8" height="30"/><rect x="1209" y="190" width="8" height="30"/>
+
+              <!-- P3 N (boundary y=550 → crossing y=520-550) -->
+              <rect x="244" y="520" width="8" height="30"/><rect x="259" y="520" width="8" height="30"/>
+              <rect x="274" y="520" width="8" height="30"/><rect x="289" y="520" width="8" height="30"/>
+              <rect x="304" y="520" width="8" height="30"/><rect x="319" y="520" width="8" height="30"/>
+              <rect x="334" y="520" width="8" height="30"/><rect x="349" y="520" width="8" height="30"/>
+              <!-- P3 S (boundary y=730 → crossing y=730-760) -->
+              <rect x="244" y="730" width="8" height="30"/><rect x="259" y="730" width="8" height="30"/>
+              <rect x="274" y="730" width="8" height="30"/><rect x="289" y="730" width="8" height="30"/>
+              <rect x="304" y="730" width="8" height="30"/><rect x="319" y="730" width="8" height="30"/>
+              <rect x="334" y="730" width="8" height="30"/><rect x="349" y="730" width="8" height="30"/>
+
+              <!-- P4 N (boundary y=550 → crossing y=520-550) -->
+              <rect x="674" y="520" width="8" height="30"/><rect x="689" y="520" width="8" height="30"/>
+              <rect x="704" y="520" width="8" height="30"/><rect x="719" y="520" width="8" height="30"/>
+              <rect x="734" y="520" width="8" height="30"/><rect x="749" y="520" width="8" height="30"/>
+              <rect x="764" y="520" width="8" height="30"/><rect x="779" y="520" width="8" height="30"/>
+              <!-- P4 S (boundary y=730 → crossing y=730-760) -->
+              <rect x="674" y="730" width="8" height="30"/><rect x="689" y="730" width="8" height="30"/>
+              <rect x="704" y="730" width="8" height="30"/><rect x="719" y="730" width="8" height="30"/>
+              <rect x="734" y="730" width="8" height="30"/><rect x="749" y="730" width="8" height="30"/>
+              <rect x="764" y="730" width="8" height="30"/><rect x="779" y="730" width="8" height="30"/>
+
+              <!-- ══ E-W roads: horizontal stripes w=30 h=8, spread full road height ══ -->
+
+              <!-- P1 W (boundary x=210 → crossing x=180-210) -->
+              <rect x="180" y="254" width="30" height="8"/><rect x="180" y="269" width="30" height="8"/>
+              <rect x="180" y="284" width="30" height="8"/><rect x="180" y="299" width="30" height="8"/>
+              <rect x="180" y="314" width="30" height="8"/><rect x="180" y="329" width="30" height="8"/>
+              <rect x="180" y="344" width="30" height="8"/><rect x="180" y="359" width="30" height="8"/>
+              <!-- P1 E (boundary x=390 → crossing x=390-420) -->
+              <rect x="390" y="254" width="30" height="8"/><rect x="390" y="269" width="30" height="8"/>
+              <rect x="390" y="284" width="30" height="8"/><rect x="390" y="299" width="30" height="8"/>
+              <rect x="390" y="314" width="30" height="8"/><rect x="390" y="329" width="30" height="8"/>
+              <rect x="390" y="344" width="30" height="8"/><rect x="390" y="359" width="30" height="8"/>
+
+              <!-- P2 W (boundary x=640 → crossing x=610-640) -->
+              <rect x="610" y="254" width="30" height="8"/><rect x="610" y="269" width="30" height="8"/>
+              <rect x="610" y="284" width="30" height="8"/><rect x="610" y="299" width="30" height="8"/>
+              <rect x="610" y="314" width="30" height="8"/><rect x="610" y="329" width="30" height="8"/>
+              <rect x="610" y="344" width="30" height="8"/><rect x="610" y="359" width="30" height="8"/>
+              <!-- P2 E (boundary x=820 → crossing x=820-850) -->
+              <rect x="820" y="254" width="30" height="8"/><rect x="820" y="269" width="30" height="8"/>
+              <rect x="820" y="284" width="30" height="8"/><rect x="820" y="299" width="30" height="8"/>
+              <rect x="820" y="314" width="30" height="8"/><rect x="820" y="329" width="30" height="8"/>
+              <rect x="820" y="344" width="30" height="8"/><rect x="820" y="359" width="30" height="8"/>
+
+              <!-- P5 W (boundary x=1070 → crossing x=1040-1070) -->
+              <rect x="1040" y="254" width="30" height="8"/><rect x="1040" y="269" width="30" height="8"/>
+              <rect x="1040" y="284" width="30" height="8"/><rect x="1040" y="299" width="30" height="8"/>
+              <rect x="1040" y="314" width="30" height="8"/><rect x="1040" y="329" width="30" height="8"/>
+              <rect x="1040" y="344" width="30" height="8"/><rect x="1040" y="359" width="30" height="8"/>
+              <!-- P5 E (boundary x=1250 → crossing x=1250-1280) -->
+              <rect x="1250" y="254" width="30" height="8"/><rect x="1250" y="269" width="30" height="8"/>
+              <rect x="1250" y="284" width="30" height="8"/><rect x="1250" y="299" width="30" height="8"/>
+              <rect x="1250" y="314" width="30" height="8"/><rect x="1250" y="329" width="30" height="8"/>
+              <rect x="1250" y="344" width="30" height="8"/><rect x="1250" y="359" width="30" height="8"/>
+
+              <!-- P3 W (boundary x=210 → crossing x=180-210) -->
+              <rect x="180" y="584" width="30" height="8"/><rect x="180" y="599" width="30" height="8"/>
+              <rect x="180" y="614" width="30" height="8"/><rect x="180" y="629" width="30" height="8"/>
+              <rect x="180" y="644" width="30" height="8"/><rect x="180" y="659" width="30" height="8"/>
+              <rect x="180" y="674" width="30" height="8"/><rect x="180" y="689" width="30" height="8"/>
+              <!-- P3 E (boundary x=390 → crossing x=390-420) -->
+              <rect x="390" y="584" width="30" height="8"/><rect x="390" y="599" width="30" height="8"/>
+              <rect x="390" y="614" width="30" height="8"/><rect x="390" y="629" width="30" height="8"/>
+              <rect x="390" y="644" width="30" height="8"/><rect x="390" y="659" width="30" height="8"/>
+              <rect x="390" y="674" width="30" height="8"/><rect x="390" y="689" width="30" height="8"/>
+
+              <!-- P4 W (boundary x=640 → crossing x=610-640) -->
+              <rect x="610" y="584" width="30" height="8"/><rect x="610" y="599" width="30" height="8"/>
+              <rect x="610" y="614" width="30" height="8"/><rect x="610" y="629" width="30" height="8"/>
+              <rect x="610" y="644" width="30" height="8"/><rect x="610" y="659" width="30" height="8"/>
+              <rect x="610" y="674" width="30" height="8"/><rect x="610" y="689" width="30" height="8"/>
+              <!-- P4 E (boundary x=820 → crossing x=820-850) -->
+              <rect x="820" y="584" width="30" height="8"/><rect x="820" y="599" width="30" height="8"/>
+              <rect x="820" y="614" width="30" height="8"/><rect x="820" y="629" width="30" height="8"/>
+              <rect x="820" y="644" width="30" height="8"/><rect x="820" y="659" width="30" height="8"/>
+              <rect x="820" y="674" width="30" height="8"/><rect x="820" y="689" width="30" height="8"/>
+
+            </g>
 
             <!-- 9. Intersection labels (P1–P5) -->
             <text x="300"  y="310" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="42" font-weight="900" fill="rgba(255,220,60,0.88)">P1</text>

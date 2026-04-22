@@ -58,7 +58,7 @@ for n = valid_systems
        x1 = x_prev{prev_road}{n}(kn) + Dt; x2 = x_prev{agent_i}{n}(kn); lambda = 0.5;
        ddl{n}(kn) = x1 + lambda*(x2-x1);
        % ddl{n}(kn) = (x_prev{prev_road}{n}(kn) + Dt + x_prev{agent_i}{n}(kn)) / 2; %non-first int 前面一定是road
-       arrival_ref(n) = y_prev{prev_int}{n}(kn) + Dt;
+       arrival_ref(n) = y_prev{prev_int}{n}(kn) + Dt; 
     end
     % 记录当前系统 n 的第一个参与任务的时间
     % d(n) = arrival_ref(n);
@@ -92,17 +92,19 @@ l = 1; %index of node
 g = 0;
 ni = zeros(1,N); %initialize all tasks index
 f = 0; 
-NODES = {{l,d,r,o,tw,ni,0,U_c,U,g,gamma,f,speed,ra_reset,x,alpha,zeros(1,M)}};
+NODES = {{l,d,r,o,tw,ni,0,U_c,U,g,gamma,f,speed,ra_reset,x,alpha,zeros(N,N),zeros(1,N)}};
 %initial node: l(index),ddl,remain,response,tw,ni,l(parentnode), V_c, V_past, g_cost,
 %  {17} = priority_lock (1xM, 0=no priority established for that column)
 OPEN = l;
 LEAF = []; %record leaf node
 c_node_index = l;
 
-global WEAK_RULE_PRUNE_COUNT;
-WEAK_RULE_PRUNE_COUNT = 0;
+total_pruned = 0;
+timeout_s = 30;
+if isfield(const, 'timeout_int_s'), timeout_s = const.timeout_int_s; end
+t_start = tic;
 
-ctx = struct(); 
+ctx = struct();
 ctx.agent_i = agent_i;
 ctx.M = M; ctx.S = S;
 ctx.NI_agent = NI_agent;
@@ -142,21 +144,27 @@ arrival_ref  = ctx.arrival_ref;
 %   refactor.
 % ─────────────────────────────────────────────────────────────────────────
 while any(ni <= NI_agent)
-    [NODES,OPEN,LEAF] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
+    [NODES,OPEN,LEAF,np] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
        ctx,const);
+    total_pruned = total_pruned + np;
 
     %------------------PRUNE NODES (optional)-------------------
     if isfield(const,'use_pruning') && const.use_pruning && length(OPEN) > 1
         OPEN = prune_nodes_by_ni(NODES, OPEN);
     end
     %------------------------------------------------------------
-     if ~isempty(OPEN)
+    if toc(t_start) > timeout_s
+        fprintf('  [WeakRule] Agent %d: timeout %.1fs, forcing termination\n', agent_i, timeout_s);
+        OPEN = [];
+        if isempty(LEAF), LEAF = l; end
+    end
+    if ~isempty(OPEN)
         %find out the node with min f cost
         [~, minIndex] = f_min(NODES,OPEN);
         c_node_index = minIndex;
      else
         fprintf('  [WeakRule] Agent %d: total nodes=%d, pruned branches=%d\n', ...
-            agent_i, size(NODES,1), WEAK_RULE_PRUNE_COUNT);
+            agent_i, size(NODES,1), total_pruned);
         [x, y,best_alpha,best_gamma,best_idx,NODES] ...
             = IN_Admm(NODES,LEAF,agent_i, entries,...
                 x_prev{agent_i}, y_prev{agent_i}, xi_prev_bar, yi_prev_bar, ai_x, ai_y...

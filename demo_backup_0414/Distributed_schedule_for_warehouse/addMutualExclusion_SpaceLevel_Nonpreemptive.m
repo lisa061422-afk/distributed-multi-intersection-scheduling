@@ -1,5 +1,7 @@
 function Constraints = addMutualExclusion_SpaceLevel_Nonpreemptive( ...
-    Constraints, MapMat, Cmat, x, y, valid_systems, best_gamma, eps_gap)
+    Constraints, MapMat, Cmat, x, y, valid_systems, best_gamma, eps_gap, agent_i)
+
+    if nargin < 9 || isempty(agent_i), agent_i = -1; end
 % Space-level mutual exclusion cuts (nonpreemptive) for ONE intersection agent i
 %
 % Variables/meaning (consistent with your notation):
@@ -25,11 +27,15 @@ function Constraints = addMutualExclusion_SpaceLevel_Nonpreemptive( ...
 
     if iscell(best_gamma)
         for n = valid_systems
-            ghat(n) = best_gamma{n}(1);  % guaranteed to exist
+            if isempty(best_gamma{n})
+            fprintf('[WARNING] gamma is empty for system %d in agent %d\n', n, agent_i);
+            continue;
+        end
+            ghat(n) = best_gamma{n}(1);
         end
     else
         for n = valid_systems
-            ghat(n) = best_gamma(n);     % guaranteed to exist
+            ghat(n) = best_gamma(n);
         end
     end
 

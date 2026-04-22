@@ -5,7 +5,7 @@ clear all;
 % ===================== Mode switch =====================
 % 'manual' : fixed 10-robot config (warehouse demo special case)
 % 'random' : generateBalancedTrafficConfig batch runs
-configMode = 'manual';
+configMode = 'random';
 % ===================== Physical parameters =====================
 T_val        = 2.0;    % headway between vehicles at the SAME entrance (s)
 T_ent        = 0.0;    % stagger between first vehicles at DIFFERENT entrances (s)
@@ -14,23 +14,23 @@ v_max_phys   = 1.5;    % AMR speed on road (m/s)
 W            = 1.6;    % merging zone width (m)  — scale 1:12.5 from traffic W=20m
 detect_range_val = 7.6; % detection range (m): road(3m) + half-zone(0.8m), on each side
                         % => alpha_tilde base = (7.6/2 - 1.6/2) / 1.5 = 2.0 s
-
+         
 DEMO_DIR     = 'C:\Users\robin\OneDrive\Documents\Github_file\demo_backup_0414\Traffic_Demo\schedules';
 % FCFS functions are now in this folder (copied from Centralized_FCFS_031426).
 
 % ===================== Batch settings =====================
 if strcmp(configMode, 'manual')
-    numVehiclesList = [10];
+    numVehiclesList = [10];   
     seedList        = [0];   % seed unused in manual mode
 else
-    numVehiclesList = [30];
-    seedList        = [41603];   % 30r S1 seed
+    numVehiclesList = [15];
+    seedList        = [4221];   % 30r S1 seed
 end
 
 % ===================== Demo export settings (random mode only) =====================
 % demoScene: HTML scene label for this run — change each time you run a new seed
 % demoGroup is auto-derived from Nveh (e.g. 10 robots → '10r')
-demoScene = 'S6';   % <-- change to 'S2', 'S3', etc. for each new seed
+demoScene = 'S1';   % <-- change to 'S2', 'S3', etc. for each new seed
 rootSaveDir = 'BatchRuns';
 
 % ===================== Run Mode =====================
@@ -42,7 +42,7 @@ priority_robots = [1];        % priority 模式下给哪些 robot 最高优先�
 % ===================== Parallel switch =====================
 % true  : use parfeval (fast, multi-worker)
 % false : sequential direct calls (easy to set breakpoints and inspect variables)
-useParallel = true;
+useParallel = false;
 
 % (derived — do not edit)
 skip_normal_run       = strcmp(runMode, 'priority');
@@ -82,7 +82,7 @@ for iN = 1:numel(numVehiclesList)
         caseDir = fullfile(rootSaveDir, caseName);
         if ~exist(caseDir, 'dir')
             mkdir(caseDir);
-        end
+        end       
 
         fprintf('\n====================================================\n');
         fprintf('Running case: %s  [configMode=%s]\n', caseName, configMode);
@@ -90,7 +90,7 @@ for iN = 1:numel(numVehiclesList)
 
 %% -----------------------ADMM penalty parameters-------------------------
 rho1 = 1; rho2 = 1; weight = 1.5; max_iter = 500;
-tol_r = 1e-3; tol_s = 1e-3;
+tol_r = 1e-2; tol_s = 1e-2;
 
 % ── Random initialisation switch ──────────────────────────────────────
 % 0   : deterministic earliest-time init (original)
@@ -98,7 +98,7 @@ tol_r = 1e-3; tol_s = 1e-3;
 %       added to its entire chain — any positive value is valid, e.g.:
 %         0.5  — small nudge, stays close to earliest-time solution
 %         2.0  — up to one road-segment worth of spread
-randInitScale = 0;
+randInitScale = 0;      
 
 %% Local Intersection Information
 IntSpaceDB = makeIntSpaceDB();
@@ -274,7 +274,8 @@ const.N      = N;
 const.Dt     = Dt;
 const.priority_n  = 0;        % 0 = no priority override (normal run)
 const.use_pruning = true;     % true = prune dominated nodes in local decision tree (faster for large N)
-const.use_weak_rule = false;  % true = weak-rule priority lock (fewer branches); false = original algorithm  [S6: OFF]
+const.use_weak_rule = true;   % weak-rule pair_lock required for distributed port
+const.timeout_int_s = 9999;    % per-agent tree search timeout (seconds)
 const.deadline     = deadline;
 const.alpha_tilde  = alpha_tilde;
 const.initial_position = initial_position;

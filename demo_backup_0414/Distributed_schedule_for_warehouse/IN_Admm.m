@@ -62,7 +62,7 @@ for i = 1:length(LEAF)
  
     %% 互斥约束（调用函数）
     Constraints = addMutualExclusion_SpaceLevel_Nonpreemptive( ...
-        Constraints, MapMat, Cmat, x, y, valid_systems, gamma, 1e-4);
+        Constraints, MapMat, Cmat, x, y, valid_systems, gamma, 1e-4, agent_i);
 
 
     % 求解

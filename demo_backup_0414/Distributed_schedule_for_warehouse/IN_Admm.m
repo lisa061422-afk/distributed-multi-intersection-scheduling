@@ -52,7 +52,15 @@ for i = 1:length(LEAF)
         [Aineq, bineq] = buildMutualExclusionConstraints_numeric(...
             MapMat, Cmat, valid_systems, gamma, idx_map, C_vec, 1e-4);
 
-        [x_vec, ~, exitflag] = quadprog(H_mat, f_vec, Aineq, bineq, [], [], lb_vec, [], [], qp_opts);
+        % ── analytical closed-form: x* = -f / A_coef, then clip to lb ────
+        x_cl = max(-f_vec / A_coef, lb_vec);   % unconstrained opt + lb clip
+        if isempty(Aineq) || all(Aineq * x_cl <= bineq(:) + 1e-8)
+            % mutual exclusion satisfied → no quadprog needed
+            exitflag = 1;
+            x_vec = x_cl;
+        else
+            [x_vec, ~, exitflag] = quadprog(H_mat, f_vec, Aineq, bineq, [], [], lb_vec, [], [], qp_opts);
+        end
 
         if exitflag <= 0
             x_opt = zeros(N, 1); y_opt = zeros(N, 1);

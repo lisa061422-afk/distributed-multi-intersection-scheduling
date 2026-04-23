@@ -3,10 +3,10 @@
 % No plots or HTML — outputs a summary table to the console.
 %
 % ===================== SETTINGS ==============================================
-NUM_TRIALS    = 50;       % number of random test cases
-N_SYS_RANGE   = [3, 6];  % system count sampled uniformly from this range
+NUM_TRIALS    = 20;       % number of random test cases
+N_SYS_RANGE   = [7, 10]; % system count sampled uniformly from this range
 D1_MAX        = 3;        % d1 values sampled from U[0, D1_MAX]; set 0 to force all zeros
-RNG_SEED      = 123;      % fixed seed for reproducibility; set [] for random each run
+RNG_SEED      = 456;      % fixed seed for reproducibility; set [] for random each run
 
 cfg_base.v_max        = 20;
 cfg_base.detect_range = 510;

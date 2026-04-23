@@ -18,11 +18,11 @@ cfg.W            = 30;     % merging zone width (m)
 %                   Arm2: 4=left 5=straight 6=right
 %                   Arm3: 7=left 8=straight 9=right
 %                   Arm4: 10=left 11=straight 12=right
-cfg.routeAssignment = [1 2 1 7];
+cfg.routeAssignment = [1 4 5];
 % cfg.routeAssignment = [10 3 1 4];   % Trial13 debug: ON=1.5743 OFF=1.7302
 
 % Initial arrival offset d1(n): U[0,3] random or manual (length = N)
-cfg.d1 = [0, 0, 0, 0];
+cfg.d1 = [0, 0, 0];
 % cfg.d1 = [0.48, 2.79, 2.42, 1.90];  % Trial13 debug
 
 % ===================== Intersection config ===================================

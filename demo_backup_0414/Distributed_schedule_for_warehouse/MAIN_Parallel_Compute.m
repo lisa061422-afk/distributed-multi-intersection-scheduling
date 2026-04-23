@@ -63,6 +63,7 @@ if run_compare
     cmp_rows = {};               % comparison results accumulator
 end
 
+
 if ~exist(rootSaveDir, 'dir')
     mkdir(rootSaveDir);
 end
@@ -113,7 +114,9 @@ tol_r = 1e-2; tol_s = 1e-2;
 %       added to its entire chain — any positive value is valid, e.g.:
 %         0.5  — small nudge, stays close to earliest-time solution
 %         2.0  — up to one road-segment worth of spread
-randInitScale = 0;      
+randInitScale = 0;
+numStarts     = 1;   % multi-start: 1 = single run (default); >1 = repeat with
+                     % random init (randInitScale must be >0) and keep best cost
 
 %% Local Intersection Information
 IntSpaceDB = makeIntSpaceDB();
@@ -328,6 +331,7 @@ const.use_weak_rule = true;   % weak-rule pair_lock required for distributed por
 const.timeout_int_s = 30;    % per-agent tree search timeout (seconds)
 const.useTBound     = true;   % prune nodes with tw > worst-case sequential deadline
 const.use_quadprog  = true;   % true = quadprog (fast); false = YALMIP+Gurobi (original)
+const.use_adaptive_rho = true; % true = adaptive ρ (Boyd 2011); false = fixed rho1/rho2 above
 const.deadline     = deadline;
 const.alpha_tilde  = alpha_tilde;
 const.initial_position = initial_position;
@@ -363,7 +367,7 @@ if run_compare
     [~,~,~,~,~, dc_gr, k_gr, T_gr] = run_admm_core(const, agent_participation);
 
     cost_qp = dc_qp(k_qp);  cost_gr = dc_gr(k_gr);
-    fprintf('  seed=%-4d  quadprog: %.3fmin cost=%.4f  |  Gurobi: %.3fmin cost=%.4f\n', ...
+    fprintf('  seed=%-4d  quadprog: %.1fs cost=%.4f  |  Gurobi: %.1fs cost=%.4f\n', ...
         seed, T_qp, cost_qp, T_gr, cost_gr);
     cmp_rows{end+1} = {seed, T_qp, cost_qp, k_qp, T_gr, cost_gr, k_gr};
 
@@ -379,12 +383,31 @@ elseif skip_normal_run
     fprintf('Loaded: %s\n', matFile);
 else
     %% ── Full normal ADMM + FCFS + export ─────────────────────────────────
-    fprintf('--- ADMM normal run (priority_n = 0) ---\n');
-    [x_prev, y_prev, LocalTreeCache, residual_r, residual_s, delay_costs, k, T_ADMM_TOTAL] = ...
-        run_admm_core(const, agent_participation);
-    T_TOTAL = toc(Time_begin) / 60;   % total wall-clock time incl. config + ADMM + FCFS
-    fprintf('ADMM elapsed %.3f mins\n', T_ADMM_TOTAL);
-    fprintf('Total elapsed %.3f mins\n', T_TOTAL);
+    best_cost_ms = Inf;
+    for ms = 1:numStarts
+        if numStarts > 1
+            fprintf('--- ADMM run %d/%d (randInitScale=%.2f) ---\n', ms, numStarts, randInitScale);
+            const.randInitScale = randInitScale;
+        else
+            fprintf('--- ADMM normal run (priority_n = 0) ---\n');
+        end
+        [xp, yp, ltc, rr, rs, dc, kk, T_ms] = run_admm_core(const, agent_participation);
+        fprintf('ADMM elapsed %.1f s  cost=%.4f\n', T_ms, dc(kk));
+        if dc(kk) < best_cost_ms
+            best_cost_ms  = dc(kk);
+            x_prev        = xp;   y_prev      = yp;
+            LocalTreeCache= ltc;  residual_r  = rr;
+            residual_s    = rs;   delay_costs = dc;
+            k             = kk;   T_ADMM_TOTAL= T_ms;
+            best_start    = ms;
+        end
+    end
+    if numStarts > 1
+        fprintf('Best start: %d/%d  cost=%.4f\n', best_start, numStarts, best_cost_ms);
+    end
+    T_TOTAL = toc(Time_begin);   % total wall-clock time incl. config + ADMM + FCFS
+    fprintf('ADMM elapsed %.1f s\n', T_ADMM_TOTAL);
+    fprintf('Total elapsed %.1f s\n', T_TOTAL);
 
     caseConfigFile = fullfile(caseDir, 'case_config.mat');
     save(caseConfigFile, ...
@@ -666,12 +689,12 @@ if run_compare && ~isempty(cmp_rows)
     fprintf('  COMPARISON SUMMARY  (N=%d, %d seeds)\n', numVehiclesList(1), numel(cmp_rows));
     fprintf('%s\n', repmat('=',1,75));
     fprintf('  %-6s  %-10s  %-10s  %-5s  %-10s  %-10s  %-5s  %-8s\n', ...
-        'seed', 'qp_min', 'qp_cost', 'k_qp', 'gr_min', 'gr_cost', 'k_gr', 'speedup');
+        'seed', 'qp_s', 'qp_cost', 'k_qp', 'gr_s', 'gr_cost', 'k_gr', 'speedup');
     fprintf('%s\n', repmat('-',1,75));
     for ri = 1:numel(cmp_rows)
         r = cmp_rows{ri};
         sd=r{1}; tq=r{2}; cq=r{3}; kq=r{4}; tg=r{5}; cg=r{6}; kg=r{7};
-        fprintf('  %-6d  %-10.3f  %-10.4f  %-5d  %-10.3f  %-10.4f  %-5d  %-8.2fx\n', ...
+        fprintf('  %-6d  %-10.1f  %-10.4f  %-5d  %-10.1f  %-10.4f  %-5d  %-8.2fx\n', ...
             sd, tq, cq, kq, tg, cg, kg, tg/max(tq,1e-9));
     end
     fprintf('%s\n', repmat('=',1,75));
@@ -680,7 +703,7 @@ if run_compare && ~isempty(cmp_rows)
     T_gr_all = cellfun(@(r) r{5}, cmp_rows);
     C_qp_all = cellfun(@(r) r{3}, cmp_rows);
     C_gr_all = cellfun(@(r) r{6}, cmp_rows);
-    fprintf('  MEAN    %-10.3f  %-10.4f  %-5s  %-10.3f  %-10.4f  %-5s  %-8.2fx\n', ...
+    fprintf('  MEAN    %-10.1f  %-10.4f  %-5s  %-10.1f  %-10.4f  %-5s  %-8.2fx\n', ...
         mean(T_qp_all), mean(C_qp_all), '-', mean(T_gr_all), mean(C_gr_all), '-', ...
         mean(T_gr_all)/max(mean(T_qp_all),1e-9));
     fprintf('%s\n', repmat('=',1,75));
@@ -716,6 +739,7 @@ max_iter = const.max_iter;
 tol_r    = const.tol_r;
 tol_s    = const.tol_s;
 rho1     = const.rho1;
+rho2     = const.rho2;
 alpha_tilde          = const.alpha_tilde;
 pathInfo_agent_chain = const.pathInfo_agent_chain;
 pathInfo_c           = const.pathInfo_c;
@@ -947,6 +971,27 @@ for k = 1 : max_iter
     residual_s(k) = s;
     a_x = a_x_new; a_y = a_y_new;
 
+    % ── Adaptive ρ (Boyd 2011): rescale dual vars when ρ changes ──────────
+    if isfield(const,'use_adaptive_rho') && const.use_adaptive_rho
+        mu = 10; tau = 2;
+        if r > mu * s,     scale = tau;
+        elseif s > mu * r, scale = 1/tau;
+        else,              scale = 1;
+        end
+        if scale ~= 1
+            ratio = 1/scale;   % a_x *= (rho_old/rho_new) = 1/scale
+            for ag = 1:9
+                for n = 1:N
+                    a_x{ag}{n} = a_x{ag}{n} * ratio;
+                    if ag <= 8, a_y{ag}{n} = a_y{ag}{n} * ratio; end
+                end
+            end
+            rho1 = rho1 * scale;  rho2 = rho2 * scale;
+            const.rho1 = rho1;    const.rho2 = rho2;
+            fprintf('[AdapRho] k=%d  r/s=%.1f  rho→%.3f\n', k, r/max(s,1e-9), rho1);
+        end
+    end
+
     % ── checkpoint: save periodically so Ctrl+C is recoverable ──
     if mod(k, 50) == 0
         save('admm_checkpoint.mat', ...
@@ -964,8 +1009,8 @@ for k = 1 : max_iter
     fprintf('[Iter %d] r=%.4f  s=%.4f  time=%.2fs\n', k, r, s, toc(t_iter));
 end
 
-T_ADMM = toc(T0) / 60;
-fprintf('ADMM elapsed %.3f mins  (priority_n=%d)\n', T_ADMM, const.priority_n);
+T_ADMM = toc(T0);
+fprintf('ADMM elapsed %.1f s  (priority_n=%d)\n', T_ADMM, const.priority_n);
 end
 
 % ── run_admm_core end ──────────────────────────────────────────────────────

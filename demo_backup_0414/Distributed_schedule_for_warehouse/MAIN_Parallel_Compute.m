@@ -4,8 +4,8 @@ clear all;
 
 % ===================== Mode switch =====================
 % 'manual' : fixed 10-robot config (warehouse demo special case)
-% 'random' : generateBalancedTrafficConfig batch runs
-configMode = 'random';
+% 'random' : generateBalancedTrafficConfig batch runs 
+configMode = 'manual'; 
 % ===================== Physical parameters =====================
 T_val        = 2.0;    % headway between vehicles at the SAME entrance (s)
 T_ent        = 0.0;    % stagger between first vehicles at DIFFERENT entrances (s)
@@ -23,8 +23,8 @@ if strcmp(configMode, 'manual')
     numVehiclesList = [10];   
     seedList        = [0];   % seed unused in manual mode
 else
-    numVehiclesList = [15];
-    seedList        = [4221];   % 30r S1 seed
+    numVehiclesList = [20];
+    seedList        = [4223];   % 30r S1 seed
 end
 
 % ===================== Demo export settings (random mode only) =====================
@@ -36,17 +36,32 @@ rootSaveDir = 'BatchRuns';
 % ===================== Run Mode =====================
 % 'normal'   : full ADMM + FCFS + export (no priority)
 % 'priority' : skip normal run, load existing result, run priority sweep only
-runMode         = 'normal';   % ← 改这一个
+% 'compare'  : run each seed twice (quadprog vs Gurobi), print timing/cost table, no file save
+runMode         = 'normal';    % ← 改这一个
 priority_robots = [1];        % priority 模式下给哪些 robot 最高优先级
+
+% ===================== Demo safety switch =====================
+% true : after random config generation, verify actual per-intersection vehicle
+%        count <= demoMaxPerInt; if violated, reduce N by 1 and regenerate until
+%        the hard cap is satisfied.  Guarantees the tree search is feasible.
+% false: use Nveh as-is (MaxPerIntersection passed to generator is a soft hint).
+demoSafeMode  = false;
+demoMaxPerInt = 8;   % hard cap per intersection when demoSafeMode = true
 
 % ===================== Parallel switch =====================
 % true  : use parfeval (fast, multi-worker)
 % false : sequential direct calls (easy to set breakpoints and inspect variables)
-useParallel = false;
+useParallel = true;
 
 % (derived — do not edit)
 skip_normal_run       = strcmp(runMode, 'priority');
 enable_priority_sweep = strcmp(runMode, 'priority');
+run_compare           = strcmp(runMode, 'compare');
+if run_compare
+    numVehiclesList = [20];
+    seedList        = 201:220;   % 20 new seeds, do NOT include 4223 or 101-110
+    cmp_rows = {};               % comparison results accumulator
+end
 
 if ~exist(rootSaveDir, 'dir')
     mkdir(rootSaveDir);
@@ -132,12 +147,47 @@ if strcmp(configMode, 'manual')
     stats = struct();
 else
     % ── Random balanced config ─────────────────────────────────────────
-    [config_raw, vehicleList, stats] = generateBalancedTrafficConfig(Nveh, ...
-        'Seed', seed, ...
-        'MaxPerEntrance',    ceil(Nveh/4), ...
-        'MaxPerIntersection', ceil(Nveh * 1.5 / 4) + 2, ...
-        'MaxPerStage',       ceil(Nveh / 4) + 1, ...
-        'EntrancePenalty', 0.4);
+    Nveh_try = Nveh;
+    while true
+        [config_raw, vehicleList, stats] = generateBalancedTrafficConfig(Nveh_try, ...
+            'Seed', seed, ...
+            'MaxPerEntrance',    ceil(Nveh_try/4), ...
+            'MaxPerIntersection', demoMaxPerInt, ...
+            'MaxPerStage',       ceil(Nveh_try / 4) + 1, ...
+            'EntrancePenalty', 0.4);
+
+        if ~demoSafeMode, break; end
+
+        % Expand config_raw → single-vehicle list, then route to count intersection loads
+        vCfg_tmp = {};  vid_tmp = 0;
+        for g_tmp = 1:length(config_raw)
+            for j_tmp = 1:length(config_raw{g_tmp}.exits)
+                vid_tmp = vid_tmp + 1;
+                vCfg_tmp{vid_tmp} = struct('entrance', config_raw{g_tmp}.entrance, ...
+                    'exits', config_raw{g_tmp}.exits(j_tmp), 'entryIndex', j_tmp);
+            end
+        end
+        pInfo_tmp  = getVehiclePaths(vCfg_tmp);
+        int_loads  = zeros(1, 8);
+        for nn_tmp = 1:length(vCfg_tmp)
+            for ii_tmp = 1:length(pInfo_tmp{nn_tmp}(1).int)
+                ag_tmp = pInfo_tmp{nn_tmp}(1).int(ii_tmp);
+                int_loads(ag_tmp) = int_loads(ag_tmp) + 1;
+            end
+        end
+        fprintf('  [demoSafeMode] N=%d  intersection loads: %s\n', Nveh_try, mat2str(int_loads));
+        if max(int_loads) <= demoMaxPerInt
+            fprintf('  [demoSafeMode] cap satisfied — using N=%d\n', Nveh_try);
+            break;
+        end
+        Nveh_try = Nveh_try - 1;
+        fprintf('  [demoSafeMode] max load %d > cap %d — retrying with N=%d\n', ...
+            max(int_loads), demoMaxPerInt, Nveh_try);
+        if Nveh_try < 1
+            error('[demoSafeMode] cannot satisfy MaxPerIntersection=%d even with N=1', demoMaxPerInt);
+        end
+    end
+    Nveh = Nveh_try;   % update Nveh to the feasible count
     configFile = fullfile(caseDir, sprintf('config_seed%d_N%d.m', seed, Nveh));
     printTrafficConfig(config_raw, configFile);
 end
@@ -273,9 +323,11 @@ const.tol_r  = tol_r; const.tol_s  = tol_s;
 const.N      = N;
 const.Dt     = Dt;
 const.priority_n  = 0;        % 0 = no priority override (normal run)
-const.use_pruning = true;     % true = prune dominated nodes in local decision tree (faster for large N)
+const.use_pruning   = true;   % true = prune dominated nodes in local decision tree (faster for large N)
 const.use_weak_rule = true;   % weak-rule pair_lock required for distributed port
-const.timeout_int_s = 9999;    % per-agent tree search timeout (seconds)
+const.timeout_int_s = 30;    % per-agent tree search timeout (seconds)
+const.useTBound     = true;   % prune nodes with tw > worst-case sequential deadline
+const.use_quadprog  = true;   % true = quadprog (fast); false = YALMIP+Gurobi (original)
 const.deadline     = deadline;
 const.alpha_tilde  = alpha_tilde;
 const.initial_position = initial_position;
@@ -300,7 +352,22 @@ demoGroup = sprintf('%dr', Nveh);   % e.g. 10 → '10r'
 %% ADMM run — normal (priority_n = 0, set above)
 matFile = fullfile(caseDir, sprintf('FourIntersection_ADMM_%s.mat', caseName));
 
-if skip_normal_run
+if run_compare
+    %% ── Compare mode: quadprog vs Gurobi, no file save ───────────────────
+    fprintf('--- COMPARE seed=%d: quadprog ---\n', seed);
+    const.use_quadprog = true;
+    [~,~,~,~,~, dc_qp, k_qp, T_qp] = run_admm_core(const, agent_participation);
+
+    fprintf('--- COMPARE seed=%d: Gurobi ---\n', seed);
+    const.use_quadprog = false;
+    [~,~,~,~,~, dc_gr, k_gr, T_gr] = run_admm_core(const, agent_participation);
+
+    cost_qp = dc_qp(k_qp);  cost_gr = dc_gr(k_gr);
+    fprintf('  seed=%-4d  quadprog: %.3fmin cost=%.4f  |  Gurobi: %.3fmin cost=%.4f\n', ...
+        seed, T_qp, cost_qp, T_gr, cost_gr);
+    cmp_rows{end+1} = {seed, T_qp, cost_qp, k_qp, T_gr, cost_gr, k_gr};
+
+elseif skip_normal_run
     %% ── Skip normal ADMM: load existing result ───────────────────────────
     fprintf('--- skip_normal_run=true: loading existing matFile ---\n');
     if ~exist(matFile, 'file')
@@ -586,10 +653,50 @@ if enable_priority_sweep && ~isempty(priority_robots)
     end
 end
 
-fprintf('Finished case: %s\n', caseName);
-fprintf('Saved to: %s\n', caseDir);
+if ~run_compare
+    fprintf('Finished case: %s\n', caseName);
+    fprintf('Saved to: %s\n', caseDir);
+end
     end  % iS
 end  % iN
+
+%% ── Compare mode: print summary table ───────────────────────────────────
+if run_compare && ~isempty(cmp_rows)
+    fprintf('\n%s\n', repmat('=',1,75));
+    fprintf('  COMPARISON SUMMARY  (N=%d, %d seeds)\n', numVehiclesList(1), numel(cmp_rows));
+    fprintf('%s\n', repmat('=',1,75));
+    fprintf('  %-6s  %-10s  %-10s  %-5s  %-10s  %-10s  %-5s  %-8s\n', ...
+        'seed', 'qp_min', 'qp_cost', 'k_qp', 'gr_min', 'gr_cost', 'k_gr', 'speedup');
+    fprintf('%s\n', repmat('-',1,75));
+    for ri = 1:numel(cmp_rows)
+        r = cmp_rows{ri};
+        sd=r{1}; tq=r{2}; cq=r{3}; kq=r{4}; tg=r{5}; cg=r{6}; kg=r{7};
+        fprintf('  %-6d  %-10.3f  %-10.4f  %-5d  %-10.3f  %-10.4f  %-5d  %-8.2fx\n', ...
+            sd, tq, cq, kq, tg, cg, kg, tg/max(tq,1e-9));
+    end
+    fprintf('%s\n', repmat('=',1,75));
+    % Mean summary
+    T_qp_all = cellfun(@(r) r{2}, cmp_rows);
+    T_gr_all = cellfun(@(r) r{5}, cmp_rows);
+    C_qp_all = cellfun(@(r) r{3}, cmp_rows);
+    C_gr_all = cellfun(@(r) r{6}, cmp_rows);
+    fprintf('  MEAN    %-10.3f  %-10.4f  %-5s  %-10.3f  %-10.4f  %-5s  %-8.2fx\n', ...
+        mean(T_qp_all), mean(C_qp_all), '-', mean(T_gr_all), mean(C_gr_all), '-', ...
+        mean(T_gr_all)/max(mean(T_qp_all),1e-9));
+    fprintf('%s\n', repmat('=',1,75));
+
+    % Save results to CSV for post-processing (PPTX generation)
+    csvFile = fullfile(rootSaveDir, 'compare_results.csv');
+    fid = fopen(csvFile, 'w');
+    fprintf(fid, 'seed,qp_min,qp_cost,k_qp,gr_min,gr_cost,k_gr,speedup\n');
+    for ri = 1:numel(cmp_rows)
+        r = cmp_rows{ri};
+        fprintf(fid, '%d,%.6f,%.6f,%d,%.6f,%.6f,%d,%.4f\n', ...
+            r{1},r{2},r{3},r{4},r{5},r{6},r{7}, r{5}/max(r{2},1e-9));
+    end
+    fclose(fid);
+    fprintf('Results saved to: %s\n', csvFile);
+end
 
 %% ═══════════════════════ Local agent functions ═══════════════════════════
 
@@ -637,7 +744,6 @@ T0 = tic;
 
 % ── ADMM main loop ──────────────────────────────────────────────────────
 for k = 1 : max_iter
-    k %#ok<NOPRT>
     t_iter = tic;
     x_last = x_prev; y_last = y_prev;
 
@@ -739,6 +845,7 @@ for k = 1 : max_iter
     else
         % Sequential — no parfeval, easy to debug with breakpoints
         for agent_i = 1:9
+            fprintf('  [k=%d] agent %d starting...\n', k, agent_i);
             if agent_i >= 1 && agent_i <= 4
                 entries       = agent_participation{agent_i};
                 valid_systems = find(~cellfun(@isempty, entries))';
@@ -772,7 +879,9 @@ for k = 1 : max_iter
     r_local = 0;
     for agent_i = 1:9
         S_res = meta{agent_i};
-        fprintf('Agent %d time=%.3f worker=%d\n', agent_i, S_res.elapsed, S_res.worker);
+        if mod(k, 10) == 1
+            fprintf('  [k=%d] Agent %d time=%.3f worker=%d\n', k, agent_i, S_res.elapsed, S_res.worker);
+        end
         switch S_res.kind
             case 'intersection'
                 LocalTreeCache{agent_i} = S_res.cache;
@@ -780,8 +889,10 @@ for k = 1 : max_iter
                     kn = 1;
                     x_prev{agent_i}{n}(kn) = S_res.best_x(n);
                     y_prev{agent_i}{n}(kn) = S_res.best_y(n);
-                    r_local = r_local + (S_res.best_x(n) - S_res.best_alpha{n}(kn))^2 ...
-                                      + (S_res.best_y(n) - S_res.best_gamma{n}(kn))^2;
+                    if ~isempty(S_res.best_alpha{n}) && ~isempty(S_res.best_gamma{n})
+                        r_local = r_local + (S_res.best_x(n) - S_res.best_alpha{n}(kn))^2 ...
+                                          + (S_res.best_y(n) - S_res.best_gamma{n}(kn))^2;
+                    end
                 end
             case 'road'
                 for n = S_res.valid_systems
@@ -796,6 +907,23 @@ for k = 1 : max_iter
                 end
             otherwise
                 error('Unknown meta.kind = %s', S_res.kind);
+        end
+    end
+
+    %% NaN guard: only replace when x_last has a valid value
+    % Non-chain (agent,n) pairs are permanently NaN by design — skip silently.
+    for agent_i = 1:9
+        for n = 1:N
+            if ~isempty(x_prev{agent_i}{n}) && any(isnan(x_prev{agent_i}{n})) ...
+                    && ~isempty(x_last{agent_i}{n}) && ~any(isnan(x_last{agent_i}{n}))
+                fprintf('[NaN] k=%d agent=%d n=%d x_prev — replaced with x_last\n', k, agent_i, n);
+                x_prev{agent_i}{n} = x_last{agent_i}{n};
+            end
+            if agent_i <= 8 && ~isempty(y_prev{agent_i}{n}) && any(isnan(y_prev{agent_i}{n})) ...
+                    && ~isempty(y_last{agent_i}{n}) && ~any(isnan(y_last{agent_i}{n}))
+                fprintf('[NaN] k=%d agent=%d n=%d y_prev — replaced with y_last\n', k, agent_i, n);
+                y_prev{agent_i}{n} = y_last{agent_i}{n};
+            end
         end
     end
 
@@ -815,14 +943,12 @@ for k = 1 : max_iter
         s = s + norm(x_prev{9}{n} - x_last{9}{n})^2;
     end
 
-    r %#ok<NOPRT>
-    s %#ok<NOPRT>
     residual_r(k) = r;
     residual_s(k) = s;
     a_x = a_x_new; a_y = a_y_new;
 
-    % ── checkpoint: save after every iteration so Ctrl+C is recoverable ──
-    if mod(k, 10) == 0
+    % ── checkpoint: save periodically so Ctrl+C is recoverable ──
+    if mod(k, 50) == 0
         save('admm_checkpoint.mat', ...
             'x_prev', 'y_prev', 'LocalTreeCache', ...
             'residual_r', 'residual_s', 'delay_costs', 'k');
@@ -835,7 +961,7 @@ for k = 1 : max_iter
         delay_costs = delay_costs(1:k);
         break;
     end
-    fprintf('[Iter %d] total time = %.3f s\n', k, toc(t_iter));
+    fprintf('[Iter %d] r=%.4f  s=%.4f  time=%.2fs\n', k, r, s, toc(t_iter));
 end
 
 T_ADMM = toc(T0) / 60;

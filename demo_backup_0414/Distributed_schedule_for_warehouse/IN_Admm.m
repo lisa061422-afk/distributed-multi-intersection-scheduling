@@ -8,82 +8,132 @@ best_cost = Inf; best_x = []; best_y = [];
 
 kn = 1; % per car per system, no recurring tasks
 
-% FUTURE: this loop is a parfor candidate — each leaf's YALMIP solve is
-% independent. Currently blocked by MATLAB nested-parfor restriction
-% (intersections already run inside parfeval workers). See Idea A/B/C in
-% INi_Admm_DecisionTree.m for the full parallelisation roadmap.
+use_quadprog = isfield(const,'use_quadprog') && const.use_quadprog;
+
+% ── quadprog pre-computation (shared across leaves) ──────────────────────
+if use_quadprog
+    A_coef  = 4*(rho1 + rho2);   % quadprog: min 0.5*x'Hx + f'x
+    nv      = numel(valid_systems);
+    idx_map = zeros(N, 1);
+    idx_map(valid_systems) = 1:nv;
+    qp_opts = optimset('Display', 'off');
+end
+
 for i = 1:length(LEAF)
-    idx = LEAF(i);
+    idx   = LEAF(i);
     gamma = NODES{idx}{11}; alpha = NODES{idx}{16};
-    %-------------------solve yalmip---------------------------------
-    % YALMIP variables
-    x = sdpvar(N, 1); y = sdpvar(N, 1);
 
-    Objective = 0; %initialization
-    Constraints = [];
+    if use_quadprog
+        % ── quadprog path ─────────────────────────────────────────────
+        H_mat  = A_coef * eye(nv);
+        f_vec  = zeros(nv, 1);
+        lb_vec = -inf(nv, 1);
+        C_vec  = zeros(N, 1);
 
-    %% 提取 alpha_vec 和 gamma_vec
-    % alpha_vec = NaN(N, I); gamma_vec = NaN(N, I);
-    for n = valid_systems % traverse all routes that pass agent i
-        if isempty(entries{n}), continue; end
-        if isempty(xi_prev_bar{n}) || isempty(alpha{n}) || isempty(gamma{n})
-            fprintf('[IN_Admm] Agent %d sys %d leaf %d: empty bar/alpha/gamma — skipping system.\n', agent_i, n, idx);
-            continue;
+        for ni = 1:nv
+            n = valid_systems(ni);
+            if isempty(entries{n}), continue; end
+            if isempty(xi_prev_bar{n}) || isempty(alpha{n}) || isempty(gamma{n})
+                fprintf('[IN_Admm] Agent %d sys %d leaf %d: empty bar/alpha/gamma — skipping system.\n', agent_i, n, idx);
+                continue;
+            end
+            x_bar    = xi_prev_bar{n}(kn);
+            y_bar    = yi_prev_bar{n}(kn);
+            a_x      = ai_x{n}(kn);
+            a_y      = ai_y{n}(kn);
+            alpha_kn = alpha{n}(kn);
+            gamma_kn = gamma{n}(kn);
+            C_n      = gamma_kn - alpha_kn;
+            C_vec(n) = C_n;
+            f_vec(ni)  = a_x + a_y + 2*rho1*(C_n - x_bar - y_bar) - 4*rho2*alpha_kn;
+            lb_vec(ni) = alpha_tilde{n}(kn);
         end
 
-        x_bar = xi_prev_bar{n}(kn);
-        y_bar = yi_prev_bar{n}(kn);
-        a_x   = ai_x{n}(kn);
-        a_y   = ai_y{n}(kn);
-        alpha_kn = alpha{n}(kn);
-        gamma_kn = gamma{n}(kn);
-        % 对 system n 的所有车辆（整行）计算 cost
-        Objective = Objective ...
-                + rho1 * (x(n, kn) - x_bar)^2 + a_x * x(n, kn) ...
-                + rho1 * (y(n, kn) - y_bar)^2 + a_y * y(n, kn) ...
-                + rho2 * (x(n, kn) - alpha_kn)^2 ...
-                + rho2 * (y(n, kn) - gamma_kn)^2;
-        % 基本约束：y = x + p  
-        Constraints = [Constraints, ...
-             y(n, kn) == x(n, kn) + (gamma_kn - alpha_kn), ...
-             x(n, kn) >= alpha_tilde{n}(kn), ...
-             y(n, kn) >= 0]; 
-    end
+        [Aineq, bineq] = buildMutualExclusionConstraints_numeric(...
+            MapMat, Cmat, valid_systems, gamma, idx_map, C_vec, 1e-4);
 
-    % % 保证 system n 的任务按顺序执行
-    % for n = valid_systems
-    %     kn_set = entries{n};
-    %     for k = 2:length(kn_set)
-    %         prev = kn_set(k-1);
-    %         curr = kn_set(k);
-    %         Constraints = [Constraints, x(n, curr) >= y(n, prev)];
-    %     end
-    % end
- 
-    %% 互斥约束（调用函数）
-    Constraints = addMutualExclusion_SpaceLevel_Nonpreemptive( ...
-        Constraints, MapMat, Cmat, x, y, valid_systems, gamma, 1e-4, agent_i);
+        [x_vec, ~, exitflag] = quadprog(H_mat, f_vec, Aineq, bineq, [], [], lb_vec, [], [], qp_opts);
 
+        if exitflag <= 0
+            x_opt = zeros(N, 1); y_opt = zeros(N, 1);
+            for nn = valid_systems
+                x_opt(nn) = xi_prev{nn}(kn); y_opt(nn) = yi_prev{nn}(kn);
+            end
+            cost = Inf;
+        else
+            x_opt = zeros(N, 1);
+            for ni = 1:nv, x_opt(valid_systems(ni)) = x_vec(ni); end
+            y_opt = x_opt + C_vec;
 
-    % 求解
-    options = sdpsettings('solver', 'gurobi', 'verbose', 0);
-    diagnostics = optimize(Constraints, Objective, options);
-
-    if diagnostics.problem ~= 0
-        warning('Infeasible or solver failed. Returning previous value.');
-        x_opt = zeros(N, 1);
-        y_opt = zeros(N, 1);
-        for nn = valid_systems
-            x_opt(nn) = xi_prev{nn}(kn);
-            y_opt(nn) = yi_prev{nn}(kn);
+            if any(isnan(x_opt(valid_systems))) || any(isnan(y_opt(valid_systems)))
+                fprintf('[IN_Admm] Agent %d leaf %d: quadprog NaN — fallback to xi_prev.\n', agent_i, idx);
+                x_opt = zeros(N, 1); y_opt = zeros(N, 1);
+                for nn = valid_systems
+                    x_opt(nn) = xi_prev{nn}(kn); y_opt(nn) = yi_prev{nn}(kn);
+                end
+                cost = Inf;
+            else
+                cost = 0;
+                for ni2 = 1:nv
+                    n = valid_systems(ni2); xn = x_opt(n); yn = y_opt(n);
+                    cost = cost ...
+                        + rho1*(xn - xi_prev_bar{n}(kn))^2 + ai_x{n}(kn)*xn ...
+                        + rho1*(yn - yi_prev_bar{n}(kn))^2 + ai_y{n}(kn)*yn ...
+                        + rho2*(xn - alpha{n}(kn))^2 ...
+                        + rho2*(yn - gamma{n}(kn))^2;
+                end
+            end
         end
-        cost = value(-1);
+
     else
-        x_opt = value(x);
-        y_opt = value(y);
-        cost = value(Objective);
-      
+        % ── YALMIP + Gurobi path (original) ──────────────────────────
+        x = sdpvar(N, 1);
+        C_vec = zeros(N, 1);
+        Objective = 0; Constraints = [];
+
+        for n = valid_systems
+            if isempty(entries{n}), continue; end
+            if isempty(xi_prev_bar{n}) || isempty(alpha{n}) || isempty(gamma{n})
+                fprintf('[IN_Admm] Agent %d sys %d leaf %d: empty bar/alpha/gamma — skipping system.\n', agent_i, n, idx);
+                continue;
+            end
+            x_bar    = xi_prev_bar{n}(kn); y_bar = yi_prev_bar{n}(kn);
+            a_x      = ai_x{n}(kn);        a_y   = ai_y{n}(kn);
+            alpha_kn = alpha{n}(kn);        gamma_kn = gamma{n}(kn);
+            C_n      = gamma_kn - alpha_kn; C_vec(n) = C_n;
+            Objective = Objective ...
+                + rho1*(x(n) - x_bar)^2       + a_x*x(n) ...
+                + rho1*(x(n)+C_n - y_bar)^2   + a_y*(x(n)+C_n) ...
+                + 2*rho2*(x(n) - alpha_kn)^2;
+            Constraints = [Constraints, x(n) >= alpha_tilde{n}(kn)];
+        end
+        y_expr = x + C_vec;
+        Constraints = addMutualExclusion_SpaceLevel_Nonpreemptive( ...
+            Constraints, MapMat, Cmat, x, y_expr, valid_systems, gamma, 1e-4, agent_i);
+
+        options = sdpsettings('solver', 'gurobi', 'verbose', 0);
+        diagnostics = optimize(Constraints, Objective, options);
+
+        if diagnostics.problem ~= 0
+            warning('Infeasible or solver failed. Returning previous value.');
+            x_opt = zeros(N, 1); y_opt = zeros(N, 1);
+            for nn = valid_systems
+                x_opt(nn) = xi_prev{nn}(kn); y_opt(nn) = yi_prev{nn}(kn);
+            end
+            cost = Inf;
+        else
+            x_opt = value(x); y_opt = x_opt + C_vec; cost = value(Objective);
+            if any(isnan(x_opt(valid_systems))) || any(isnan(y_opt(valid_systems)))
+                fprintf('[IN_Admm] Agent %d leaf %d: Gurobi NaN — fallback to xi_prev.\n', agent_i, idx);
+                x_opt = zeros(N, 1); y_opt = zeros(N, 1);
+                for nn = valid_systems
+                    x_opt(nn) = xi_prev{nn}(kn); y_opt(nn) = yi_prev{nn}(kn);
+                end
+                cost = Inf;
+            end
+        end
     end
+
     if ~isnan(cost) && cost < best_cost
         best_cost = cost;
         best_x = x_opt;

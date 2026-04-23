@@ -108,19 +108,6 @@ for n = active_systems
     U_c(n, m1) = s_idx;
 end
 
-%% ---------------- debug print ----------------
-disp('---------------- expand_array_global (FCFS single-branch) ----------------');
-disp(['current node = ', num2str(c_node_index)]);
-disp('tw = '); disp(tw);
-disp('ni  = '); disp(ni);
-disp('ni2 = '); disp(ni2);
-disp('da  = '); disp(da);
-disp('ra  = '); disp(ra);
-disp('r(tw-) = '); disp(r);
-disp('oa  = '); disp(oa);
-disp('new_task_flag = '); disp(new_task_flag);
-disp('U_c = '); disp(U_c);
-
 %% =======================================================
 %  FCFS single branch:
 %  1) old tasks in r(tw-) continue first
@@ -248,9 +235,6 @@ for ii = 1:length(new_tasks)
     U_temp(n, m1_n) = s_idx;
     accepted_new = [accepted_new, n];
 end
-
-disp('U_temp (FCFS) = ');
-disp(U_temp);
 
 % if nnz(U_temp) == 0
 %     fprintf('No executable FCFS action at node %d. Mark as leaf.\n', c_node_index);

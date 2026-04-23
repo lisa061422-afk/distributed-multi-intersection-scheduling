@@ -107,18 +107,6 @@ for n = active_systems
     U_c(n, m1) = s_idx;
 end
 
-%% ---------------- debug print ----------------
-disp('---------------- expand_array_global (FCFS single-branch) ----------------');
-disp(['current node = ', num2str(c_node_index)]);
-disp('tw = '); disp(tw);
-disp('ni  = '); disp(ni);
-disp('ni2 = '); disp(ni2);
-disp('da  = '); disp(da);
-disp('ra  = '); disp(ra);
-disp('r(tw-) = '); disp(r);
-disp('oa  = '); disp(oa);
-disp('new_task_flag = '); disp(new_task_flag);
-disp('U_c = '); disp(U_c);
 
 %% ============================================================
 % FCFS single branch with correct waiting/entry logic:
@@ -193,19 +181,11 @@ end
 %% -------- 3) admit waiting tasks only when shared spaces released ----------
 accepted_waiting = [];
 
-disp('before loop:');
-disp(candidate_waiting);
-disp(size(candidate_waiting));
-disp(length(candidate_waiting));
-disp(numel(candidate_waiting));
-
 for ii = 1:numel(candidate_waiting)
     n = candidate_waiting(ii);
-    fprintf('ENTER: ii=%d, n=%d\n', ii, n);
 
     s_idx_n = find(ra(:,n) > 1e-9, 1, 'first');
     if isempty(s_idx_n)
-        fprintf('  n=%d skipped: empty s_idx_n\n', n);
         continue;
     end
 
@@ -224,7 +204,6 @@ for ii = 1:numel(candidate_waiting)
         end
 
         if ~has_released_shared_spaces_local(j, n, ni2, ra, const)
-            fprintf('  skip n=%d: blocked by executing j=%d\n', n, j);
             can_start = false;
             break;
         end
@@ -254,8 +233,6 @@ for ii = 1:numel(candidate_waiting)
         shared_valid = intersect(map_j_valid, map_n_valid);
 
         if ~isempty(shared_valid)
-            fprintf('  skip n=%d: conflicts with accepted j=%d, shared=%s\n', ...
-                n, j, mat2str(shared_valid));
             can_start = false;
             break;
         end
@@ -267,16 +244,11 @@ for ii = 1:numel(candidate_waiting)
 
     % first space cannot already be occupied this instant
     if any(U_temp(:,m1_n) > 1e-9)
-        fprintf('  skip n=%d: first space m1_n=%d occupied\n', n, m1_n);
         continue;
     end
-    fprintf('  accept n=%d\n', n);
     U_temp(n, m1_n) = s_idx_n;
     accepted_waiting = [accepted_waiting, n];
 end
-
-disp('U_temp (FCFS) = ');
-disp(U_temp);
 
 %% ---------------- advance to next significant moment ----------------
 [d2, r2, o2, tw1] = NextSigM_global(tw, da, ra_temp, oa, U_temp, const);

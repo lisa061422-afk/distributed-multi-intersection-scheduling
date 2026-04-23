@@ -87,12 +87,14 @@ speed = cell(1, N);
 %     gamma{n} = NaN(1, I(n));  % 所有任务初始化为 NaN
 % end
 %-------------------------Nodes initialization-----------------------------
-NODES = {}; %store all produced nodes 
-l = 1; %index of node  
+l = 1; %index of node
 g = 0;
 ni = zeros(1,N); %initialize all tasks index
-f = 0; 
-NODES = {{l,d,r,o,tw,ni,0,U_c,U,g,gamma,f,speed,ra_reset,x,alpha,zeros(N,N),zeros(1,N)}};
+f = 0;
+NODES_cap = 2000;
+NODES = cell(NODES_cap, 1);
+NODES{1} = {l,d,r,o,tw,ni,0,U_c,U,g,gamma,f,speed,ra_reset,x,alpha,zeros(N,N),zeros(1,N)};
+node_count = 1;
 %initial node: l(index),ddl,remain,response,tw,ni,l(parentnode), V_c, V_past, g_cost,
 %  {17} = priority_lock (1xM, 0=no priority established for that column)
 OPEN = l;
@@ -100,7 +102,7 @@ LEAF = []; %record leaf node
 c_node_index = l;
 
 total_pruned = 0;
-timeout_s = 30;
+timeout_s = 60;
 if isfield(const, 'timeout_int_s'), timeout_s = const.timeout_int_s; end
 t_start = tic;
 
@@ -129,6 +131,11 @@ ddl          = ctx.ddl;
 arrival_ref  = ctx.arrival_ref;
 
 
+% T_bound: worst-case sequential deadline for this intersection
+total_C_local = sum(sum(Cmat(:, valid_systems)));
+T_bound = max(arrival_ref(valid_systems)) + total_C_local;
+fprintf('  [T_bound] Agent %d: %.2f\n', agent_i, T_bound);
+
 % ── FUTURE: Parallel tree expansion ──────────────────────────────────────
 % Current: expand one OPEN node per iteration (A*-style, pick min f-cost).
 % Idea A (easy): parallelize LEAF solving in IN_Admm — each leaf's YALMIP
@@ -143,14 +150,33 @@ arrival_ref  = ctx.arrival_ref;
 %   run a single parfor across all of them. Most efficient but largest
 %   refactor.
 % ─────────────────────────────────────────────────────────────────────────
+iter_count = 0;
+max_open = 0;
 while any(ni <= NI_agent)
-    [NODES,OPEN,LEAF,np] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
-       ctx,const);
+    iter_count = iter_count + 1;
+    if length(OPEN) > max_open, max_open = length(OPEN); end
+    if mod(iter_count, 200) == 0
+        c_ni = NODES{c_node_index}{6};
+        fprintf('  [Agent %d] iter=%d  OPEN=%d  LEAF=%d  nodes=%d  ni=%s  t=%.1fs\n', ...
+            agent_i, iter_count, length(OPEN), length(LEAF), node_count, ...
+            mat2str(c_ni(valid_systems)'), toc(t_start));
+    end
+    [NODES,OPEN,LEAF,np,node_count] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
+       ctx,const,node_count);
     total_pruned = total_pruned + np;
 
     %------------------PRUNE NODES (optional)-------------------
     if isfield(const,'use_pruning') && const.use_pruning && length(OPEN) > 1
         OPEN = prune_nodes_by_ni(NODES, OPEN);
+    end
+    %--------------------T_bound pruning------------------------
+    if isfield(const,'useTBound') && const.useTBound
+        over = OPEN(arrayfun(@(idx) NODES{idx}{5} > T_bound, OPEN));
+        if ~isempty(over)
+            fprintf('  [T_bound] Agent %d: pruned %d nodes (tw > %.2f)\n', agent_i, numel(over), T_bound);
+            OPEN = OPEN(~ismember(OPEN, over));
+            if isempty(OPEN) && isempty(LEAF), LEAF = [LEAF, c_node_index]; end
+        end
     end
     %------------------------------------------------------------
     if toc(t_start) > timeout_s
@@ -163,8 +189,9 @@ while any(ni <= NI_agent)
         [~, minIndex] = f_min(NODES,OPEN);
         c_node_index = minIndex;
      else
-        fprintf('  [WeakRule] Agent %d: total nodes=%d, pruned branches=%d\n', ...
-            agent_i, size(NODES,1), total_pruned);
+        fprintf('  [Agent %d] nodes=%d  leaves=%d  max_OPEN=%d  pruned=%d  t=%.2fs\n', ...
+            agent_i, node_count, length(LEAF), max_open, total_pruned, toc(t_start));
+        NODES = NODES(1:node_count);
         [x, y,best_alpha,best_gamma,best_idx,NODES] ...
             = IN_Admm(NODES,LEAF,agent_i, entries,...
                 x_prev{agent_i}, y_prev{agent_i}, xi_prev_bar, yi_prev_bar, ai_x, ai_y...

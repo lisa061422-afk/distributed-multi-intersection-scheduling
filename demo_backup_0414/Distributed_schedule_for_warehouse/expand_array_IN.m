@@ -1,5 +1,5 @@
-function [NODES,OPEN,LEAF,n_pruned_out] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
-    ctx,const)
+function [NODES,OPEN,LEAF,n_pruned_out,node_count] = expand_array_IN(NODES,OPEN,c_node_index,LEAF,...
+    ctx,const,node_count)
     n_pruned_out = 0;
 
     N = const.N; M = ctx.M; S = ctx.S; NI_agent = ctx.NI_agent;
@@ -16,7 +16,7 @@ function [NODES,OPEN,LEAF,n_pruned_out] = expand_array_IN(NODES,OPEN,c_node_inde
     end
 
     da = zeros(1,N); ra = zeros(S,N); oa = zeros(1,N); ni2 = zeros(1,N); U_c = zeros(N,M);
-    num_nodes = size(NODES,1);
+    num_nodes = node_count;
     %--------------extract current node information-----------------
     c_node = NODES{c_node_index};
     l  = c_node{1};
@@ -92,10 +92,12 @@ function [NODES,OPEN,LEAF,n_pruned_out] = expand_array_IN(NODES,OPEN,c_node_inde
         U_temp   = zeros(N,M);
         [d2,r2,o2,tw1] = NextSigM(tw,da,ra,oa,U_temp,valid_systems,ctx,const);
         ra_reset = -1 * ones(S,N);
-        NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,...
+        NODES_new = NewNode(node_count,d2,r2,o2,tw1,ni2,parent_node_index,...
             U_c,U_temp,g,gamma,speed,ra,ra_reset,x,Cmat,valid_systems,alpha,ddl,arrival_ref,const,pair_lock,reset_since);
+        node_count = node_count + 1;
+        if node_count > numel(NODES), NODES{numel(NODES)*2} = []; end
+        NODES{node_count} = NODES_new;
         OPEN  = [OPEN, NODES_new{1}];
-        NODES = [NODES; {NODES_new}];
 
     elseif any(ra(:, valid_systems) > 1e-5, 'all')
         da = round(da, 6);
@@ -116,8 +118,6 @@ function [NODES,OPEN,LEAF,n_pruned_out] = expand_array_IN(NODES,OPEN,c_node_inde
         if any(col_cnt > 1)
             [V_valid, n_pruned, cb_updates] = traverse_columns(U_c, priority_n, pair_lock, ra);
             n_pruned_out = n_pruned_out + n_pruned;
-            number_current_node = num_nodes;
-
             for i = 1:numel(V_valid)
                 ra_temp = ra;
                 U_temp  = V_valid{i};
@@ -154,11 +154,12 @@ function [NODES,OPEN,LEAF,n_pruned_out] = expand_array_IN(NODES,OPEN,c_node_inde
 
                     [d2,r2,o2,tw1] = NextSigM(tw,da,ra_temp2,oa,U_temp2,valid_systems,ctx,const,tw1_rr);
                     x2 = update_vtemp_x(x2, U_temp2, ni2, r2, tw1, Cmat, N);
-                    NODES_new = NewNode(number_current_node,d2,r2,o2,tw1,ni2,parent_node_index,...
+                    NODES_new = NewNode(node_count,d2,r2,o2,tw1,ni2,parent_node_index,...
                         U_c,U_temp2,g,gamma,speed,ra,ra_reset,x2,Cmat,valid_systems,alpha,ddl,arrival_ref,const,new_pair_lock,reset_since2);
-                    OPEN  = [OPEN,  NODES_new{1}]; %#ok<AGROW>
-                    number_current_node = number_current_node + 1;
-                    NODES = [NODES; {NODES_new}]; %#ok<AGROW>
+                    node_count = node_count + 1;
+                    if node_count > numel(NODES), NODES{numel(NODES)*2} = []; end
+                    NODES{node_count} = NODES_new;
+                    OPEN  = [OPEN, NODES_new{1}];
                 end
             end
 
@@ -172,10 +173,12 @@ function [NODES,OPEN,LEAF,n_pruned_out] = expand_array_IN(NODES,OPEN,c_node_inde
                 new_pair_lock = zeros(N, N);
             end
             x_clean = update_vtemp_x(x, U_temp, ni2, r2, tw1, Cmat, N);
-            NODES_new = NewNode(num_nodes,d2,r2,o2,tw1,ni2,parent_node_index,...
+            NODES_new = NewNode(node_count,d2,r2,o2,tw1,ni2,parent_node_index,...
                 U_c,U_temp,g,gamma,speed,ra,ra_reset,x_clean,Cmat,valid_systems,alpha,ddl,arrival_ref,const,new_pair_lock,reset_since);
+            node_count = node_count + 1;
+            if node_count > numel(NODES), NODES{numel(NODES)*2} = []; end
+            NODES{node_count} = NODES_new;
             OPEN  = [OPEN, NODES_new{1}];
-            NODES = [NODES; {NODES_new}];
         end
     end
 end

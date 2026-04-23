@@ -1,43 +1,49 @@
 function [x_road, y_road] = updateRoadAgent(agent_i, entries, valid_systems, ...
-            xi_prev, yi_prev, xi_prev_bar, yi_prev_bar, ai_x, ai_y,const)
+            xi_prev, yi_prev, xi_prev_bar, yi_prev_bar, ai_x, ai_y, const)
+% Closed-form KKT solution — replaces YALMIP/quadprog.
+% Per system n the problem decouples:
+%   min  rho1*(x-x_bar)^2 + a_x*x + rho1*(y-y_bar)^2 + a_y*y
+%   s.t. y >= x + Dt,  x >= 0
+% Three KKT cases handled analytically.
 
 N = const.N; rho1 = const.rho1; Dt = const.Dt;
-    % YALMIP variables
-    x = sdpvar(N, 1);
-    y = sdpvar(N, 1);
+kn = 1;
 
-    Objective = 0; %initialization
-    Constraints = [];
-    
-    kn = 1; 
-    for n = valid_systems
-        if isempty(entries{n}) continue; end
-        x_bar = xi_prev_bar{n}(kn);
-        y_bar = yi_prev_bar{n}(kn);
-        a_xn  = ai_x{n}(kn);
-        a_yn  = ai_y{n}(kn);
+x_road = zeros(N, 1);
+y_road = zeros(N, 1);
 
-        % 构建目标函数
-        Objective = Objective ...
-            + rho1 * (x(n, kn) - x_bar)^2 + a_xn * x(n, kn) ...
-            + rho1 * (y(n, kn) - y_bar)^2 + a_yn * y(n, kn);
-        % 构建约束：y ≥ x + Dt, 非负约束
-        Constraints = [Constraints, ...
-            y(n, kn) >= x(n, kn) + Dt, ...
-            x(n, kn) >= 0, ...
-            y(n, kn) >= 0];
+for n = valid_systems
+    if isempty(entries{n}), continue; end
+
+    x_bar = xi_prev_bar{n}(kn);
+    y_bar = yi_prev_bar{n}(kn);
+    a_x   = ai_x{n}(kn);
+    a_y   = ai_y{n}(kn);
+
+    x_unc = x_bar - a_x / (2*rho1);
+    y_unc = y_bar - a_y / (2*rho1);
+
+    if x_unc >= 0 && y_unc >= x_unc + Dt
+        % Case 1: both constraints inactive
+        x_n = x_unc;
+        y_n = y_unc;
+
+    elseif x_unc >= 0
+        % Case 2: y = x + Dt active, x >= 0 may bind
+        x_n = (x_bar + y_bar - Dt)/2 - (a_x + a_y)/(4*rho1);
+        if x_n < 0
+            x_n = 0;
+            y_n = Dt;
+        else
+            y_n = x_n + Dt;
+        end
+
+    else
+        % Case 3: x = 0 active
+        x_n = 0;
+        y_n = max(y_unc, Dt);
     end
 
-% YALMIP 求解
-options = sdpsettings('solver', 'quadprog', 'verbose', 0);
-diagnostics = optimize(Constraints, Objective, options);
-
-% 若求解成功，则返回最优值；否则 fallback 为上次值
-if diagnostics.problem ~= 0
-    warning(['YALMIP: updateRoadAgent infeasible for agent ', num2str(agent_i)]);
-    x_road = xi_prev;
-    y_road = yi_prev;
-else
-    x_road = value(x);
-    y_road = value(y);
+    x_road(n) = x_n;
+    y_road(n) = y_n;
 end

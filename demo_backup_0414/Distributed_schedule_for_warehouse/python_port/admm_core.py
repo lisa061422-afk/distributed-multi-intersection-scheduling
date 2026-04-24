@@ -280,11 +280,6 @@ def run_admm_core(const, agent_participation,
     # ── Initialisation ───────────────────────────────────────────────
     local_tree_cache = [None] * 9
 
-    # Warm up the pool before timing starts (spawns workers + pre-imports)
-    if use_parallel:
-        pool = _get_pool()
-        list(pool.map(_noop_task, range(os.cpu_count() or 4)))
-
     if x_init is not None and y_init is not None:
         # Warm-start: use provided primal variables; clamp to alpha_tilde
         x_prev = [[x_init[ag][n].copy() if x_init[ag][n] is not None else None

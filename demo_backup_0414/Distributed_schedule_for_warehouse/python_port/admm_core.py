@@ -12,14 +12,89 @@ Sequential fallback available via const['useParallel'] = False.
 All arrays 0-indexed (n=0..N-1, kn=0).
 """
 
+import os
 import time
 import copy
 import numpy as np
+from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from .decision_tree import ini_admm_decision_tree
 from .road_agent import update_road_agent
 from .terminal_agent import update_terminal_agent
+
+
+# ===========================================================================
+# Parallel worker — must be at module level for Windows spawn pickling
+# ===========================================================================
+
+_parallel_pool = None         # persistent pool across ADMM calls
+_parallel_pool_root = None    # warehouse root used to create pool
+
+
+def _worker_init(warehouse_root):
+    """Set sys.path and pre-import modules in each worker process."""
+    import sys
+    if warehouse_root not in sys.path:
+        sys.path.insert(0, warehouse_root)
+    # Pre-import to avoid cold-import latency on first task
+    import python_port.decision_tree  # noqa: F401
+
+
+def _parallel_int_task(packed):
+    """Run one intersection agent in a worker process."""
+    (agent_i, entries, valid_systems,
+     x_prev, y_prev, xi_bar, yi_bar,
+     ai_x, ai_y, cache, const) = packed
+    import time as _time
+    from python_port.decision_tree import ini_admm_decision_tree as _dt
+    t0 = _time.time()
+    x_out, y_out, best_alpha, best_gamma, best_idx, _, cache_new = _dt(
+        agent_i, entries, x_prev, y_prev, xi_bar, yi_bar,
+        valid_systems, ai_x, ai_y, const, cache)
+    return {
+        'kind': 'intersection',
+        'agent_i': agent_i,
+        'valid_systems': valid_systems,
+        'best_x': x_out,
+        'best_y': y_out,
+        'best_alpha': best_alpha,
+        'best_gamma': best_gamma,
+        'cache': cache_new,
+        'elapsed': _time.time() - t0,
+    }
+
+
+def _noop_task(_):
+    """Warm-up task: triggers module import in worker on first call."""
+    import python_port.decision_tree  # noqa: F401
+    return None
+
+
+def _get_pool():
+    """Return the module-level ProcessPoolExecutor, creating it on first call."""
+    global _parallel_pool, _parallel_pool_root
+    root = str(Path(__file__).parent.parent)
+    if _parallel_pool is None or _parallel_pool_root != root:
+        if _parallel_pool is not None:
+            _parallel_pool.shutdown(wait=False)
+        n_workers = min(4, os.cpu_count() or 4)
+        _parallel_pool = ProcessPoolExecutor(
+            max_workers=n_workers,
+            initializer=_worker_init,
+            initargs=(root,))
+        _parallel_pool_root = root
+    return _parallel_pool
+
+
+def warmup_parallel_pool():
+    """
+    Pre-warm the ProcessPoolExecutor: spawn workers and pre-import modules.
+    Call this once at MPC startup so the first run_admm_core call pays no
+    pool-creation penalty.  Safe to call multiple times (no-op if already warm).
+    """
+    pool = _get_pool()
+    list(pool.map(_noop_task, range(os.cpu_count() or 4)))
 
 
 # ===========================================================================
@@ -199,6 +274,11 @@ def run_admm_core(const, agent_participation):
     # ── Initialisation ───────────────────────────────────────────────
     local_tree_cache = [None] * 9
 
+    # Warm up the pool before timing starts (spawns workers + pre-imports)
+    if use_parallel:
+        pool = _get_pool()
+        list(pool.map(_noop_task, range(os.cpu_count() or 4)))
+
     x_prev, y_prev, x_prev_bar, y_prev_bar = init_xy_prev(
         const['alpha_tilde'], pathInfo_agent_chain,
         const['pathInfo_c'], const['Dt'], N,
@@ -258,45 +338,57 @@ def run_admm_core(const, agent_participation):
                         (float(yp[kn]) + float(xc[kn])) / 2.0])
 
         # ── Step 2: local agent updates ──────────────────────────────
-        meta = [None] * 9
+        meta    = [None] * 9
+        futures = {}   # future → agent_i
 
-        for agent_i in range(9):
+        # Intersection agents 0-3: dispatch to pool or run inline
+        for agent_i in range(4):
             entries = agent_participation[agent_i]
             valid_systems = [n for n in range(N) if entries[n]]
+            if not valid_systems:
+                meta[agent_i] = {'kind': 'intersection', 'agent_i': agent_i,
+                                 'valid_systems': [], 'best_x': np.zeros(N),
+                                 'best_y': np.zeros(N), 'best_alpha': [None]*N,
+                                 'best_gamma': [None]*N, 'cache': None,
+                                 'elapsed': 0.0}
+            elif use_parallel:
+                packed = (agent_i, entries, valid_systems,
+                          x_prev, y_prev,
+                          x_prev_bar[agent_i], y_prev_bar[agent_i],
+                          a_x_new[agent_i], a_y_new[agent_i],
+                          local_tree_cache[agent_i], const)
+                futures[_get_pool().submit(_parallel_int_task, packed)] = agent_i
+            else:
+                meta[agent_i] = _agent_update_intersection(
+                    const, agent_i, entries, valid_systems,
+                    x_prev, y_prev,
+                    x_prev_bar[agent_i], y_prev_bar[agent_i],
+                    a_x_new[agent_i], a_y_new[agent_i],
+                    local_tree_cache[agent_i])
 
-            if agent_i <= 3:   # intersection
-                if not valid_systems:
-                    meta[agent_i] = {'kind': 'intersection', 'agent_i': agent_i,
-                                     'valid_systems': [], 'best_x': np.zeros(N),
-                                     'best_y': np.zeros(N), 'best_alpha': [None]*N,
-                                     'best_gamma': [None]*N, 'cache': None,
-                                     'elapsed': 0.0}
-                else:
-                    if k % 10 == 0:
-                        print(f'  [k={k+1}] agent {agent_i} starting...')
-                    meta[agent_i] = _agent_update_intersection(
-                        const, agent_i, entries, valid_systems,
-                        x_prev, y_prev,
-                        x_prev_bar[agent_i], y_prev_bar[agent_i],
-                        a_x_new[agent_i], a_y_new[agent_i],
-                        local_tree_cache[agent_i])
+        # Road agents 4-7: always sequential (analytical, < 1ms each)
+        for agent_i in range(4, 8):
+            entries = agent_participation[agent_i]
+            valid_systems = [n for n in range(N) if entries[n]]
+            if not valid_systems:
+                meta[agent_i] = {'kind': 'road', 'agent_i': agent_i,
+                                 'valid_systems': [],
+                                 'x_road': np.zeros(N), 'y_road': np.zeros(N),
+                                 'elapsed': 0.0}
+            else:
+                meta[agent_i] = _agent_update_road(
+                    const, agent_i, entries, valid_systems,
+                    x_prev[agent_i], y_prev[agent_i],
+                    x_prev_bar[agent_i], y_prev_bar[agent_i],
+                    a_x_new[agent_i], a_y_new[agent_i])
 
-            elif agent_i <= 7:   # road
-                if not valid_systems:
-                    meta[agent_i] = {'kind': 'road', 'agent_i': agent_i,
-                                     'valid_systems': [],
-                                     'x_road': np.zeros(N), 'y_road': np.zeros(N),
-                                     'elapsed': 0.0}
-                else:
-                    meta[agent_i] = _agent_update_road(
-                        const, agent_i, entries, valid_systems,
-                        x_prev[agent_i], y_prev[agent_i],
-                        x_prev_bar[agent_i], y_prev_bar[agent_i],
-                        a_x_new[agent_i], a_y_new[agent_i])
+        # Terminal agent 8: always sequential
+        meta[8] = _agent_update_terminal(
+            const, x_prev[8], x_prev_bar[8], a_x_new[8])
 
-            else:   # terminal (agent 8)
-                meta[8] = _agent_update_terminal(
-                    const, x_prev[8], x_prev_bar[8], a_x_new[8])
+        # Collect parallel intersection results
+        for fut in as_completed(futures):
+            meta[futures[fut]] = fut.result()
 
         # ── Merge results ────────────────────────────────────────────
         r_local = 0.0

@@ -156,25 +156,39 @@ def main():
     print(f'  alpha_tilde[0..2]: {[round(float(const["alpha_tilde"][n][0]),4) for n in range(min(3,N))]}')
     print()
 
+    # ── Sequential run ───────────────────────────────────────────────
+    print('--- Sequential ---')
+    const_seq = {**const, 'useParallel': False}
     t0 = time.time()
     (x_prev, y_prev, cache,
      res_r, res_s, delay_costs,
-     k_conv, T_admm) = run_admm_core(const, agent_participation)
+     k_conv, T_admm) = run_admm_core(const_seq, agent_participation)
+    T_seq = time.time() - t0
+    print(f'Sequential: k={k_conv}  elapsed={T_seq:.2f}s  cost={delay_costs[k_conv-1]:.4f}')
 
-    print(f'\n=== Results ===')
+    # ── Parallel run (first call — includes pool creation) ───────────
+    print('\n--- Parallel first call (pool cold, creation included) ---')
+    const_par = {**const, 'useParallel': True}
+    t0 = time.time()
+    run_admm_core(const_par, agent_participation)
+    T_cold = time.time() - t0
+    print(f'Parallel cold: elapsed={T_cold:.2f}s')
+
+    # ── Parallel run (second call — pool warm) ───────────────────────
+    print('\n--- Parallel second call (pool warm) ---')
+    t0 = time.time()
+    (x_prev_p, y_prev_p, cache_p,
+     res_r_p, res_s_p, delay_costs_p,
+     k_conv_p, T_admm_p) = run_admm_core(const_par, agent_participation)
+    T_par = time.time() - t0
+    print(f'Parallel warm: k={k_conv_p}  elapsed={T_par:.2f}s  cost={delay_costs_p[k_conv_p-1]:.4f}')
+    if T_seq > 0:
+        print(f'Speedup (warm pool): {T_seq/T_par:.2f}x')
+
+    print(f'\n=== Sequential Results ===')
     print(f'Converged at k={k_conv}   elapsed={T_admm:.2f}s')
     print(f'Delay cost (terminal): {delay_costs[k_conv-1]:.6f}')
     print(f'Final residuals: r={res_r[k_conv-1]:.6f}  s={res_s[k_conv-1]:.6f}')
-    print(f'Residual r history: {[round(float(x),4) for x in res_r[:min(k_conv,10)]]}')
-
-    print(f'\nFinal x_prev (agent 0, intersection, first 5 vehicles):')
-    for n in range(min(5, N)):
-        xv = x_prev[0][n]
-        yv = y_prev[0][n]
-        if xv is not None:
-            print(f'  n={n}: x={float(xv[0]):.4f}  y={float(yv[0]):.4f}')
-        else:
-            print(f'  n={n}: (not participating)')
 
     print(f'\nFinal x_prev (terminal agent 8, first 5 vehicles):')
     for n in range(min(5, N)):

@@ -1,0 +1,8 @@
+Converged k=34 elapsed=3.34
+Delay cost=3.949146
+Final r=0.007986 s=0.005325
+n=0 x=3.7854 deadline=3.7854 delay=0.0000
+n=1 x=11.5081 deadline=10.3562 delay=1.1519
+n=2 x=10.5124 deadline=10.5124 delay=0.0000
+n=3 x=15.3557 deadline=15.1562 delay=0.1995
+n=4 x=10.1000 deadline=10.1000 delay=0.0000

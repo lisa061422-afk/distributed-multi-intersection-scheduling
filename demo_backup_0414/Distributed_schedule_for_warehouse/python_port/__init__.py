@@ -14,6 +14,7 @@ admm_core       : run_admm_core  (main ADMM loop)
 """
 
 from .admm_core import run_admm_core, init_xy_prev, warmup_parallel_pool
+from .mpc_loop import MPCScheduler
 from .decision_tree import ini_admm_decision_tree
 from .road_agent import update_road_agent
 from .terminal_agent import update_terminal_agent

@@ -162,7 +162,7 @@ def main():
     t0 = time.time()
     (x_prev, y_prev, cache,
      res_r, res_s, delay_costs,
-     k_conv, T_admm) = run_admm_core(const_seq, agent_participation)
+     k_conv, T_admm, _, _) = run_admm_core(const_seq, agent_participation)
     T_seq = time.time() - t0
     print(f'Sequential: k={k_conv}  elapsed={T_seq:.2f}s  cost={delay_costs[k_conv-1]:.4f}')
 
@@ -179,7 +179,7 @@ def main():
     t0 = time.time()
     (x_prev_p, y_prev_p, cache_p,
      res_r_p, res_s_p, delay_costs_p,
-     k_conv_p, T_admm_p) = run_admm_core(const_par, agent_participation)
+     k_conv_p, T_admm_p, _, _) = run_admm_core(const_par, agent_participation)
     T_par = time.time() - t0
     print(f'Parallel warm: k={k_conv_p}  elapsed={T_par:.2f}s  cost={delay_costs_p[k_conv_p-1]:.4f}')
     if T_seq > 0:

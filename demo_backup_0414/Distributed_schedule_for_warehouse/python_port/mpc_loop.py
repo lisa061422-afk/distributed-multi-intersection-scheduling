@@ -68,6 +68,12 @@ class MPCScheduler:
         # Mutable position state (updated by simulate())
         self._pos = self._pos0.copy()
 
+        # Warm-start / hot-start state carried between MPC steps
+        self._warm_x  = None
+        self._warm_y  = None
+        self._warm_ax = None   # dual variables for hot-start
+        self._warm_ay = None
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -77,8 +83,12 @@ class MPCScheduler:
         warmup_parallel_pool()
 
     def reset(self):
-        """Reset vehicle positions to initial state."""
-        self._pos = self._pos0.copy()
+        """Reset vehicle positions and warm-start / hot-start state."""
+        self._pos     = self._pos0.copy()
+        self._warm_x  = None
+        self._warm_y  = None
+        self._warm_ax = None
+        self._warm_ay = None
 
     def alpha_tilde_from_positions(self, t_current, positions=None):
         """
@@ -131,10 +141,19 @@ class MPCScheduler:
             'alpha_tilde':  alpha_new,
             'deadline':     deadline_new,
             'useParallel':  use_parallel,
+            'verbose':      False,
         }
 
-        x_prev, y_prev, _, _, _, delay_costs, k, T_solve = run_admm_core(
-            const_step, self._ap)
+        x_prev, y_prev, _, _, _, delay_costs, k, T_solve, ax_out, ay_out = run_admm_core(
+            const_step, self._ap,
+            x_init=self._warm_x, y_init=self._warm_y,
+            ax_init=self._warm_ax, ay_init=self._warm_ay)
+
+        # Save solution for next step's warm-start + hot-start
+        self._warm_x  = x_prev
+        self._warm_y  = y_prev
+        self._warm_ax = ax_out
+        self._warm_ay = ay_out
 
         return x_prev, y_prev, float(delay_costs[k - 1]), T_solve, k, alpha_new
 

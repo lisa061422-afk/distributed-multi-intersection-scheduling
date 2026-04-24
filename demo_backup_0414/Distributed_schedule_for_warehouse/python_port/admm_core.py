@@ -246,7 +246,8 @@ def _agent_update_terminal(const, x9_prev, x9_prev_bar, a9_x):
 # ADMM core loop
 # ===========================================================================
 
-def run_admm_core(const, agent_participation):
+def run_admm_core(const, agent_participation,
+                  x_init=None, y_init=None, ax_init=None, ay_init=None):
     """
     Equivalent of MATLAB run_admm_core.
 
@@ -254,11 +255,15 @@ def run_admm_core(const, agent_participation):
     ----------
     const               : dict  (all hyperparameters + config)
     agent_participation : list[9] of list[N]  entries per agent
+    x_init              : list[9][N] or None  warm-start primal x
+    y_init              : list[8][N] or None  warm-start primal y
+    ax_init             : list[9][N] or None  hot-start dual a_x
+    ay_init             : list[9][N] or None  hot-start dual a_y
 
     Returns
     -------
     x_prev, y_prev, local_tree_cache, residual_r, residual_s,
-    delay_costs, k, T_admm
+    delay_costs, k, T_admm, a_x, a_y
     """
     N        = const['N']
     max_iter = const['max_iter']
@@ -266,8 +271,9 @@ def run_admm_core(const, agent_participation):
     tol_s    = const['tol_s']
     rho1     = const['rho1']
     rho2     = const['rho2']
-    use_parallel = const.get('useParallel', False)
+    use_parallel     = const.get('useParallel', False)
     use_adaptive_rho = const.get('use_adaptive_rho', False)
+    verbose          = const.get('verbose', True)
     pathInfo_agent_chain = const['pathInfo_agent_chain']
     kn = 0
 
@@ -279,16 +285,37 @@ def run_admm_core(const, agent_participation):
         pool = _get_pool()
         list(pool.map(_noop_task, range(os.cpu_count() or 4)))
 
-    x_prev, y_prev, x_prev_bar, y_prev_bar = init_xy_prev(
-        const['alpha_tilde'], pathInfo_agent_chain,
-        const['pathInfo_c'], const['Dt'], N,
-        const.get('randInitScale', 0.0))
+    if x_init is not None and y_init is not None:
+        # Warm-start: use provided primal variables; clamp to alpha_tilde
+        x_prev = [[x_init[ag][n].copy() if x_init[ag][n] is not None else None
+                   for n in range(N)] for ag in range(9)]
+        y_prev = [[y_init[ag][n].copy() if y_init[ag][n] is not None else None
+                   for n in range(N)] for ag in range(8)]
+        # Clamp: x_prev[ag][n] >= alpha_tilde[n] (feasibility under updated alpha)
+        for n in range(N):
+            lb = float(const['alpha_tilde'][n][0])
+            for ag in range(9):
+                if x_prev[ag][n] is not None:
+                    x_prev[ag][n] = np.array([max(float(x_prev[ag][n][0]), lb)])
+        x_prev_bar = [[x_prev[ag][n].copy() if x_prev[ag][n] is not None else None
+                       for n in range(N)] for ag in range(9)]
+        y_prev_bar = [[y_prev[ag][n].copy() if y_prev[ag][n] is not None else None
+                       for n in range(N)] for ag in range(8)]
+    else:
+        x_prev, y_prev, x_prev_bar, y_prev_bar = init_xy_prev(
+            const['alpha_tilde'], pathInfo_agent_chain,
+            const['pathInfo_c'], const['Dt'], N,
+            const.get('randInitScale', 0.0))
 
-    # Dual variables: a_x[ag][n] = np.array([0.0])
-    a_x = [[np.array([0.0]) if x_prev[ag][n] is not None else np.array([0.0])
-             for n in range(N)] for ag in range(9)]
-    a_y = [[np.array([0.0]) if (ag < 8 and y_prev[ag][n] is not None) else np.array([0.0])
-             for n in range(N)] for ag in range(9)]
+    # Dual variables: carry from previous step (hot-start) or reset to zero
+    if ax_init is not None and ay_init is not None:
+        a_x = [[ax_init[ag][n].copy() if ax_init[ag][n] is not None else np.array([0.0])
+                for n in range(N)] for ag in range(9)]
+        a_y = [[ay_init[ag][n].copy() if ay_init[ag][n] is not None else np.array([0.0])
+                for n in range(N)] for ag in range(9)]
+    else:
+        a_x = [[np.array([0.0]) for n in range(N)] for _ in range(9)]
+        a_y = [[np.array([0.0]) for n in range(N)] for _ in range(9)]
     a_x_new = copy.deepcopy(a_x)
     a_y_new = copy.deepcopy(a_y)
 
@@ -359,6 +386,8 @@ def run_admm_core(const, agent_participation):
                           local_tree_cache[agent_i], const)
                 futures[_get_pool().submit(_parallel_int_task, packed)] = agent_i
             else:
+                if verbose and k % 10 == 0:
+                    print(f'  [k={k+1}] agent {agent_i} starting...')
                 meta[agent_i] = _agent_update_intersection(
                     const, agent_i, entries, valid_systems,
                     x_prev, y_prev,
@@ -394,7 +423,7 @@ def run_admm_core(const, agent_participation):
         r_local = 0.0
         for agent_i in range(9):
             res = meta[agent_i]
-            if k % 10 == 0:
+            if verbose and k % 10 == 0:
                 print(f'  [k={k+1}] Agent {agent_i} time={res.get("elapsed",0):.3f}s')
 
             if res['kind'] == 'intersection':
@@ -481,12 +510,15 @@ def run_admm_core(const, agent_participation):
                 rho1 *= scale
                 rho2 *= scale
                 const = {**const, 'rho1': rho1, 'rho2': rho2}
-                print(f'[AdapRho] k={k+1}  r/s={r/max(s,1e-9):.1f}  rho→{rho1:.3f}')
+                if verbose:
+                    print(f'[AdapRho] k={k+1}  r/s={r/max(s,1e-9):.1f}  rho→{rho1:.3f}')
 
-        print(f'[Iter {k+1}] r={r:.4f}  s={s:.4f}  time={time.time()-t_iter:.2f}s')
+        if verbose:
+            print(f'[Iter {k+1}] r={r:.4f}  s={s:.4f}  time={time.time()-t_iter:.2f}s')
 
         if r < tol_r and s < tol_s:
-            print(f'Converged at iteration {k+1}')
+            if verbose:
+                print(f'Converged at iteration {k+1}')
             residual_r  = residual_r[:k + 1]
             residual_s  = residual_s[:k + 1]
             delay_costs = delay_costs[:k + 1]
@@ -494,6 +526,8 @@ def run_admm_core(const, agent_participation):
             break
 
     T_admm = time.time() - T0
-    print(f'ADMM elapsed {T_admm:.1f} s')
+    if verbose:
+        print(f'ADMM elapsed {T_admm:.1f} s')
     return (x_prev, y_prev, local_tree_cache,
-            residual_r, residual_s, delay_costs, k, T_admm)
+            residual_r, residual_s, delay_costs, k, T_admm,
+            a_x, a_y)

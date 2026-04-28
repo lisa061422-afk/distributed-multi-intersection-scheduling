@@ -167,7 +167,11 @@ while any(ni <= NI_agent)
 
     %------------------PRUNE NODES (optional)-------------------
     if isfield(const,'use_pruning') && const.use_pruning && length(OPEN) > 1
-        OPEN = prune_nodes_by_ni(NODES, OPEN);
+        if isfield(const,'use_fast_prune') && const.use_fast_prune
+            OPEN = prune_nodes_by_ni_fast(NODES, OPEN);
+        else
+            OPEN = prune_nodes_by_ni(NODES, OPEN);
+        end
     end
     %--------------------T_bound pruning------------------------
     if isfield(const,'useTBound') && const.useTBound

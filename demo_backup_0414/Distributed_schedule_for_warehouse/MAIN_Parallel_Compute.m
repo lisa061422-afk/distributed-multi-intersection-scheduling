@@ -5,7 +5,7 @@ clear all;
 % ===================== Mode switch =====================
 % 'manual' : fixed 10-robot config (warehouse demo special case)
 % 'random' : generateBalancedTrafficConfig batch runs 
-configMode = 'manual'; 
+configMode = 'manual';
 % ===================== Physical parameters =====================
 T_val        = 2.0;    % headway between vehicles at the SAME entrance (s)
 T_ent        = 0.0;    % stagger between first vehicles at DIFFERENT entrances (s)
@@ -329,6 +329,7 @@ const.priority_n  = 0;        % 0 = no priority override (normal run)
 const.use_pruning   = true;   % true = prune dominated nodes in local decision tree (faster for large N)
 const.use_weak_rule = true;   % weak-rule pair_lock required for distributed port
 const.timeout_int_s = 30;    % per-agent tree search timeout (seconds)
+const.use_fast_prune = true; % vectorised prune_nodes_by_ni_fast (drops containers.Map)
 const.useTBound     = true;   % prune nodes with tw > worst-case sequential deadline
 const.use_quadprog  = true;   % true = quadprog (fast); false = YALMIP+Gurobi (original)
 const.use_adaptive_rho = true; % true = adaptive ρ (Boyd 2011); false = fixed rho1/rho2 above

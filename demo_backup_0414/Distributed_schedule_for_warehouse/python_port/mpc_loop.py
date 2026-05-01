@@ -49,6 +49,10 @@ class MPCScheduler:
         self._v_max      = v_max
         self._detect_range = detect_range
         self._W          = W
+        # Terminal agent ID — derived from topology, not hardcoded.
+        self._terminal_0 = const.get(
+            'terminal_id_0idx',
+            const.get('n_agents', 9) - 1)
 
         # Zone entry position (< 0, vehicle must reach this to enter detection zone)
         self._zone_entry = -(detect_range / 2.0 - W / 2.0)   # e.g. -3.0 m
@@ -123,12 +127,12 @@ class MPCScheduler:
 
         Returns
         -------
-        x_prev      : list[9][N]   optimal arrival times per agent per vehicle
-        y_prev      : list[8][N]   optimal departure times
-        delay_cost  : float        total delay cost at convergence
-        T_solve     : float        ADMM wall-clock solve time (s)
-        k           : int          ADMM iterations to convergence
-        alpha_tilde : list[N]      alpha_tilde used in this step
+        x_prev      : list[n_agents][N]   optimal arrival times per agent per vehicle
+        y_prev      : list[n_agents-1][N] optimal departure times (no y for terminal)
+        delay_cost  : float               total delay cost at convergence
+        T_solve     : float               ADMM wall-clock solve time (s)
+        k           : int                 ADMM iterations to convergence
+        alpha_tilde : list[N]             alpha_tilde used in this step
         """
         alpha_new = self.alpha_tilde_from_positions(t_current, positions)
         deadline_new = [
@@ -199,8 +203,9 @@ class MPCScheduler:
                 t, positions=pos_snapshot, use_parallel=use_parallel)
 
             # ── Terminal arrival times ───────────────────────────────
+            term = self._terminal_0
             terminal_x = np.array([
-                float(x_prev[8][n][0]) if x_prev[8][n] is not None else np.nan
+                float(x_prev[term][n][0]) if x_prev[term][n] is not None else np.nan
                 for n in range(self._N)
             ])
 

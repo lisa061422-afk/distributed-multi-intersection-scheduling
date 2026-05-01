@@ -44,7 +44,8 @@ def main():
     t0 = time.time()
     x_s, y_s, _, _, _, dc_s, k_s, T_s, _, _ = run_admm_core(const_static, agent_participation)
     T_static = time.time() - t0
-    terminal_static = [float(x_s[8][n][0]) for n in range(N)]
+    terminal_0 = const.get('terminal_id_0idx', const.get('n_agents', 9) - 1)
+    terminal_static = [float(x_s[terminal_0][n][0]) for n in range(N)]
     delays_static = [max(0.0, terminal_static[n] - float(const['deadline'][n][0]))
                      for n in range(N)]
     print(f'Converged k={k_s}  T_solve={T_s:.2f}s  total_delay={dc_s[k_s-1]:.4f}')

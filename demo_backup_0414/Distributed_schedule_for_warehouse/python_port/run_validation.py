@@ -31,11 +31,46 @@ def load_config(json_path: str) -> dict:
 
     MATLAB uses 1-indexed agent IDs (1..9) and vehicle IDs (1..N).
     Python port uses 0-indexed throughout.
+
+    Auto-regen: if the JSON contains a 'vehicles' field, derived fields
+    (alpha_tilde, deadline, agent_chains, path_c, route_ids,
+    agent_participation, initial_position) are recomputed in-memory from
+    'vehicles' + 'IntSpaceDB' + 'physical_params' (or defaults).  The on-disk
+    JSON is NOT touched.  Run build_manual_config.py to persist.
     """
     with open(json_path, encoding='utf-8') as f:
         raw = json.load(f)
 
+    # ── Auto-regen derived fields if 'vehicles' present ──
+    if 'vehicles' in raw and raw['vehicles']:
+        from python_port.build_manual_config import derive_fields, DEFAULTS
+        pp = {**DEFAULTS['physical_params'], **(raw.get('physical_params') or {})}
+        # Dt at top level overrides physical_params['Dt']
+        if 'Dt' in raw:
+            pp['Dt'] = float(raw['Dt'])
+        veh = [{'entrance':   int(v['entrance']),
+                'exit':       int(v['exit']),
+                'entryIndex': int(v['entryIndex'])} for v in raw['vehicles']]
+        derived = derive_fields(veh, raw['IntSpaceDB'], pp)
+        raw.update(derived)
+        raw['N']  = len(veh)
+        raw['Dt'] = pp['Dt']
+        print(f"[load_config] auto-regenerated {len(veh)} vehicles' derived fields "
+              f"(Dt={pp['Dt']}, T_val={pp['T_val']}, T_ent={pp['T_ent']})")
+
     N = int(raw['N'])
+
+    # ── Topology sizes (inferred from JSON shape) ────────────────────
+    # IntSpaceDB length = number of intersection agents.
+    # agent_participation has one row per non-terminal agent (ints + roads).
+    n_int     = len(raw['IntSpaceDB'])
+    n_nonterm = len(raw['agent_participation'])
+    n_road    = n_nonterm - n_int
+    n_agents  = n_nonterm + 1
+    if n_road < 0:
+        raise ValueError(
+            f'Inconsistent JSON: agent_participation rows ({n_nonterm}) < '
+            f'IntSpaceDB length ({n_int})')
 
     # ── Scalars ──────────────────────────────────────────────────────
     const = {
@@ -56,6 +91,10 @@ def load_config(json_path: str) -> dict:
         'use_adaptive_rho': False,
         'randInitScale': float(raw.get('randInitScale', 0.0)),
         'useParallel': False,
+        'n_int':            n_int,
+        'n_road':           n_road,
+        'n_agents':         n_agents,
+        'terminal_id_0idx': n_agents - 1,
     }
 
     # ── alpha_tilde, deadline (1-indexed list, 0-indexed access via [n][0]) ─
@@ -97,11 +136,10 @@ def load_config(json_path: str) -> dict:
     pathInfo = [{'routeId': route_ids[n]} for n in range(N)]
     const['pathInfo'] = pathInfo
 
-    # ── IntSpaceDB: 4 intersections, 0-indexed ────────────���──────────
+    # ── IntSpaceDB: n_int intersections, 0-indexed ───────────────────
     int_db_raw = raw['IntSpaceDB']
-    # int_db_raw is a list of 4 dicts (0-indexed after MATLAB's 1-indexed export)
     IntSpaceDB = []
-    for ag in range(4):
+    for ag in range(n_int):
         db_raw = int_db_raw[ag]
         num_routes = int(db_raw['numRoutes'])
         db = {
@@ -119,15 +157,15 @@ def load_config(json_path: str) -> dict:
         IntSpaceDB.append(db)
     const['IntSpaceDB'] = IntSpaceDB
 
-    # ── agent_participation: 9 agents × N vehicles ───────────────────
-    ap_mat = raw['agent_participation']   # 8 x N from MATLAB (0-indexed rows 0..7)
+    # ── agent_participation: n_agents × N (non-terminal rows from JSON,
+    #    terminal row = all-True since terminal serves every vehicle) ──
+    ap_mat = raw['agent_participation']   # n_nonterm x N
     agent_participation = []
-    for ag in range(9):
-        if ag < 8:
+    for ag in range(n_agents):
+        if ag < n_nonterm:
             row = [bool(int(ap_mat[ag][n])) for n in range(N)]
         else:
-            # Terminal (agent 8): participates in all vehicles
-            row = [True] * N
+            row = [True] * N   # terminal participates in all vehicles
         agent_participation.append(row)
 
     return const, agent_participation

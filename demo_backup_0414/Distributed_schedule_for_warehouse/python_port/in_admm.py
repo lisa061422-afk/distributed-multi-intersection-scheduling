@@ -96,6 +96,7 @@ def in_admm(NODES, LEAF: List[int], agent_i: int, entries,
     rho2 = const['rho2']
     N = const['N']
     alpha_tilde = const['alpha_tilde']   # list[N] of float
+    verbose = const.get('verbose', True)
 
     kn = 0   # 0-indexed task (kn=1 in MATLAB)
 
@@ -129,8 +130,9 @@ def in_admm(NODES, LEAF: List[int], agent_i: int, entries,
             if not entries[n]:
                 continue
             if (xi_prev_bar[n] is None or alpha[n] is None or gamma[n] is None):
-                print(f'[IN_Admm] Agent {agent_i} sys {n} leaf {leaf_idx}: '
-                      f'empty bar/alpha/gamma — skipping system.')
+                if verbose:
+                    print(f'[IN_Admm] Agent {agent_i} sys {n} leaf {leaf_idx}: '
+                          f'empty bar/alpha/gamma — skipping system.')
                 continue
 
             x_bar    = float(xi_prev_bar[n][kn])
@@ -179,7 +181,8 @@ def in_admm(NODES, LEAF: List[int], agent_i: int, entries,
 
             if (np.any(np.isnan(x_opt[valid_systems]))
                     or np.any(np.isnan(y_opt[valid_systems]))):
-                print(f'[IN_Admm] Agent {agent_i} leaf {leaf_idx}: NaN — fallback.')
+                if verbose:
+                    print(f'[IN_Admm] Agent {agent_i} leaf {leaf_idx}: NaN — fallback.')
                 for n in valid_systems:
                     x_opt[n] = float(xi_prev[n][kn])
                     y_opt[n] = float(yi_prev[n][kn])
@@ -187,6 +190,9 @@ def in_admm(NODES, LEAF: List[int], agent_i: int, entries,
             else:
                 cost = 0.0
                 for n in valid_systems:
+                    if (xi_prev_bar[n] is None or alpha[n] is None
+                            or gamma[n] is None):
+                        continue
                     xn = x_opt[n]; yn = y_opt[n]
                     cost += (rho1 * (xn - float(xi_prev_bar[n][kn])) ** 2
                              + float(ai_x[n][kn]) * xn
@@ -205,7 +211,8 @@ def in_admm(NODES, LEAF: List[int], agent_i: int, entries,
 
     # Fallback if all leaves infeasible
     if best_x is None:
-        print(f'[IN_Admm] Agent {agent_i}: all {len(LEAF)} leaves infeasible — fallback.')
+        if verbose:
+            print(f'[IN_Admm] Agent {agent_i}: all {len(LEAF)} leaves infeasible — fallback.')
         best_x = np.zeros(N)
         best_y = np.zeros(N)
         best_alpha = [None] * N

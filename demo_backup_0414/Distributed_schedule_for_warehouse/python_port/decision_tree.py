@@ -241,7 +241,8 @@ def ini_admm_decision_tree(agent_i, entries,
     pathInfo_c = const['pathInfo_c']
     use_pruning = const.get('use_pruning', True)
     use_t_bound = const.get('useTBound', True)
-    timeout_s = const.get('timeout_int_s', 30)
+    timeout_s   = const.get('timeout_int_s', 30)
+    verbose     = const.get('verbose', True)
 
     kn = 0    # 0-indexed task index (kn=1 in MATLAB)
     T_cst = 16.111
@@ -304,7 +305,8 @@ def ini_admm_decision_tree(agent_i, entries,
     valid_arrivals = valid_arrivals[~np.isnan(valid_arrivals)]
     T_bound = (float(np.max(valid_arrivals)) if len(valid_arrivals) > 0 else 0.0) \
               + float(np.sum(Cmat[:, valid_systems]))
-    print(f'  [T_bound] Agent {agent_i}: {T_bound:.2f}')
+    if verbose:
+        print(f'  [T_bound] Agent {agent_i}: {T_bound:.2f}')
 
     # ── Initialise tree ──────────────────────────────────────────────
     d_init = np.zeros(N)
@@ -358,7 +360,8 @@ def ini_admm_decision_tree(agent_i, entries,
             for idx in OPEN_queue:
                 if NODES[idx].tw > T_bound:
                     total_pruned += 1
-                    print(f'  [T_bound] Agent {agent_i}: pruned node (tw={NODES[idx].tw:.2f} > {T_bound:.2f})')
+                    if verbose:
+                        print(f'  [T_bound] Agent {agent_i}: pruned node (tw={NODES[idx].tw:.2f} > {T_bound:.2f})')
                 else:
                     new_q.append(idx)
             if not new_q and not LEAF:
@@ -367,7 +370,8 @@ def ini_admm_decision_tree(agent_i, entries,
 
         # Timeout
         if time.time() - t_start > timeout_s:
-            print(f'  [BFS] Agent {agent_i}: timeout {timeout_s}s, forcing termination.')
+            if verbose:
+                print(f'  [BFS] Agent {agent_i}: timeout {timeout_s}s, forcing termination.')
             OPEN_queue.clear()
             if not LEAF:
                 LEAF.append(1)
@@ -376,8 +380,9 @@ def ini_admm_decision_tree(agent_i, entries,
     # Trim NODES list
     NODES = NODES[:node_count + 1]
 
-    print(f'  [Agent {agent_i}] nodes={node_count}  leaves={len(LEAF)}'
-          f'  pruned={total_pruned}  t={time.time()-t_start:.2f}s')
+    if verbose:
+        print(f'  [Agent {agent_i}] nodes={node_count}  leaves={len(LEAF)}'
+              f'  pruned={total_pruned}  t={time.time()-t_start:.2f}s')
 
     # ── Solve QP over all leaves ─────────────────────────────────────
     x_out, y_out, best_alpha, best_gamma, best_idx, NODES = in_admm(

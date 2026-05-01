@@ -1,10 +1,13 @@
 """
 Python equivalent of MAIN_Parallel_Compute.m — ADMM core loop.
 
-Agents (0-indexed):
-  0-3  : intersection agents  (INi_Admm_DecisionTree + IN_Admm)
-  4-7  : road agents          (updateRoadAgent)
-  8    : terminal agent       (updateAgent9)
+Agent layout (0-indexed) is parameterized by ``const``:
+  0 .. n_int-1                  : intersection agents (decision tree)
+  n_int .. n_int+n_road-1       : road agents          (analytical)
+  n_int+n_road  (= terminal_0)  : terminal agent       (delay cost)
+
+Sizes (n_int / n_road / n_agents / terminal_id_0idx) MUST be present in
+``const`` — see ``_agent_sizes``. Construction helpers populate them.
 
 Parallel execution uses concurrent.futures.ProcessPoolExecutor.
 Sequential fallback available via const['useParallel'] = False.
@@ -22,6 +25,26 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from .decision_tree import ini_admm_decision_tree
 from .road_agent import update_road_agent
 from .terminal_agent import update_terminal_agent
+
+
+def _agent_sizes(const):
+    """Return (n_int, n_road, n_agents, terminal_0) from const.
+
+    All four keys must be present in ``const``; otherwise raises KeyError.
+    Construction helpers (``generate_random_config``, ``load_config`` in
+    ``run_validation.py``) populate these. Failing loud here prevents a class
+    of bugs where a const dict built for a non-4-int topology silently runs
+    with the old 4-int sizes.
+    """
+    required = ('n_int', 'n_road', 'n_agents', 'terminal_id_0idx')
+    missing = [k for k in required if k not in const]
+    if missing:
+        raise KeyError(
+            f'const is missing topology size keys: {missing}. '
+            f'Build const via generate_random_config(...) or load_config(...) '
+            f'so the sizes get populated, or set them explicitly.')
+    return (const['n_int'], const['n_road'],
+            const['n_agents'], const['terminal_id_0idx'])
 
 
 # ===========================================================================
@@ -102,17 +125,23 @@ def warmup_parallel_pool():
 # ===========================================================================
 
 def init_xy_prev(alpha_tilde, pathInfo_agent_chain, pathInfo_c,
-                 Dt, N, perturb_scale=0.0):
+                 Dt, N, perturb_scale=0.0,
+                 n_agents=9, terminal_id_0idx=8):
     """
     Equivalent of MATLAB initEarliestXYPrev_fromChain.
     All 0-indexed.  kn=0 (one task per vehicle per agent).
 
+    Parameters
+    ----------
+    n_agents          : total agent count (default 9 = 4 ints + 4 roads + terminal)
+    terminal_id_0idx  : 0-indexed agent ID of the terminal (default 8)
+
     Returns x_prev, y_prev, x_prev_bar, y_prev_bar
       x_prev[agent][n] = np.array([value])  or None
     """
-    n_agents = 9
+    n_nonterm = n_agents - 1   # number of non-terminal agents (ints + roads)
     x_prev = [[None] * N for _ in range(n_agents)]
-    y_prev = [[None] * N for _ in range(8)]   # no y for terminal (agent 8)
+    y_prev = [[None] * N for _ in range(n_nonterm)]   # no y for terminal
 
     for n in range(N):
         kn = 0
@@ -127,9 +156,9 @@ def init_xy_prev(alpha_tilde, pathInfo_agent_chain, pathInfo_c,
         int_count = 0
 
         for posi, ag in enumerate(chain):
-            if ag == 8:   # terminal (0-indexed)
+            if ag == terminal_id_0idx:
                 t_terminal = t_alpha + passed_int_time + passed_road_time + delta
-                x_prev[8][n] = np.array([t_terminal])
+                x_prev[terminal_id_0idx][n] = np.array([t_terminal])
                 continue
 
             if posi % 2 == 0:   # intersection (even positions: 0, 2, 4, ...)
@@ -153,7 +182,7 @@ def init_xy_prev(alpha_tilde, pathInfo_agent_chain, pathInfo_c,
     x_prev_bar = [[x_prev[ag][n].copy() if x_prev[ag][n] is not None else None
                    for n in range(N)] for ag in range(n_agents)]
     y_prev_bar = [[y_prev[ag][n].copy() if y_prev[ag][n] is not None else None
-                   for n in range(N)] for ag in range(8)]
+                   for n in range(N)] for ag in range(n_nonterm)]
 
     return x_prev, y_prev, x_prev_bar, y_prev_bar
 
@@ -229,13 +258,13 @@ def _agent_update_road(const, agent_i, entries, valid_systems,
     }
 
 
-def _agent_update_terminal(const, x9_prev, x9_prev_bar, a9_x):
+def _agent_update_terminal(const, x9_prev, x9_prev_bar, a9_x, terminal_id_0idx=8):
     """Run terminal agent update."""
     t0 = time.time()
     x9_new, delay_cost = update_terminal_agent(x9_prev, x9_prev_bar, a9_x, const)
     return {
         'kind': 'terminal',
-        'agent_i': 8,
+        'agent_i': terminal_id_0idx,
         'x9_new': x9_new,
         'delay_cost': delay_cost,
         'elapsed': time.time() - t0,
@@ -277,40 +306,45 @@ def run_admm_core(const, agent_participation,
     pathInfo_agent_chain = const['pathInfo_agent_chain']
     kn = 0
 
+    # Topology sizes
+    n_int, n_road, n_agents, terminal_0 = _agent_sizes(const)
+    n_nonterm = n_int + n_road   # non-terminal agents
+
     # ── Initialisation ───────────────────────────────────────────────
-    local_tree_cache = [None] * 9
+    local_tree_cache = [None] * n_agents
 
     if x_init is not None and y_init is not None:
         # Warm-start: use provided primal variables; clamp to alpha_tilde
         x_prev = [[x_init[ag][n].copy() if x_init[ag][n] is not None else None
-                   for n in range(N)] for ag in range(9)]
+                   for n in range(N)] for ag in range(n_agents)]
         y_prev = [[y_init[ag][n].copy() if y_init[ag][n] is not None else None
-                   for n in range(N)] for ag in range(8)]
+                   for n in range(N)] for ag in range(n_nonterm)]
         # Clamp: x_prev[ag][n] >= alpha_tilde[n] (feasibility under updated alpha)
         for n in range(N):
             lb = float(const['alpha_tilde'][n][0])
-            for ag in range(9):
+            for ag in range(n_agents):
                 if x_prev[ag][n] is not None:
                     x_prev[ag][n] = np.array([max(float(x_prev[ag][n][0]), lb)])
         x_prev_bar = [[x_prev[ag][n].copy() if x_prev[ag][n] is not None else None
-                       for n in range(N)] for ag in range(9)]
+                       for n in range(N)] for ag in range(n_agents)]
         y_prev_bar = [[y_prev[ag][n].copy() if y_prev[ag][n] is not None else None
-                       for n in range(N)] for ag in range(8)]
+                       for n in range(N)] for ag in range(n_nonterm)]
     else:
         x_prev, y_prev, x_prev_bar, y_prev_bar = init_xy_prev(
             const['alpha_tilde'], pathInfo_agent_chain,
             const['pathInfo_c'], const['Dt'], N,
-            const.get('randInitScale', 0.0))
+            const.get('randInitScale', 0.0),
+            n_agents=n_agents, terminal_id_0idx=terminal_0)
 
     # Dual variables: carry from previous step (hot-start) or reset to zero
     if ax_init is not None and ay_init is not None:
         a_x = [[ax_init[ag][n].copy() if ax_init[ag][n] is not None else np.array([0.0])
-                for n in range(N)] for ag in range(9)]
+                for n in range(N)] for ag in range(n_agents)]
         a_y = [[ay_init[ag][n].copy() if ay_init[ag][n] is not None else np.array([0.0])
-                for n in range(N)] for ag in range(9)]
+                for n in range(N)] for ag in range(n_agents)]
     else:
-        a_x = [[np.array([0.0]) for n in range(N)] for _ in range(9)]
-        a_y = [[np.array([0.0]) for n in range(N)] for _ in range(9)]
+        a_x = [[np.array([0.0]) for n in range(N)] for _ in range(n_agents)]
+        a_y = [[np.array([0.0]) for n in range(N)] for _ in range(n_agents)]
     a_x_new = copy.deepcopy(a_x)
     a_y_new = copy.deepcopy(a_y)
 
@@ -320,10 +354,22 @@ def run_admm_core(const, agent_participation,
 
     T0 = time.time()
 
+    # Boyd 2011 §3.4.3 over/under-relaxation factor (1.0 = standard ADMM).
+    # α<1 (under-relaxation) damps oscillation on non-convex problems;
+    # α∈(1,2] (over-relaxation) accelerates convergence on convex problems.
+    alpha_relax = float(const.get('alpha_relax', 1.0))
+    do_relax    = (alpha_relax != 1.0)
+
     for k in range(max_iter):
         t_iter = time.time()
         x_last = copy.deepcopy(x_prev)
         y_last = copy.deepcopy(y_prev)
+
+        # Snapshot consensus targets z^k before Step 1 mutates them — needed
+        # for relaxed primal x_relaxed = α·x + (1-α)·z^k (Boyd Eq. 3.21).
+        if do_relax:
+            x_bar_prev = copy.deepcopy(x_prev_bar)
+            y_bar_prev = copy.deepcopy(y_prev_bar)
 
         # ── Step 1: dual variable update ────────────────────────────
         for n in range(N):
@@ -339,32 +385,48 @@ def run_admm_core(const, agent_participation,
                 prev_ag = chain[pos - 1]
                 curr_ag = chain[pos]
 
-                # Skip terminal (agent 8) for y update
+                # Skip terminal for y update (terminal has no y variable)
                 xc = x_prev[curr_ag][n]
-                yp = y_prev[prev_ag][n] if prev_ag < 8 else None
+                yp = y_prev[prev_ag][n] if prev_ag != terminal_0 else None
 
                 if xc is None or yp is None:
                     continue
 
+                # Boyd over-relaxation: use α·primal + (1-α)·z^k in dual /
+                # consensus updates. α=1 reduces to standard ADMM exactly.
+                if do_relax:
+                    xb_old = x_bar_prev[curr_ag][n]
+                    yb_old = (y_bar_prev[prev_ag][n]
+                              if prev_ag != terminal_0 else None)
+                    xc_v = (alpha_relax * float(xc[kn])
+                            + (1 - alpha_relax) * float(xb_old[kn])
+                            if xb_old is not None else float(xc[kn]))
+                    yp_v = (alpha_relax * float(yp[kn])
+                            + (1 - alpha_relax) * float(yb_old[kn])
+                            if yb_old is not None else float(yp[kn]))
+                else:
+                    xc_v = float(xc[kn])
+                    yp_v = float(yp[kn])
+
                 a_x_new[curr_ag][n] = np.array([
                     float(a_x[curr_ag][n][kn])
-                    + rho1 * (float(xc[kn]) - float(yp[kn]))])
+                    + rho1 * (xc_v - yp_v)])
                 x_prev_bar[curr_ag][n] = np.array([
-                    (float(xc[kn]) + float(yp[kn])) / 2.0])
+                    (xc_v + yp_v) / 2.0])
 
                 a_y_new[prev_ag][n] = np.array([
                     float(a_y[prev_ag][n][kn])
-                    + rho1 * (float(yp[kn]) - float(xc[kn]))])
-                if prev_ag < 8:
+                    + rho1 * (yp_v - xc_v)])
+                if prev_ag != terminal_0:
                     y_prev_bar[prev_ag][n] = np.array([
-                        (float(yp[kn]) + float(xc[kn])) / 2.0])
+                        (yp_v + xc_v) / 2.0])
 
         # ── Step 2: local agent updates ──────────────────────────────
-        meta    = [None] * 9
+        meta    = [None] * n_agents
         futures = {}   # future → agent_i
 
-        # Intersection agents 0-3: dispatch to pool or run inline
-        for agent_i in range(4):
+        # Intersection agents 0..n_int-1: dispatch to pool or run inline
+        for agent_i in range(n_int):
             entries = agent_participation[agent_i]
             valid_systems = [n for n in range(N) if entries[n]]
             if not valid_systems:
@@ -390,8 +452,8 @@ def run_admm_core(const, agent_participation,
                     a_x_new[agent_i], a_y_new[agent_i],
                     local_tree_cache[agent_i])
 
-        # Road agents 4-7: always sequential (analytical, < 1ms each)
-        for agent_i in range(4, 8):
+        # Road agents n_int..n_nonterm-1: always sequential (analytical, < 1ms each)
+        for agent_i in range(n_int, n_nonterm):
             entries = agent_participation[agent_i]
             valid_systems = [n for n in range(N) if entries[n]]
             if not valid_systems:
@@ -406,9 +468,10 @@ def run_admm_core(const, agent_participation,
                     x_prev_bar[agent_i], y_prev_bar[agent_i],
                     a_x_new[agent_i], a_y_new[agent_i])
 
-        # Terminal agent 8: always sequential
-        meta[8] = _agent_update_terminal(
-            const, x_prev[8], x_prev_bar[8], a_x_new[8])
+        # Terminal agent: always sequential
+        meta[terminal_0] = _agent_update_terminal(
+            const, x_prev[terminal_0], x_prev_bar[terminal_0], a_x_new[terminal_0],
+            terminal_id_0idx=terminal_0)
 
         # Collect parallel intersection results
         for fut in as_completed(futures):
@@ -416,7 +479,7 @@ def run_admm_core(const, agent_participation,
 
         # ── Merge results ────────────────────────────────────────────
         r_local = 0.0
-        for agent_i in range(9):
+        for agent_i in range(n_agents):
             res = meta[agent_i]
             if verbose and k % 10 == 0:
                 print(f'  [k={k+1}] Agent {agent_i} time={res.get("elapsed",0):.3f}s')
@@ -442,10 +505,10 @@ def run_admm_core(const, agent_participation,
             elif res['kind'] == 'terminal':
                 delay_costs[k] = res['delay_cost']
                 for n in range(N):
-                    x_prev[8][n] = np.array([res['x9_new'][n]])
+                    x_prev[terminal_0][n] = np.array([res['x9_new'][n]])
 
         # ── NaN guard ────────────────────────────────────────────────
-        for agent_i in range(9):
+        for agent_i in range(n_agents):
             for n in range(N):
                 xc = x_prev[agent_i][n]
                 xl = x_last[agent_i][n]
@@ -453,7 +516,7 @@ def run_admm_core(const, agent_participation,
                         and np.any(np.isnan(xc)) and not np.any(np.isnan(xl))):
                     print(f'[NaN] k={k+1} agent={agent_i} n={n} x_prev replaced')
                     x_prev[agent_i][n] = xl.copy()
-                if agent_i < 8:
+                if agent_i != terminal_0:
                     yc = y_prev[agent_i][n]
                     yl = y_last[agent_i][n]
                     if (yc is not None and yl is not None
@@ -464,7 +527,7 @@ def run_admm_core(const, agent_participation,
         # ── Step 3: residuals ────────────────────────────────────────
         r = compute_r(x_prev, y_prev, r_local, const)
         s = 0.0
-        for agent_i in range(8):
+        for agent_i in range(n_nonterm):
             entries = agent_participation[agent_i]
             vs = [n for n in range(N) if entries[n]]
             for n in vs:
@@ -475,7 +538,7 @@ def run_admm_core(const, agent_participation,
                 if yc is not None and yl is not None:
                     s += float(np.sum((yc - yl) ** 2))
         for n in range(N):
-            xc = x_prev[8][n]; xl = x_last[8][n]
+            xc = x_prev[terminal_0][n]; xl = x_last[terminal_0][n]
             if xc is not None and xl is not None:
                 s += float(np.sum((xc - xl) ** 2))
 
@@ -497,10 +560,10 @@ def run_admm_core(const, agent_participation,
                 scale = 1.0
             if scale != 1.0:
                 ratio = 1.0 / scale
-                for ag in range(9):
+                for ag in range(n_agents):
                     for n in range(N):
                         a_x[ag][n] = a_x[ag][n] * ratio
-                        if ag < 8:
+                        if ag != terminal_0:
                             a_y[ag][n] = a_y[ag][n] * ratio
                 rho1 *= scale
                 rho2 *= scale
@@ -519,6 +582,9 @@ def run_admm_core(const, agent_participation,
             delay_costs = delay_costs[:k + 1]
             k += 1
             break
+    else:
+        # Loop completed without convergence: align k with array length.
+        k = max_iter
 
     T_admm = time.time() - T0
     if verbose:

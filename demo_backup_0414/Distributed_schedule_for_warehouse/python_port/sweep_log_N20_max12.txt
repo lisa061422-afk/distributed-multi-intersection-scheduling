@@ -1,0 +1,10 @@
+Sweep: N=20  2x2 warehouse  Dt=3  T_val=2  max_per_int=12
+first_iter_timeout=10.0s  total_budget=30.0s  max_iter=300
+Seeds (17): [42, 7, 13, 100, 200, 1234, 2024, 4101, 4222, 4223, 1, 3, 11, 21, 71, 314, 999]
+
+ seed  iters   admm(s)    delay  status          reason
+---------------------------------------------------------------------------
+   42      1     10.82    0.000  iter1-slow      
+    7      1     32.32    0.000  iter1-slow      
+   13      1     32.26    0.000  iter1-slow      
+  100    300    426.30   10.971  no-conv         

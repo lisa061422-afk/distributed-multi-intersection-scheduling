@@ -75,7 +75,7 @@ if useParallel && license('test','Distrib_Computing_Toolbox')
         if ~isempty(p)
             delete(p);
         end
-        parpool('local', 10);
+        parpool('local'); %, 10
     end
 end
 
@@ -472,7 +472,11 @@ drawnow; pause(0.3);
 localBase    = fullfile(caseDir, sprintf('local_%s', caseName));
 localPngFile = [localBase '.png'];
 savefig(fig, [localBase '.fig']);
-print(fig, localPngFile, '-dpng', '-r150');
+try
+    exportapp(fig, localPngFile);
+catch
+    exportgraphics(fig, localPngFile, 'Resolution', 150);
+end
 
 %% ══════════════════════════════════════════════════════════════════════════
 %%  FCFS (Centralized Branch-and-Bound) using the SAME const parameters
@@ -583,7 +587,11 @@ drawnow; pause(0.3);
     fcfsBase    = fullfile(caseDir, sprintf('fcfs_%s', caseName));
     fcfsPngFile = [fcfsBase '.png'];
     savefig(fig_fcfs, [fcfsBase '.fig']);
-    print(fig_fcfs, fcfsPngFile, '-dpng', '-r150');
+    try
+        exportapp(fig_fcfs, fcfsPngFile);
+    catch
+        exportgraphics(fig_fcfs, fcfsPngFile, 'Resolution', 150);
+    end
 
     %% ── Auto-export to HTML demo ─────────────────────────────────────────
     fprintf('\nAuto-exporting to demo: group=%s  scene=%s\n', demoGroup, demoScene);
@@ -652,7 +660,11 @@ if enable_priority_sweep && ~isempty(priority_robots)
         drawnow; pause(0.3);
         localBase_p = fullfile(caseDir_p, sprintf('local_%s', caseName_p));
         savefig(fig_p, [localBase_p '.fig']);
-        print(fig_p, [localBase_p '.png'], '-dpng', '-r150');
+        try
+            exportapp(fig_p, [localBase_p '.png']);
+        catch
+            exportgraphics(fig_p, [localBase_p '.png'], 'Resolution', 150);
+        end
         close(fig_p);
 
         % Export to HTML demo (priority_n passed → priorityRobot field in JS)
@@ -1105,3 +1117,5 @@ function S = agent_update_road_stub_single(agent_i)
         'valid_systems', [], 'x_road', [], 'y_road', [], ...
         'elapsed', 0, 'worker', wid);
 end
+
+

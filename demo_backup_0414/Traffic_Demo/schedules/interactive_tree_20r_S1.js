@@ -7,7 +7,7 @@ window.ALL_INTERACTIVE_TREES["20r_S1"] = {
     "1": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.00,"isLeaf":false,"isRoot":true},
-        {"id":2,"orig":40,"tw":53.111,"f":-0.00,"isLeaf":true,"isRoot":false}
+        {"id":2,"orig":39,"tw":29.467,"f":3.85,"isLeaf":true,"isRoot":false}
       ],
       "edges": [
         [1,2]
@@ -19,18 +19,18 @@ window.ALL_INTERACTIVE_TREES["20r_S1"] = {
       ],
       "leafGantts": [
         {
-          "fCost": -0.00,
+          "fCost": 3.85,
           "vehicles": [
-            {"veh":2,"k":2,"t0":16.3562,"tf":18.7123,"genTime":16.3562,"actualGenTime":16.3562,"spaces":[2.0000,5.0000,4.0000],"segStart":[16.3562,17.1415,17.9269],"segEnd":[17.1415,17.9269,18.7123]},
-            {"veh":3,"k":1,"t0":5.0000,"tf":7.0000,"genTime":5.0000,"actualGenTime":5.0000,"spaces":[1.0000,2.0000],"segStart":[5.0000,6.0000],"segEnd":[6.0000,7.0000]},
-            {"veh":4,"k":1,"t0":12.0000,"tf":12.7854,"genTime":12.0000,"actualGenTime":12.0000,"spaces":[1.0000],"segStart":[12.0000],"segEnd":[12.7854]},
-            {"veh":5,"k":1,"t0":19.0000,"tf":19.7854,"genTime":19.0000,"actualGenTime":19.0000,"spaces":[1.0000],"segStart":[19.0000],"segEnd":[19.7854]},
-            {"veh":9,"k":2,"t0":24.9998,"tf":26.9998,"genTime":24.9999,"actualGenTime":24.9998,"spaces":[3.0000,4.0000],"segStart":[24.9998,25.9998],"segEnd":[25.9998,26.9998]},
-            {"veh":10,"k":2,"t0":32.0000,"tf":32.7854,"genTime":32.0000,"actualGenTime":32.0000,"spaces":[3.0000],"segStart":[32.0000],"segEnd":[32.7854]},
-            {"veh":11,"k":2,"t0":19.7855,"tf":21.7855,"genTime":19.7854,"actualGenTime":19.7855,"spaces":[3.0000,4.0000],"segStart":[19.7855,20.7855],"segEnd":[20.7855,21.7855]},
-            {"veh":16,"k":1,"t0":20.0000,"tf":22.3562,"genTime":20.0000,"actualGenTime":20.0000,"spaces":[4.0000,5.0000,2.0000],"segStart":[20.0000,20.7854,21.5708],"segEnd":[20.7854,21.5708,22.3562]},
-            {"veh":17,"k":1,"t0":27.0000,"tf":29.0000,"genTime":27.0000,"actualGenTime":27.0000,"spaces":[4.0000,1.0000],"segStart":[27.0000,28.0000],"segEnd":[28.0000,29.0000]},
-            {"veh":19,"k":2,"t0":37.0000,"tf":39.0000,"genTime":37.0000,"actualGenTime":37.0000,"spaces":[2.0000,3.0000],"segStart":[37.0000,38.0000],"segEnd":[38.0000,39.0000]}
+            {"veh":4,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[1.0000,2.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":5,"k":1,"t0":5.0000,"tf":7.0000,"genTime":5.0000,"actualGenTime":5.0000,"spaces":[1.0000,2.0000],"segStart":[5.0000,6.0000],"segEnd":[6.0000,7.0000]},
+            {"veh":6,"k":1,"t0":8.0000,"tf":8.7854,"genTime":8.0000,"actualGenTime":8.0000,"spaces":[1.0000],"segStart":[8.0000],"segEnd":[8.7854]},
+            {"veh":8,"k":2,"t0":11.1403,"tf":13.4965,"genTime":10.7855,"actualGenTime":10.9629,"spaces":[2.0000,5.0000,4.0000],"segStart":[11.1403,11.9257,12.7111],"segEnd":[11.9257,12.7111,13.4965]},
+            {"veh":9,"k":2,"t0":13.3562,"tf":15.7124,"genTime":13.3562,"actualGenTime":13.3562,"spaces":[2.0000,5.0000,4.0000],"segStart":[13.3562,14.1416,14.9270],"segEnd":[14.1416,14.9270,15.7124]},
+            {"veh":10,"k":2,"t0":7.5695,"tf":9.5695,"genTime":7.0000,"actualGenTime":7.2847,"spaces":[3.0000,4.0000],"segStart":[7.5695,8.5695],"segEnd":[8.5695,9.5695]},
+            {"veh":12,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[4.0000,1.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":13,"k":1,"t0":7.7841,"tf":10.1403,"genTime":5.0000,"actualGenTime":5.0000,"spaces":[4.0000,5.0000,2.0000],"segStart":[7.7841,8.5695,9.3549],"segEnd":[8.5695,9.3549,10.1403]},
+            {"veh":15,"k":2,"t0":10.1403,"tf":12.1403,"genTime":10.0000,"actualGenTime":10.0701,"spaces":[2.0000,3.0000],"segStart":[10.1403,11.1403],"segEnd":[11.1403,12.1403]},
+            {"veh":17,"k":2,"t0":5.7841,"tf":7.7841,"genTime":5.7846,"actualGenTime":5.7842,"spaces":[3.0000,4.0000],"segStart":[5.7841,6.7841],"segEnd":[6.7841,7.7841]}
           ],
           "numSpaces": 5
         }
@@ -39,34 +39,30 @@ window.ALL_INTERACTIVE_TREES["20r_S1"] = {
     "2": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.00,"isLeaf":false,"isRoot":true},
-        {"id":2,"orig":20,"tw":25.286,"f":-0.00,"isLeaf":false,"isRoot":false},
-        {"id":3,"orig":21,"tw":25.572,"f":-0.00,"isLeaf":false,"isRoot":false},
-        {"id":4,"orig":43,"tw":53.111,"f":0.57,"isLeaf":true,"isRoot":false}
+        {"id":2,"orig":33,"tw":29.220,"f":0.79,"isLeaf":true,"isRoot":false}
       ],
       "edges": [
-        [1,2],
-        [2,3],
-        [3,4]
+        [1,2]
       ],
-      "optimalPath": [1,2,3,4],
+      "optimalPath": [1,2],
       "optimalLeaf": 1,
       "leafPaths": [
-        [1,2,3,4]
+        [1,2]
       ],
       "leafGantts": [
         {
-          "fCost": 0.57,
+          "fCost": 0.79,
           "vehicles": [
-            {"veh":1,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[1.0000,2.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
-            {"veh":2,"k":1,"t0":9.0000,"tf":11.3562,"genTime":9.0000,"actualGenTime":9.0000,"spaces":[1.0000,5.0000,3.0000],"segStart":[9.0000,9.7854,10.5708],"segEnd":[9.7854,10.5708,11.3562]},
-            {"veh":4,"k":2,"t0":17.7854,"tf":18.5708,"genTime":17.7854,"actualGenTime":17.7854,"spaces":[4.0000],"segStart":[17.7854],"segEnd":[18.5708]},
-            {"veh":5,"k":2,"t0":24.7868,"tf":27.1430,"genTime":24.7878,"actualGenTime":24.7887,"spaces":[4.0000,5.0000,2.0000],"segStart":[24.7868,25.5722,26.3576],"segEnd":[25.5722,26.3576,27.1430]},
-            {"veh":6,"k":2,"t0":15.3562,"tf":17.3562,"genTime":15.3562,"actualGenTime":15.3562,"spaces":[3.0000,4.0000],"segStart":[15.3562,16.3562],"segEnd":[16.3562,17.3562]},
-            {"veh":13,"k":2,"t0":24.5722,"tf":26.5722,"genTime":24.0001,"actualGenTime":24.2876,"spaces":[3.0000,4.0000],"segStart":[24.5722,25.5722],"segEnd":[25.5722,26.5722]},
-            {"veh":17,"k":2,"t0":34.0000,"tf":34.7854,"genTime":34.0000,"actualGenTime":34.0000,"spaces":[4.0000],"segStart":[34.0000],"segEnd":[34.7854]},
-            {"veh":18,"k":1,"t0":23.0000,"tf":23.7854,"genTime":23.0000,"actualGenTime":23.0000,"spaces":[2.0000],"segStart":[23.0000],"segEnd":[23.7854]},
-            {"veh":19,"k":1,"t0":30.0000,"tf":32.0000,"genTime":30.0000,"actualGenTime":30.0000,"spaces":[2.0000,3.0000],"segStart":[30.0000,31.0000],"segEnd":[31.0000,32.0000]},
-            {"veh":20,"k":1,"t0":37.0000,"tf":37.7854,"genTime":37.0000,"actualGenTime":37.0000,"spaces":[2.0000],"segStart":[37.0000],"segEnd":[37.7854]}
+            {"veh":2,"k":2,"t0":13.1085,"tf":15.1085,"genTime":13.1117,"actualGenTime":13.1121,"spaces":[3.0000,4.0000],"segStart":[13.1085,14.1085],"segEnd":[14.1085,15.1085]},
+            {"veh":6,"k":2,"t0":11.7854,"tf":12.5708,"genTime":11.7854,"actualGenTime":11.7854,"spaces":[4.0000],"segStart":[11.7854],"segEnd":[12.5708]},
+            {"veh":7,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[1.0000,2.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":8,"k":1,"t0":5.4292,"tf":7.7854,"genTime":5.0000,"actualGenTime":5.0000,"spaces":[1.0000,5.0000,3.0000],"segStart":[5.4292,6.2146,7.0000],"segEnd":[6.2146,7.0000,7.7854]},
+            {"veh":9,"k":1,"t0":8.0000,"tf":10.3562,"genTime":8.0000,"actualGenTime":8.0000,"spaces":[1.0000,5.0000,3.0000],"segStart":[8.0000,8.7854,9.5708],"segEnd":[8.7854,9.5708,10.3562]},
+            {"veh":12,"k":2,"t0":6.9997,"tf":7.7851,"genTime":6.9997,"actualGenTime":6.9996,"spaces":[4.0000],"segStart":[6.9997],"segEnd":[7.7851]},
+            {"veh":14,"k":1,"t0":2.0000,"tf":2.7854,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[2.0000],"segStart":[2.0000],"segEnd":[2.7854]},
+            {"veh":15,"k":1,"t0":5.0000,"tf":7.0000,"genTime":5.0000,"actualGenTime":5.0000,"spaces":[2.0000,3.0000],"segStart":[5.0000,6.0000],"segEnd":[6.0000,7.0000]},
+            {"veh":16,"k":1,"t0":8.0000,"tf":8.7854,"genTime":8.0000,"actualGenTime":8.0000,"spaces":[2.0000],"segStart":[8.0000],"segEnd":[8.7854]},
+            {"veh":20,"k":2,"t0":10.3562,"tf":12.7124,"genTime":10.0000,"actualGenTime":10.1781,"spaces":[3.0000,5.0000,1.0000],"segStart":[10.3562,11.1416,11.9270],"segEnd":[11.1416,11.9270,12.7124]}
           ],
           "numSpaces": 5
         }
@@ -75,109 +71,30 @@ window.ALL_INTERACTIVE_TREES["20r_S1"] = {
     "3": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.00,"isLeaf":false,"isRoot":true},
-        {"id":2,"orig":13,"tw":18.851,"f":-0.00,"isLeaf":false,"isRoot":false},
-        {"id":3,"orig":14,"tw":19.637,"f":-0.00,"isLeaf":false,"isRoot":false},
-        {"id":4,"orig":15,"tw":19.000,"f":-0.00,"isLeaf":false,"isRoot":false},
-        {"id":5,"orig":27,"tw":29.391,"f":0.30,"isLeaf":false,"isRoot":false},
-        {"id":6,"orig":28,"tw":30.391,"f":0.69,"isLeaf":false,"isRoot":false},
-        {"id":7,"orig":29,"tw":29.782,"f":0.30,"isLeaf":false,"isRoot":false},
-        {"id":8,"orig":52,"tw":58.896,"f":1.08,"isLeaf":true,"isRoot":false},
-        {"id":9,"orig":60,"tw":29.391,"f":1.79,"isLeaf":false,"isRoot":false},
-        {"id":10,"orig":61,"tw":30.391,"f":2.18,"isLeaf":false,"isRoot":false},
-        {"id":11,"orig":62,"tw":29.782,"f":1.79,"isLeaf":false,"isRoot":false},
-        {"id":12,"orig":81,"tw":58.896,"f":2.30,"isLeaf":true,"isRoot":false},
-        {"id":13,"orig":97,"tw":58.896,"f":2.57,"isLeaf":true,"isRoot":false},
-        {"id":14,"orig":109,"tw":58.896,"f":3.79,"isLeaf":true,"isRoot":false}
+        {"id":2,"orig":37,"tw":27.896,"f":5.06,"isLeaf":true,"isRoot":false}
       ],
       "edges": [
-        [1,2],
-        [2,3],
-        [2,4],
-        [4,5],
-        [5,6],
-        [5,7],
-        [7,8],
-        [3,9],
-        [9,10],
-        [9,11],
-        [6,12],
-        [11,13],
-        [10,14]
+        [1,2]
       ],
-      "optimalPath": [1,2,4,5,7,8],
+      "optimalPath": [1,2],
       "optimalLeaf": 1,
       "leafPaths": [
-        [1,2,4,5,7,8],
-        [1,2,4,5,6,12],
-        [1,2,3,9,11,13],
-        [1,2,3,9,10,14]
+        [1,2]
       ],
       "leafGantts": [
         {
-          "fCost": 1.08,
+          "fCost": 5.06,
           "vehicles": [
-            {"veh":1,"k":2,"t0":9.0000,"tf":11.0000,"genTime":9.0000,"actualGenTime":9.0000,"spaces":[1.0000,2.0000],"segStart":[9.0000,10.0000],"segEnd":[10.0000,11.0000]},
-            {"veh":5,"k":3,"t0":32.1447,"tf":34.1447,"genTime":32.1463,"actualGenTime":32.1460,"spaces":[1.0000,2.0000],"segStart":[32.1447,33.1447],"segEnd":[33.1447,34.1447]},
-            {"veh":6,"k":1,"t0":8.0000,"tf":10.3562,"genTime":8.0000,"actualGenTime":8.0000,"spaces":[2.0000,5.0000,4.0000],"segStart":[8.0000,8.7854,9.5708],"segEnd":[8.7854,9.5708,10.3562]},
-            {"veh":7,"k":1,"t0":15.0000,"tf":17.0000,"genTime":15.0000,"actualGenTime":15.0000,"spaces":[2.0000,3.0000],"segStart":[15.0000,16.0000],"segEnd":[16.0000,17.0000]},
-            {"veh":8,"k":2,"t0":19.0000,"tf":21.3562,"genTime":18.7302,"actualGenTime":18.8652,"spaces":[4.0000,5.0000,2.0000],"segStart":[19.0000,19.7854,20.5708],"segEnd":[19.7854,20.5708,21.3562]},
-            {"veh":12,"k":2,"t0":28.7822,"tf":30.7822,"genTime":28.0000,"actualGenTime":28.3908,"spaces":[4.0000,1.0000],"segStart":[28.7822,29.7822],"segEnd":[29.7822,30.7822]},
-            {"veh":13,"k":1,"t0":17.0000,"tf":19.0000,"genTime":17.0000,"actualGenTime":17.0000,"spaces":[3.0000,4.0000],"segStart":[17.0000,18.0000],"segEnd":[18.0000,19.0000]},
-            {"veh":14,"k":1,"t0":24.0000,"tf":24.7854,"genTime":24.0000,"actualGenTime":24.0000,"spaces":[3.0000],"segStart":[24.0000],"segEnd":[24.7854]},
-            {"veh":15,"k":1,"t0":31.0000,"tf":31.7854,"genTime":31.0000,"actualGenTime":31.0000,"spaces":[3.0000],"segStart":[31.0000],"segEnd":[31.7854]},
-            {"veh":18,"k":2,"t0":28.7822,"tf":30.7822,"genTime":28.7831,"actualGenTime":28.7823,"spaces":[1.0000,2.0000],"segStart":[28.7822,29.7822],"segEnd":[29.7822,30.7822]},
-            {"veh":20,"k":2,"t0":42.7854,"tf":43.5708,"genTime":42.7854,"actualGenTime":42.7854,"spaces":[1.0000],"segStart":[42.7854],"segEnd":[43.5708]}
-          ],
-          "numSpaces": 5
-        },
-        {
-          "fCost": 2.30,
-          "vehicles": [
-            {"veh":1,"k":2,"t0":9.0000,"tf":11.0000,"genTime":9.0000,"actualGenTime":9.0000,"spaces":[1.0000,2.0000],"segStart":[9.0000,10.0000],"segEnd":[10.0000,11.0000]},
-            {"veh":5,"k":3,"t0":32.1447,"tf":34.1447,"genTime":32.1463,"actualGenTime":32.1460,"spaces":[1.0000,2.0000],"segStart":[32.1447,33.1447],"segEnd":[33.1447,34.1447]},
-            {"veh":6,"k":1,"t0":8.0000,"tf":10.3562,"genTime":8.0000,"actualGenTime":8.0000,"spaces":[2.0000,5.0000,4.0000],"segStart":[8.0000,8.7854,9.5708],"segEnd":[8.7854,9.5708,10.3562]},
-            {"veh":7,"k":1,"t0":15.0000,"tf":17.0000,"genTime":15.0000,"actualGenTime":15.0000,"spaces":[2.0000,3.0000],"segStart":[15.0000,16.0000],"segEnd":[16.0000,17.0000]},
-            {"veh":8,"k":2,"t0":19.0000,"tf":21.3562,"genTime":18.7302,"actualGenTime":18.8652,"spaces":[4.0000,5.0000,2.0000],"segStart":[19.0000,19.7854,20.5708],"segEnd":[19.7854,20.5708,21.3562]},
-            {"veh":12,"k":2,"t0":28.3908,"tf":30.3908,"genTime":28.0000,"actualGenTime":28.3908,"spaces":[4.0000,1.0000],"segStart":[28.3908,29.3908],"segEnd":[29.3908,30.3908]},
-            {"veh":13,"k":1,"t0":17.0000,"tf":19.0000,"genTime":17.0000,"actualGenTime":17.0000,"spaces":[3.0000,4.0000],"segStart":[17.0000,18.0000],"segEnd":[18.0000,19.0000]},
-            {"veh":14,"k":1,"t0":24.0000,"tf":24.7854,"genTime":24.0000,"actualGenTime":24.0000,"spaces":[3.0000],"segStart":[24.0000],"segEnd":[24.7854]},
-            {"veh":15,"k":1,"t0":31.0000,"tf":31.7854,"genTime":31.0000,"actualGenTime":31.0000,"spaces":[3.0000],"segStart":[31.0000],"segEnd":[31.7854]},
-            {"veh":18,"k":2,"t0":30.3908,"tf":32.3908,"genTime":28.7831,"actualGenTime":28.7823,"spaces":[1.0000,2.0000],"segStart":[30.3908,31.3908],"segEnd":[31.3908,32.3908]},
-            {"veh":20,"k":2,"t0":42.7854,"tf":43.5708,"genTime":42.7854,"actualGenTime":42.7854,"spaces":[1.0000],"segStart":[42.7854],"segEnd":[43.5708]}
-          ],
-          "numSpaces": 5
-        },
-        {
-          "fCost": 2.57,
-          "vehicles": [
-            {"veh":1,"k":2,"t0":9.0000,"tf":11.0000,"genTime":9.0000,"actualGenTime":9.0000,"spaces":[1.0000,2.0000],"segStart":[9.0000,10.0000],"segEnd":[10.0000,11.0000]},
-            {"veh":5,"k":3,"t0":32.1447,"tf":34.1447,"genTime":32.1463,"actualGenTime":32.1460,"spaces":[1.0000,2.0000],"segStart":[32.1447,33.1447],"segEnd":[33.1447,34.1447]},
-            {"veh":6,"k":1,"t0":8.0000,"tf":10.3562,"genTime":8.0000,"actualGenTime":8.0000,"spaces":[2.0000,5.0000,4.0000],"segStart":[8.0000,8.7854,9.5708],"segEnd":[8.7854,9.5708,10.3562]},
-            {"veh":7,"k":1,"t0":15.0000,"tf":17.0000,"genTime":15.0000,"actualGenTime":15.0000,"spaces":[2.0000,3.0000],"segStart":[15.0000,16.0000],"segEnd":[16.0000,17.0000]},
-            {"veh":8,"k":2,"t0":18.8512,"tf":21.2074,"genTime":18.7302,"actualGenTime":18.8652,"spaces":[4.0000,5.0000,2.0000],"segStart":[18.8512,19.6366,20.4220],"segEnd":[19.6366,20.4220,21.2074]},
-            {"veh":12,"k":2,"t0":28.7822,"tf":30.7822,"genTime":28.0000,"actualGenTime":28.3908,"spaces":[4.0000,1.0000],"segStart":[28.7822,29.7822],"segEnd":[29.7822,30.7822]},
-            {"veh":13,"k":1,"t0":18.6366,"tf":20.6366,"genTime":17.0000,"actualGenTime":17.0000,"spaces":[3.0000,4.0000],"segStart":[18.6366,19.6366],"segEnd":[19.6366,20.6366]},
-            {"veh":14,"k":1,"t0":24.0000,"tf":24.7854,"genTime":24.0000,"actualGenTime":24.0000,"spaces":[3.0000],"segStart":[24.0000],"segEnd":[24.7854]},
-            {"veh":15,"k":1,"t0":31.0000,"tf":31.7854,"genTime":31.0000,"actualGenTime":31.0000,"spaces":[3.0000],"segStart":[31.0000],"segEnd":[31.7854]},
-            {"veh":18,"k":2,"t0":28.7822,"tf":30.7822,"genTime":28.7831,"actualGenTime":28.7823,"spaces":[1.0000,2.0000],"segStart":[28.7822,29.7822],"segEnd":[29.7822,30.7822]},
-            {"veh":20,"k":2,"t0":42.7854,"tf":43.5708,"genTime":42.7854,"actualGenTime":42.7854,"spaces":[1.0000],"segStart":[42.7854],"segEnd":[43.5708]}
-          ],
-          "numSpaces": 5
-        },
-        {
-          "fCost": 3.79,
-          "vehicles": [
-            {"veh":1,"k":2,"t0":9.0000,"tf":11.0000,"genTime":9.0000,"actualGenTime":9.0000,"spaces":[1.0000,2.0000],"segStart":[9.0000,10.0000],"segEnd":[10.0000,11.0000]},
-            {"veh":5,"k":3,"t0":32.1447,"tf":34.1447,"genTime":32.1463,"actualGenTime":32.1460,"spaces":[1.0000,2.0000],"segStart":[32.1447,33.1447],"segEnd":[33.1447,34.1447]},
-            {"veh":6,"k":1,"t0":8.0000,"tf":10.3562,"genTime":8.0000,"actualGenTime":8.0000,"spaces":[2.0000,5.0000,4.0000],"segStart":[8.0000,8.7854,9.5708],"segEnd":[8.7854,9.5708,10.3562]},
-            {"veh":7,"k":1,"t0":15.0000,"tf":17.0000,"genTime":15.0000,"actualGenTime":15.0000,"spaces":[2.0000,3.0000],"segStart":[15.0000,16.0000],"segEnd":[16.0000,17.0000]},
-            {"veh":8,"k":2,"t0":18.8512,"tf":21.2074,"genTime":18.7302,"actualGenTime":18.8652,"spaces":[4.0000,5.0000,2.0000],"segStart":[18.8512,19.6366,20.4220],"segEnd":[19.6366,20.4220,21.2074]},
-            {"veh":12,"k":2,"t0":28.3908,"tf":30.3908,"genTime":28.0000,"actualGenTime":28.3908,"spaces":[4.0000,1.0000],"segStart":[28.3908,29.3908],"segEnd":[29.3908,30.3908]},
-            {"veh":13,"k":1,"t0":18.6366,"tf":20.6366,"genTime":17.0000,"actualGenTime":17.0000,"spaces":[3.0000,4.0000],"segStart":[18.6366,19.6366],"segEnd":[19.6366,20.6366]},
-            {"veh":14,"k":1,"t0":24.0000,"tf":24.7854,"genTime":24.0000,"actualGenTime":24.0000,"spaces":[3.0000],"segStart":[24.0000],"segEnd":[24.7854]},
-            {"veh":15,"k":1,"t0":31.0000,"tf":31.7854,"genTime":31.0000,"actualGenTime":31.0000,"spaces":[3.0000],"segStart":[31.0000],"segEnd":[31.7854]},
-            {"veh":18,"k":2,"t0":30.3908,"tf":32.3908,"genTime":28.7831,"actualGenTime":28.7823,"spaces":[1.0000,2.0000],"segStart":[30.3908,31.3908],"segEnd":[31.3908,32.3908]},
-            {"veh":20,"k":2,"t0":42.7854,"tf":43.5708,"genTime":42.7854,"actualGenTime":42.7854,"spaces":[1.0000],"segStart":[42.7854],"segEnd":[43.5708]}
+            {"veh":1,"k":1,"t0":2.0000,"tf":2.7854,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[2.0000],"segStart":[2.0000],"segEnd":[2.7854]},
+            {"veh":2,"k":1,"t0":7.7599,"tf":10.1161,"genTime":5.0000,"actualGenTime":5.0000,"spaces":[2.0000,5.0000,4.0000],"segStart":[7.7599,8.5453,9.3307],"segEnd":[8.5453,9.3307,10.1161]},
+            {"veh":3,"k":1,"t0":8.5453,"tf":10.5453,"genTime":8.0000,"actualGenTime":8.0000,"spaces":[2.0000,3.0000],"segStart":[8.5453,9.5453],"segEnd":[9.5453,10.5453]},
+            {"veh":7,"k":2,"t0":8.5453,"tf":10.5453,"genTime":7.0000,"actualGenTime":7.7700,"spaces":[1.0000,2.0000],"segStart":[8.5453,9.5453],"segEnd":[9.5453,10.5453]},
+            {"veh":11,"k":2,"t0":10.9015,"tf":13.2577,"genTime":10.7855,"actualGenTime":10.8408,"spaces":[4.0000,5.0000,2.0000],"segStart":[10.9015,11.6869,12.4723],"segEnd":[11.6869,12.4723,13.2577]},
+            {"veh":14,"k":2,"t0":5.7599,"tf":7.7599,"genTime":5.7699,"actualGenTime":5.7621,"spaces":[1.0000,2.0000],"segStart":[5.7599,6.7599],"segEnd":[6.7599,7.7599]},
+            {"veh":16,"k":2,"t0":11.7854,"tf":14.1416,"genTime":11.7854,"actualGenTime":11.7854,"spaces":[1.0000,5.0000,3.0000],"segStart":[11.7854,12.5708,13.3562],"segEnd":[12.5708,13.3562,14.1416]},
+            {"veh":18,"k":2,"t0":10.1161,"tf":12.4723,"genTime":10.0000,"actualGenTime":10.0553,"spaces":[4.0000,5.0000,2.0000],"segStart":[10.1161,10.9015,11.6869],"segEnd":[10.9015,11.6869,12.4723]},
+            {"veh":19,"k":1,"t0":2.0000,"tf":2.7854,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[3.0000],"segStart":[2.0000],"segEnd":[2.7854]},
+            {"veh":20,"k":1,"t0":5.0000,"tf":7.0000,"genTime":5.0000,"actualGenTime":5.0000,"spaces":[3.0000,4.0000],"segStart":[5.0000,6.0000],"segEnd":[6.0000,7.0000]}
           ],
           "numSpaces": 5
         }
@@ -186,34 +103,30 @@ window.ALL_INTERACTIVE_TREES["20r_S1"] = {
     "4": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.00,"isLeaf":false,"isRoot":true},
-        {"id":2,"orig":5,"tw":12.571,"f":0.00,"isLeaf":false,"isRoot":false},
-        {"id":3,"orig":6,"tw":12.935,"f":0.00,"isLeaf":false,"isRoot":false},
-        {"id":4,"orig":45,"tw":52.896,"f":0.30,"isLeaf":true,"isRoot":false}
+        {"id":2,"orig":36,"tw":33.253,"f":1.22,"isLeaf":true,"isRoot":false}
       ],
       "edges": [
-        [1,2],
-        [2,3],
-        [3,4]
+        [1,2]
       ],
-      "optimalPath": [1,2,3,4],
+      "optimalPath": [1,2],
       "optimalLeaf": 1,
       "leafPaths": [
-        [1,2,3,4]
+        [1,2]
       ],
       "leafGantts": [
         {
-          "fCost": 0.30,
+          "fCost": 1.22,
           "vehicles": [
-            {"veh":3,"k":2,"t0":11.9350,"tf":13.9350,"genTime":11.9723,"actualGenTime":11.9556,"spaces":[1.0000,2.0000],"segStart":[11.9350,12.9350],"segEnd":[12.9350,13.9350]},
-            {"veh":7,"k":2,"t0":22.0000,"tf":22.7854,"genTime":22.0000,"actualGenTime":22.0000,"spaces":[2.0000],"segStart":[22.0000],"segEnd":[22.7854]},
-            {"veh":8,"k":1,"t0":11.3642,"tf":13.7204,"genTime":11.0000,"actualGenTime":11.0000,"spaces":[3.0000,5.0000,1.0000],"segStart":[11.3642,12.1496,12.9350],"segEnd":[12.1496,12.9350,13.7204]},
-            {"veh":9,"k":1,"t0":18.0000,"tf":20.0000,"genTime":18.0000,"actualGenTime":18.0000,"spaces":[3.0000,4.0000],"segStart":[18.0000,19.0000],"segEnd":[19.0000,20.0000]},
-            {"veh":10,"k":1,"t0":25.0000,"tf":27.0000,"genTime":25.0000,"actualGenTime":25.0000,"spaces":[3.0000,4.0000],"segStart":[25.0000,26.0000],"segEnd":[26.0000,27.0000]},
-            {"veh":11,"k":1,"t0":14.0000,"tf":14.7854,"genTime":14.0000,"actualGenTime":14.0000,"spaces":[4.0000],"segStart":[14.0000],"segEnd":[14.7854]},
-            {"veh":12,"k":1,"t0":21.0000,"tf":23.0000,"genTime":21.0000,"actualGenTime":21.0000,"spaces":[4.0000,1.0000],"segStart":[21.0000,22.0000],"segEnd":[22.0000,23.0000]},
-            {"veh":14,"k":2,"t0":29.7854,"tf":30.5708,"genTime":29.7854,"actualGenTime":29.7854,"spaces":[2.0000],"segStart":[29.7854],"segEnd":[30.5708]},
-            {"veh":15,"k":2,"t0":36.7854,"tf":38.7854,"genTime":36.7854,"actualGenTime":36.7854,"spaces":[2.0000,3.0000],"segStart":[36.7854,37.7854],"segEnd":[37.7854,38.7854]},
-            {"veh":16,"k":2,"t0":27.3562,"tf":29.7124,"genTime":27.3562,"actualGenTime":27.3562,"spaces":[1.0000,5.0000,3.0000],"segStart":[27.3562,28.1416,28.9270],"segEnd":[28.1416,28.9270,29.7124]}
+            {"veh":3,"k":2,"t0":13.5397,"tf":14.3251,"genTime":13.5423,"actualGenTime":13.5432,"spaces":[2.0000],"segStart":[13.5397],"segEnd":[14.3251]},
+            {"veh":4,"k":2,"t0":7.7854,"tf":10.1416,"genTime":7.0000,"actualGenTime":7.3928,"spaces":[1.0000,5.0000,3.0000],"segStart":[7.7854,8.5708,9.3562],"segEnd":[8.5708,9.3562,10.1416]},
+            {"veh":5,"k":2,"t0":10.0000,"tf":12.3562,"genTime":10.0000,"actualGenTime":10.0000,"spaces":[1.0000,5.0000,3.0000],"segStart":[10.0000,10.7854,11.5708],"segEnd":[10.7854,11.5708,12.3562]},
+            {"veh":10,"k":1,"t0":2.0000,"tf":4.0000,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[3.0000,4.0000],"segStart":[2.0000,3.0000],"segEnd":[3.0000,4.0000]},
+            {"veh":11,"k":1,"t0":5.4292,"tf":7.7854,"genTime":5.0000,"actualGenTime":5.0000,"spaces":[3.0000,5.0000,1.0000],"segStart":[5.4292,6.2146,7.0000],"segEnd":[6.2146,7.0000,7.7854]},
+            {"veh":13,"k":2,"t0":13.1390,"tf":15.4952,"genTime":13.1395,"actualGenTime":13.1393,"spaces":[1.0000,5.0000,3.0000],"segStart":[13.1390,13.9244,14.7098],"segEnd":[13.9244,14.7098,15.4952]},
+            {"veh":16,"k":3,"t0":17.1416,"tf":19.1416,"genTime":17.1415,"actualGenTime":17.1415,"spaces":[2.0000,3.0000],"segStart":[17.1416,18.1416],"segEnd":[18.1416,19.1416]},
+            {"veh":17,"k":1,"t0":2.0000,"tf":2.7854,"genTime":2.0000,"actualGenTime":2.0000,"spaces":[4.0000],"segStart":[2.0000],"segEnd":[2.7854]},
+            {"veh":18,"k":1,"t0":5.0000,"tf":7.0000,"genTime":5.0000,"actualGenTime":5.0000,"spaces":[4.0000,1.0000],"segStart":[5.0000,6.0000],"segEnd":[6.0000,7.0000]},
+            {"veh":19,"k":2,"t0":5.7854,"tf":6.5708,"genTime":5.7854,"actualGenTime":5.7854,"spaces":[2.0000],"segStart":[5.7854],"segEnd":[6.5708]}
           ],
           "numSpaces": 5
         }

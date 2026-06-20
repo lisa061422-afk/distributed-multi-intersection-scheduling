@@ -571,8 +571,19 @@ def run_admm_core(const, agent_participation,
                 if verbose:
                     print(f'[AdapRho] k={k+1}  r/s={r/max(s,1e-9):.1f}  rho→{rho1:.3f}')
 
+        iter_elapsed = time.time() - t_iter
         if verbose:
-            print(f'[Iter {k+1}] r={r:.4f}  s={s:.4f}  time={time.time()-t_iter:.2f}s')
+            print(f'[Iter {k+1}] r={r:.4f}  s={s:.4f}  time={iter_elapsed:.2f}s')
+
+        first_iter_timeout = const.get('first_iter_timeout', None)
+        if k == 0 and first_iter_timeout is not None and iter_elapsed > first_iter_timeout:
+            print(f'[Early exit] iter 1 took {iter_elapsed:.1f}s > '
+                  f'{first_iter_timeout}s threshold — abandoning seed.')
+            residual_r  = residual_r[:k + 1]
+            residual_s  = residual_s[:k + 1]
+            delay_costs = delay_costs[:k + 1]
+            k += 1
+            break
 
         if r < tol_r and s < tol_s:
             if verbose:

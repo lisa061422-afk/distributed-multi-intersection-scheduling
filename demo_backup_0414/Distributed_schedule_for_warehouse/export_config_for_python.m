@@ -5,15 +5,18 @@
 % Usage: set seed and Nveh below, then run from the warehouse folder.
 % Output: python_port/validation_config.json
 
-seed = 201;
-Nveh = 10;
+% ── Mode switch: 'manual' (fixed 10-robot S1) or 'random' (seed-based) ──
+mode = 'manual';      % <-- change to 'random' for seed-based config
+
+seed = 201;           % only used in random mode
+Nveh = 10;            % only used in random mode
 
 %% ---- Shared physical parameters (copy from MAIN_Parallel_Compute) ----
-Dt              = 2.5;
-v_max_phys      = 1.0;
+Dt              = 2.0;
+v_max_phys      = 1.5;
 detect_range_val= 7.6;
-T_val           = 0.5;
-T_ent           = 0.3;
+T_val           = 2.0;
+T_ent           = 0.0;
 W               = 1.6;
 
 rho1 = 1; rho2 = 1; weight = 1.5; max_iter = 50;   % short run for validation
@@ -24,12 +27,27 @@ randInitScale = 0;   % deterministic init for reproducible comparison
 IntSpaceDB = makeIntSpaceDB();
 
 %% ---- Config generation ----
-[config_raw, ~, ~] = generateBalancedTrafficConfig(Nveh, ...
-    'Seed', seed, ...
-    'MaxPerEntrance',    ceil(Nveh/4), ...
-    'MaxPerIntersection', 5, ...
-    'MaxPerStage',       ceil(Nveh/4) + 1, ...
-    'EntrancePenalty',   0.4);
+if strcmp(mode, 'manual')
+    % ── manual_10r S1 — same as MAIN_Parallel_Compute.m configMode='manual' ──
+    config_raw = {
+        struct('entrance', 1, 'exits', [7 3]),
+        struct('entrance', 4, 'exits', [1 3]),
+        struct('entrance', 6, 'exits', [1]),
+        struct('entrance', 7, 'exits', [4]),
+        struct('entrance', 5, 'exits', [3]),
+        struct('entrance', 3, 'exits', [2 4]),
+        struct('entrance', 2, 'exits', [5]),
+    };
+elseif strcmp(mode, 'random')
+    [config_raw, ~, ~] = generateBalancedTrafficConfig(Nveh, ...
+        'Seed', seed, ...
+        'MaxPerEntrance',    ceil(Nveh/4), ...
+        'MaxPerIntersection', 5, ...
+        'MaxPerStage',       ceil(Nveh/4) + 1, ...
+        'EntrancePenalty',   0.4);
+else
+    error('Unknown mode "%s" (use ''manual'' or ''random'')', mode);
+end
 
 vehicleConfig = {};
 vid = 0;
@@ -191,4 +209,8 @@ fid = fopen(outFile, 'w');
 fprintf(fid, '%s', jsonencode(out));
 fclose(fid);
 fprintf('Exported config to: %s\n', outFile);
-fprintf('  N=%d  seed=%d  max_iter=%d\n', N, seed, max_iter);
+if strcmp(mode, 'manual')
+    fprintf('  mode=manual (10r S1)  N=%d  max_iter=%d\n', N, max_iter);
+else
+    fprintf('  mode=random  N=%d  seed=%d  max_iter=%d\n', N, seed, max_iter);
+end

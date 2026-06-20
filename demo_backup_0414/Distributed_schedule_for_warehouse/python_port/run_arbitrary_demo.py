@@ -30,6 +30,7 @@ from pathlib import Path
 # Make the package importable when run as `python python_port/run_arbitrary_demo.py`
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from python_port import defaults as _D
 from python_port.topology import (manual_topology, random_topology, Topology,
                                     plot_topology)
 from python_port.generate_config import generate_random_config
@@ -81,46 +82,59 @@ def _print_vehicles(const: dict) -> None:
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--mode',  choices=['random', 'manual', 'interactive'],
-                   required=True)
-    p.add_argument('--n_int', type=int, default=6,
+                   default='manual',
+                   help='random | manual | interactive (default: manual)')
+    p.add_argument('--n_int', type=int, default=_D.N_INT_DEFAULT,
                    help='[random mode] number of intersections')
     p.add_argument('--n_ports', type=int, default=None,
                    help='[random mode] number of external ports (default: 2*n_int)')
-    p.add_argument('--spec',  type=str, default=None,
-                   help='[manual mode] path to a .py file with `coords` and `ports`')
-    p.add_argument('--grid_size', type=int, default=6,
-                   help='[interactive mode] grid size for the picker (default 6)')
-    p.add_argument('--N',     type=int, default=8,
+    p.add_argument('--spec',  type=str,
+                   default=str(Path(__file__).resolve().parent / 'warehouse_2x2.py'),
+                   help='[manual mode] path to a .py file with `coords` and `ports` '
+                        '(default: warehouse_2x2.py)')
+    p.add_argument('--grid_size', type=int, default=_D.GRID_SIZE,
+                   help='[interactive mode] grid size for the picker')
+    p.add_argument('--N',     type=int, default=_D.N_DEFAULT,
                    help='Number of vehicles')
-    p.add_argument('--seed',  type=int, default=42)
-    p.add_argument('--max_iter', type=int, default=200,
-                   help='Max ADMM iterations (default 200)')
-    p.add_argument('--Dt',    type=float, default=5.0,
+    p.add_argument('--seed',  type=int, default=_D.SEED_DEFAULT)
+    p.add_argument('--max_iter', type=int, default=_D.MAX_ITER,
+                   help='Max ADMM iterations')
+    p.add_argument('--Dt',    type=float, default=_D.DT,
                    help='Road traversal time (uniform across all roads for now)')
-    p.add_argument('--T_val', type=float, default=2.0,
+    p.add_argument('--T_val', type=float, default=_D.T_VAL,
                    help='Headway (s) between same-entrance vehicles. Paper '
                         'uses 2.0; smaller = more contention = harder to '
                         'converge.')
-    p.add_argument('--T_ent', type=float, default=0.0,
+    p.add_argument('--T_ent', type=float, default=_D.T_ENT,
                    help='Stagger (s) between vehicles from different entrances.')
-    p.add_argument('--rho', type=float, default=1.0,
-                   help='ADMM penalty ρ1=ρ2 (default 1.0). For big networks '
+    p.add_argument('--rho', type=float, default=_D.RHO1,
+                   help='ADMM penalty rho1=rho2. For big networks '
                         '(n_int>=15) try 0.3 or 0.1 if it diverges.')
     p.add_argument('--adaptive_rho', action='store_true',
-                   help='Enable Boyd-2011 adaptive ρ schedule (auto-tunes ρ '
+                   help='Enable Boyd-2011 adaptive rho schedule (auto-tunes rho '
                         'based on r/s ratio). Useful when default diverges.')
-    p.add_argument('--alpha', type=float, default=1.0,
-                   help='Boyd-2011 over/under-relaxation factor (default 1.0 '
-                        '= standard ADMM). α∈(0,1) damps oscillation on big '
-                        'networks; α∈(1,2) accelerates on convex problems.')
-    p.add_argument('--parallel', action='store_true',
-                   help='Run ADMM intersection updates in parallel')
+    p.add_argument('--alpha', type=float, default=_D.ALPHA_RELAX,
+                   help='Boyd-2011 over/under-relaxation factor (1.0 = standard '
+                        'ADMM). alpha in (0,1) damps oscillation; (1,2) accelerates.')
+    p.add_argument('--parallel', action=argparse.BooleanOptionalAction, default=True,
+                   help='Run ADMM intersection updates in parallel (default: on). '
+                        'Use --no-parallel to disable.')
     p.add_argument('--quiet', action='store_true',
                    help='Suppress per-iteration ADMM logs')
-    p.add_argument('--plot',  action='store_true',
-                   help='Show topology + 5 ADMM result figures (matplotlib GUI)')
-    p.add_argument('--save_plots', type=str, default=None,
-                   help='Save plots as PNGs to this directory (headless, no GUI)')
+    p.add_argument('--plot',  action=argparse.BooleanOptionalAction, default=True,
+                   help='Show plots in GUI windows (default: on). '
+                        'Use --no-plot to disable.')
+    p.add_argument('--save_plots', type=str, default='my_plots',
+                   help='Save plots as PNGs to this directory (default: my_plots/). '
+                        'Pass empty string "" to disable.')
+    p.add_argument('--first_iter_timeout', type=float, default=None,
+                   help='If first ADMM iteration exceeds this many seconds, '
+                        'abandon the run (used for seed sweeping).')
+    p.add_argument('--max_per_int', type=int, default=None,
+                   help='Hard cap on vehicles per intersection during random '
+                        'config generation. Generation FAILS (ValueError, exit 2) '
+                        'if cap cannot be met — caller should mark the seed '
+                        'invalid. Default = N (no cap).')
     args = p.parse_args()
 
     # ── Build topology ──────────────────────────────────────────────
@@ -135,12 +149,16 @@ def main():
     _print_topology(t)
 
     # ── Generate vehicles ───────────────────────────────────────────
-    # max_per_int set to N so a single intersection isn't a bottleneck for sampling
-    const, ap = generate_random_config(
-        N=args.N, seed=args.seed + 1000,
-        max_per_int=args.N, Dt=args.Dt,
-        T_val=args.T_val, T_ent=args.T_ent,
-        max_iter=args.max_iter, topology=t)
+    cap = args.max_per_int if args.max_per_int is not None else args.N
+    try:
+        const, ap = generate_random_config(
+            N=args.N, seed=args.seed + 1000,
+            max_per_int=cap, Dt=args.Dt,
+            T_val=args.T_val, T_ent=args.T_ent,
+            max_iter=args.max_iter, topology=t)
+    except ValueError as e:
+        print(f'[Density reject] {e}')
+        sys.exit(2)
     print()
     _print_vehicles(const)
 
@@ -151,6 +169,7 @@ def main():
     const['rho2']             = args.rho
     const['use_adaptive_rho'] = args.adaptive_rho
     const['alpha_relax']      = args.alpha
+    const['first_iter_timeout'] = args.first_iter_timeout
     if args.rho != 1.0 or args.adaptive_rho or args.alpha != 1.0:
         print(f'  rho={args.rho}  adaptive_rho={args.adaptive_rho}  alpha={args.alpha}')
     print('\nRunning ADMM...')
@@ -178,6 +197,62 @@ def main():
             delay  = max(t_term - ddl, 0.0)
             print(f'  n={n}: t_term={t_term:7.3f}  ddl={ddl:7.3f}  delay={delay:6.3f}')
 
+    # ── FCFS baseline (always runs after optimal, fast) ────────────
+    from python_port.fcfs import run_fcfs, plot_fcfs_local_panel, print_fcfs_summary
+    fcfs_res = run_fcfs(const, ap)   # default H=0; pathInfo_c already encodes
+                                      # the vehicle's full service duration at
+                                      # each intersection.
+    print_fcfs_summary(const, fcfs_res)
+
+    # ── Auto-save self-contained batch dir ──────────────────────────
+    # batches/seed_<N>_<seed>/ contains:
+    #   data.pkl          — full state for re-export / replay
+    #   figs/*.png        — all plots from this run
+    #   demo/*.js         — demo-ready optimal.js + fcfs.js
+    import pickle
+    from python_port.export_to_demo import export_optimal_js, export_fcfs_js
+    from python_port.export_tree_to_demo import (export_tree_static_js,
+                                                   export_tree_interactive_js)
+    batch_dir = (Path(__file__).resolve().parent / 'batches' /
+                 f'seed_N{args.N}_s{args.seed}')
+    batch_dir.mkdir(parents=True, exist_ok=True)
+    (batch_dir / 'figs').mkdir(exist_ok=True)
+    (batch_dir / 'demo').mkdir(exist_ok=True)
+
+    local_tree_cache = res[2]
+    with open(batch_dir / 'data.pkl', 'wb') as f:
+        pickle.dump({
+            'mode': args.mode, 'spec': getattr(args, 'spec', None),
+            'N': args.N, 'seed': args.seed,
+            'Dt': args.Dt, 'T_val': args.T_val, 'T_ent': args.T_ent,
+            'const': const, 'ap': ap,
+            'x_prev': x_prev, 'y_prev': y_prev,
+            'fcfs_res': fcfs_res,
+            'local_tree_cache': local_tree_cache,
+            'converged': converged, 'k': k, 'T_admm': T_admm,
+        }, f)
+    if converged:
+        scenario = f'N{args.N}_s{args.seed}'
+        export_optimal_js(const, x_prev, y_prev,
+                          scenario_name=f'{scenario} · Optimal',
+                          output_file=batch_dir / 'demo' / 'optimal.js',
+                          policy_name='optimal')
+        export_fcfs_js(const, fcfs_res,
+                       scenario_name=f'{scenario} · FCFS',
+                       output_file=batch_dir / 'demo' / 'fcfs.js',
+                       policy_name='fcfs')
+        # Tree exports — group/scene placeholders, caller can rename when copying
+        export_tree_static_js(local_tree_cache,
+                              group=f'N{args.N}', scene=f's{args.seed}',
+                              out_path=batch_dir / 'demo' / 'tree_optimal.js')
+        export_tree_interactive_js(local_tree_cache, const, x_prev,
+                                     group=f'N{args.N}', scene=f's{args.seed}',
+                                     out_path=batch_dir / 'demo' / 'interactive_tree.js')
+    print(f'\n[batch] saved → {batch_dir}')
+    # Redirect plot save into the batch dir if user didn't override.
+    if args.save_plots == 'my_plots':
+        args.save_plots = str(batch_dir / 'figs')
+
     # ── Optional plotting ──────────────────────────────────────────
     if args.plot or args.save_plots:
         import matplotlib
@@ -194,6 +269,9 @@ def main():
             res[2],            # local_tree_cache
             res_r, res_s, delay_costs, k)
 
+        # FCFS local panel — same renderer (_local_panel) as fig5
+        fig_fcfs = plot_fcfs_local_panel(const, fcfs_res, title_prefix='FCFS')
+
         if args.save_plots:
             from pathlib import Path as _P
             outdir = _P(args.save_plots).resolve()
@@ -201,6 +279,7 @@ def main():
             fig0.savefig(outdir / 'fig0_topology.png', dpi=120, bbox_inches='tight')
             for i, f in enumerate(figs, start=1):
                 f.savefig(outdir / f'fig{i}.png', dpi=120, bbox_inches='tight')
+            fig_fcfs.savefig(outdir / 'fig6_fcfs_local.png', dpi=120, bbox_inches='tight')
             print(f'\nSaved plots to: {outdir}')
         if args.plot:
             plt.show()

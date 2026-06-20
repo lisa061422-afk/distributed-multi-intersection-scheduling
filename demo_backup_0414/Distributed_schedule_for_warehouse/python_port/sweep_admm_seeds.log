@@ -1,0 +1,4 @@
+Probe ADMM seeds for N=20 (budget=120.0s, max_iter=300)
+
+ seed   conv   iter    admm(s)      cost     fcfs
+------------------------------------------------------------

@@ -622,7 +622,7 @@ def plot_admm_results(const, x_prev, y_prev, local_tree_cache,
     rows = max(1, int(math.ceil(math.sqrt(n_int))))
     cols = max(1, int(math.ceil(n_int / rows)))
     fig5 = plt.figure(figsize=(7.5 * cols, 5.0 * rows), facecolor='white')
-    fig5.suptitle('Local Schedules (Per Intersection)',
+    fig5.suptitle('Optimal Local Schedules (Per Intersection)',
                   fontsize=FS_TIT, y=0.985)
     outer_gs = GridSpec(rows, cols, figure=fig5,
                         wspace=0.18, hspace=0.22,

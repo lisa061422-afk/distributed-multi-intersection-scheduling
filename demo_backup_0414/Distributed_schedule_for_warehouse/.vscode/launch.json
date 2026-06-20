@@ -1,0 +1,114 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Interactive picker (画图)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python_port/run_arbitrary_demo.py",
+            "args": [
+                "--mode", "interactive",
+                "--N", "8",
+                "--seed", "42",
+                "--max_iter", "200",
+                "--plot"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Interactive picker, big (25 cars)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python_port/run_arbitrary_demo.py",
+            "args": [
+                "--mode", "interactive",
+                "--N", "20",
+                "--seed", "102",
+                "--max_iter", "300",
+                "--rho", "0.3",
+                "--alpha", "0.7",
+                "--adaptive_rho",
+                "--plot"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Random topology (n_int=6, N=8)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python_port/run_arbitrary_demo.py",
+            "args": [
+                "--mode", "random",
+                "--n_int", "6",
+                "--N", "8",
+                "--seed", "42",
+                "--max_iter", "200",
+                "--plot"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Random topology, big (n_int=12, tuned)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python_port/run_arbitrary_demo.py",
+            "args": [
+                "--mode", "random",
+                "--n_int", "12",
+                "--N", "8",
+                "--seed", "11",
+                "--max_iter", "300",
+                "--rho", "0.3",
+                "--alpha", "0.7",
+                "--adaptive_rho",
+                "--plot"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Manual spec (example_manual_topo)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python_port/run_arbitrary_demo.py",
+            "args": [
+                "--mode", "manual",
+                "--spec", "${workspaceFolder}/python_port/example_manual_topo.py",
+                "--N", "6",
+                "--seed", "42",
+                "--max_iter", "200",
+                "--plot"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "4-int paper validation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python_port/run_validation.py",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "MPC demo (4-int rolling-horizon)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python_port/run_mpc_demo.py",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}

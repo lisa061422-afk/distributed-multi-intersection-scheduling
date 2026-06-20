@@ -1,0 +1,3 @@
+Sweep: 2x2 warehouse, N=20, seed=42, Dt=3, T_val=2
+config                                conv  iters    admm(s)     delay
+---------------------------------------------------------------------------

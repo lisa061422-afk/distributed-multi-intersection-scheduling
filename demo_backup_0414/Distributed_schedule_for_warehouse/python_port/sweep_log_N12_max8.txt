@@ -1,0 +1,30 @@
+Sweep: N=12  2x2 warehouse  Dt=3  T_val=2  max_per_int=8
+first_iter_timeout=10.0s  total_budget=30.0s  max_iter=300
+Seeds (17): [42, 7, 13, 100, 200, 1234, 2024, 4101, 4222, 4223, 1, 3, 11, 21, 71, 314, 999]
+
+ seed  iters   admm(s)    delay  status          reason
+---------------------------------------------------------------------------
+   42     16      3.01    0.535  converged       
+    7     13      2.16    0.333  converged       
+   13     21      2.34    0.851  converged       
+  100     47      4.55    2.293  converged       
+  200     34      3.14    4.479  converged       
+ 1234     71      4.00    2.963  converged       
+ 2024     52      2.89    3.217  converged       
+ 4101    121      6.01    0.792  converged       
+ 4222     42      2.93    0.867  converged       
+ 4223     36      2.87    1.100  converged       
+    1     23      2.78    1.824  converged       
+    3     21      2.68    1.192  converged       
+   11     32      3.16    5.098  converged       
+   21     16      4.27    1.770  converged       
+   71     71      7.44    2.432  converged       
+  314     16      2.13    1.880  converged       
+  999     28      2.57    3.928  converged       
+
+=== Best candidates (converged, within budget) ===
+  seed=    7  iters= 13  admm=2.16s  delay=0.333
+  seed=   42  iters= 16  admm=3.01s  delay=0.535
+  seed= 4101  iters=121  admm=6.01s  delay=0.792
+  seed=   13  iters= 21  admm=2.34s  delay=0.851
+  seed= 4222  iters= 42  admm=2.93s  delay=0.867

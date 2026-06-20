@@ -409,41 +409,89 @@ def manual_topology(coords: Dict[int, Tuple[int, int]],
             path.append(parent[path[-1]])
         return list(reversed(path))
 
+    def _all_shortest_int_paths(src: int, dst: int) -> List[List[int]]:
+        """Return ALL shortest int paths from src to dst (same length)."""
+        if src == dst:
+            return [[src]]
+        # Multi-parent BFS: dist[v] = shortest hop count from src;
+        # parents[v] = all u such that dist[u]+1 == dist[v] and u→v is an edge.
+        from collections import defaultdict
+        dist: Dict[int, int] = {src: 0}
+        parents: Dict[int, List[int]] = defaultdict(list)
+        q = [src]
+        while q:
+            cur = q.pop(0)
+            for slot in adjacency[cur].values():
+                if slot is None or slot[0] != 'int':
+                    continue
+                nb = slot[1]
+                if nb not in dist:
+                    dist[nb] = dist[cur] + 1
+                    parents[nb].append(cur)
+                    q.append(nb)
+                elif dist[nb] == dist[cur] + 1:
+                    parents[nb].append(cur)
+        if dst not in dist:
+            return []
+        # Backtrack to enumerate all shortest paths
+        def _enum(v: int) -> List[List[int]]:
+            if v == src:
+                return [[src]]
+            out: List[List[int]] = []
+            for u in parents[v]:
+                for sub in _enum(u):
+                    out.append(sub + [v])
+            return out
+        return _enum(dst)
+
     def _dir_to_neighbor(at_int: int, neighbor: int) -> str:
         for d, slot in adjacency[at_int].items():
             if slot is not None and slot[0] == 'int' and slot[1] == neighbor:
                 return d
         raise RuntimeError(f'No edge from int {at_int} to {neighbor}')
 
-    route_dict: Dict[Tuple[int, int], Dict[str, List[int]]] = {}
+    def _route_ids_for_path(ints_path: List[int],
+                             entry_dir_at_a: str,
+                             exit_dir_at_z: str) -> List[int]:
+        rids: List[int] = []
+        for k_int, cur in enumerate(ints_path):
+            if k_int == 0:
+                entry_dir = entry_dir_at_a
+            else:
+                entry_dir = _dir_to_neighbor(cur, ints_path[k_int - 1])
+            if k_int == len(ints_path) - 1:
+                exit_dir = exit_dir_at_z
+            else:
+                exit_dir = _dir_to_neighbor(cur, ints_path[k_int + 1])
+            if (entry_dir, exit_dir) not in _ROUTE_ID_TABLE:
+                return []   # U-turn or invalid for this path
+            rids.append(_ROUTE_ID_TABLE[(entry_dir, exit_dir)])
+        return rids
+
+    route_dict: Dict[Tuple[int, int], Dict[str, object]] = {}
     for p_in in range(1, n_ports + 1):
         int_a, entry_dir_at_a = port_int[p_in]
         for p_out in range(1, n_ports + 1):
             if p_in == p_out:
                 continue
             int_z, exit_dir_at_z = port_int[p_out]
-            ints_path = _shortest_int_path(int_a, int_z)
-            if not ints_path:
-                continue   # disconnected (shouldn't happen after connectivity check)
+            all_paths = _all_shortest_int_paths(int_a, int_z)
+            if not all_paths:
+                continue
 
-            rids: List[int] = []
-            for k_int, cur in enumerate(ints_path):
-                # Entry direction at cur
-                if k_int == 0:
-                    entry_dir = entry_dir_at_a
-                else:
-                    entry_dir = _dir_to_neighbor(cur, ints_path[k_int - 1])
-                # Exit direction at cur
-                if k_int == len(ints_path) - 1:
-                    exit_dir = exit_dir_at_z
-                else:
-                    exit_dir = _dir_to_neighbor(cur, ints_path[k_int + 1])
-                if (entry_dir, exit_dir) not in _ROUTE_ID_TABLE:
-                    rids = []
-                    break   # U-turn or invalid — skip this OD pair
-                rids.append(_ROUTE_ID_TABLE[(entry_dir, exit_dir)])
-            if rids:
-                route_dict[(p_in, p_out)] = {'ints': list(ints_path), 'route_id': rids}
+            variants: List[Dict[str, List[int]]] = []
+            for ints_path in all_paths:
+                rids = _route_ids_for_path(ints_path, entry_dir_at_a, exit_dir_at_z)
+                if rids:
+                    variants.append({'ints': list(ints_path), 'route_id': rids})
+            if variants:
+                # Top-level 'ints' / 'route_id' = first variant (back-compat for
+                # any caller that doesn't know about 'variants').
+                route_dict[(p_in, p_out)] = {
+                    'ints':     variants[0]['ints'],
+                    'route_id': variants[0]['route_id'],
+                    'variants': variants,
+                }
 
     # ── 6. IntSpaceDB: one 4-way template per intersection ───────────
     int_db = [_four_way_int_db() for _ in range(n_int)]

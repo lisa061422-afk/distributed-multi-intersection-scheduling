@@ -427,6 +427,47 @@
       width: 490px;
       padding: 18px;
     }
+    /* P4 merge-delay Gantt — floats just left of the Local Zoom panel, directly on the
+       warehouse background (NO separate dark card, blends with the scene). */
+    .merge-gantt-wrap {
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+      left: 180px;
+      right: 526px;            /* 16 + 490 + 20 → just left of Local Zoom */
+      z-index: 24;
+      padding: 18px 24px 14px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.62);          /* soft translucent white card */
+      border: 1px solid rgba(255,255,255,0.75);
+      box-shadow: 0 12px 34px rgba(0,0,0,0.16);
+      backdrop-filter: blur(2px);
+      pointer-events: none;
+    }
+    .merge-gantt-wrap .mg-lbl {
+      font-size: 17px; font-weight: 800; color: #16222e; margin: 0 0 8px 4px;
+    }
+    .merge-gantt-wrap svg { width: 100%; height: auto; display: block; }
+    .scene.traffic-mode .merge-gantt-wrap { display: none !important; }
+
+    /* While the merge-delay demo is on: blur everything except the Gantt card,
+       the Local Zoom panel and the bottom control bar (the focus stays on the demo). */
+    .demo-scrim {
+      position: absolute; inset: 0; z-index: 45; display: none; pointer-events: none;
+      backdrop-filter: blur(7px) brightness(0.72);
+      -webkit-backdrop-filter: blur(7px) brightness(0.72);
+      background: rgba(8,12,18,0.22);
+    }
+    .scene.demo-on .demo-scrim { display: block; }
+    .scene.demo-on .local-panel,
+    .scene.demo-on .merge-gantt-wrap,
+    .scene.demo-on .ctrl-bar { z-index: 60; }
+    .demo-exit-btn {
+      position: absolute; top: 18px; left: 180px; z-index: 61;
+      border: 0; border-radius: 12px; padding: 10px 18px; cursor: pointer;
+      font-weight: 800; font-size: 14px; color: #ffe2df;
+      background: rgba(214,45,34,0.88); box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+    }
+    .demo-exit-btn:hover { background: rgba(214,45,34,1); }
     .panel-title {
       display: flex;
       align-items: center;
@@ -2157,7 +2198,7 @@
           <div class="ctrl-group">
             <div class="ctrl-label">Control</div>
             <div class="ctrl-action-row">
-              <button class="ctrl-action primary" id="togglePlay">⏸ Pause</button>
+              <button class="ctrl-action" id="togglePlay">▶ Play</button>
               <button class="ctrl-action" id="restart">↺ Replay</button>
               <button class="ctrl-action" id="loopBtn" title="Loop current scenario">🔁 Loop</button>
               <button class="ctrl-action" id="autoBtn" title="Auto-play all scenarios">⏭ Auto</button>
@@ -2183,6 +2224,16 @@
             <button class="ctrl-action" id="speedCycleBtn">1×</button>
           </div>
 
+        </div>
+
+        <!-- Focus scrim — blurs the map/cards while the merge-delay demo is active -->
+        <div class="demo-scrim"></div>
+        <button class="demo-exit-btn" id="demoExitBtn" style="display:none;" title="退出演示 (Esc)">✕ Exit demo</button>
+
+        <!-- P4 merge-delay synced Gantt — floats left of Local Zoom (toggled from Scenario ▸ after 30r) -->
+        <div class="merge-gantt-wrap" id="mergeGanttWrap" style="display:none;">
+          <div class="mg-lbl">Zone-occupancy timeline — Δt delay at the front</div>
+          <svg id="mergeGantt" viewBox="0 0 900 210" xmlns="http://www.w3.org/2000/svg"></svg>
         </div>
 
         <div class="overlay local-panel">
@@ -2318,6 +2369,8 @@
 
                 <!-- ── Dynamic robot layer (injected by JS) ── -->
                 <g id="zoomRobots"></g>
+                <!-- ── Merge-delay explainer robots (R1/R2), injected when demo active ── -->
+                <g id="zoomScenario"></g>
               </g>
             </svg>
           </div>
@@ -2374,39 +2427,26 @@
   <script src="schedules/tree_8r_S1_optimal.js"       onerror=""></script>
   <script src="schedules/tree_10r_S1_optimal.js"      onerror=""></script>
   <script src="schedules/tree_10r_S1_p1_optimal.js"  onerror=""></script>
-  <script src="schedules/tree_10r_S5_optimal.js"      onerror=""></script>
-  <script src="schedules/tree_10r_S6_optimal.js"      onerror=""></script>
-  <script src="schedules/tree_10r_S9_optimal.js"      onerror=""></script>
-  <script src="schedules/tree_10r_S10_optimal.js"     onerror=""></script>
   <script src="schedules/tree_10r_S2_optimal.js"      onerror=""></script>
   <script src="schedules/tree_10r_S2_p7_optimal.js"   onerror=""></script>
   <script src="schedules/tree_10r_S3_optimal.js"      onerror=""></script>
   <script src="schedules/tree_10r_S3_p2_optimal.js"   onerror=""></script>
   <script src="schedules/tree_10r_S3_p9_optimal.js"   onerror=""></script>
-  <script src="schedules/tree_10r_S8_optimal.js"      onerror=""></script>
   <script src="schedules/tree_15r_S1_optimal.js"      onerror=""></script>
   <script src="schedules/tree_15r_S1_p2_optimal.js"  onerror=""></script>
   <script src="schedules/tree_15r_S1_p4_optimal.js"  onerror=""></script>
   <script src="schedules/tree_15r_S2_optimal.js"     onerror=""></script>
   <script src="schedules/tree_20r_S1_optimal.js"     onerror=""></script>
-  <script src="schedules/tree_20r_S2_optimal.js"     onerror=""></script>
   <script src="schedules/tree_25r_S1_optimal.js"     onerror=""></script>
   <script src="schedules/tree_30r_S1_optimal.js"     onerror=""></script>
   <!-- Interactive tree data for decision tree explorer -->
   <script src="schedules/interactive_tree_8r_S1.js"   onerror=""></script>
   <script src="schedules/interactive_tree_10r_S1.js" onerror=""></script>
   <script src="schedules/interactive_tree_10r_S2.js" onerror=""></script>
-  <script src="schedules/interactive_tree_10r_S5.js" onerror=""></script>
-  <script src="schedules/interactive_tree_10r_S6.js" onerror=""></script>
-  <script src="schedules/interactive_tree_10r_S7.js" onerror=""></script>
-  <script src="schedules/interactive_tree_10r_S8.js" onerror=""></script>
-  <script src="schedules/interactive_tree_10r_S9.js" onerror=""></script>
-  <script src="schedules/interactive_tree_10r_S10.js" onerror=""></script>
   <script src="schedules/interactive_tree_10r_S3.js" onerror=""></script>
   <script src="schedules/interactive_tree_15r_S1.js" onerror=""></script>
   <script src="schedules/interactive_tree_15r_S2.js" onerror=""></script>
   <script src="schedules/interactive_tree_20r_S1.js" onerror=""></script>
-  <script src="schedules/interactive_tree_20r_S2.js" onerror=""></script>
   <script src="schedules/interactive_tree_25r_S1.js" onerror=""></script>
   <script src="schedules/interactive_tree_30r_S1.js" onerror=""></script>
   <!-- Traffic (5-int) interactive trees -->
@@ -2415,14 +2455,12 @@
   <script src="schedules/interactive_tree_tr_15r_S2.js"  onerror=""></script>
   <script src="schedules/interactive_tree_tr_15r_S3.js"  onerror=""></script>
   <script src="schedules/interactive_tree_tr_20r_S1.js"  onerror=""></script>
-  <script src="schedules/interactive_tree_tr_20r_S2.js"  onerror=""></script>
   <!-- Tree data for traffic mode (5-int, tr_ prefix keys) -->
   <script src="schedules/tr_tree_10r_S1_optimal.js"  onerror=""></script>
   <script src="schedules/tr_tree_15r_S1_optimal.js"  onerror=""></script>
   <script src="schedules/tr_tree_15r_S2_optimal.js"  onerror=""></script>
   <script src="schedules/tr_tree_15r_S3_optimal.js"  onerror=""></script>
   <script src="schedules/tr_tree_20r_S1_optimal.js"  onerror=""></script>
-  <script src="schedules/tr_tree_20r_S2_optimal.js"  onerror=""></script>
 
   <script>
     const CB = '?v=' + Date.now(); // cache-bust: forces fresh load of modified PNGs
@@ -2901,7 +2939,8 @@
     };
 
     let currentScenario = 'optimal';  // legacy, kept for compat
-    let playing        = true;
+    let playing        = false;  // 打开页面时静止，不自动播放（录视频用）
+    let booting        = true;   // 首屏程序化加载期间为 true；首次真实交互后置 false
     let elapsedSec     = 0;
     let animDuration   = 30;
     let lastTs         = null;
@@ -2918,9 +2957,9 @@
     // ── Warehouse scenarios ───────────────────────────────────────────────────
     const SCENARIO_GROUPS_WH = {
       '8r':  { label:'8 Robots',  scenes:['S1'] },
-      '10r': { label:'10 Robots', scenes:['S1','S2','S3','S5','S6','S7','S8','S9','S10'] },
+      '10r': { label:'10 Robots', scenes:['S1','S2','S3'] },
       '15r': { label:'15 Robots', scenes:['S1','S2'] },
-      '20r': { label:'20 Robots', scenes:['S1','S2'] },
+      '20r': { label:'20 Robots', scenes:['S1'] },
       '25r': { label:'25 Robots', scenes:['S1'] },
       '30r': { label:'30 Robots', scenes:['S1'] },
     };
@@ -2932,18 +2971,11 @@
       '10r_S3_optimal': true,   '10r_S3_fcfs':    true,
       '10r_S3_p2_optimal': true,
       '10r_S3_p9_optimal': true,
-      '10r_S5_optimal': true,  '10r_S5_fcfs': true,
-      '10r_S6_optimal': true,  '10r_S6_fcfs': true,
-      '10r_S7_optimal': true,  '10r_S7_fcfs': true,
-      '10r_S8_optimal': true,  '10r_S8_fcfs': true,
-      '10r_S9_optimal': true,  '10r_S9_fcfs': true,
-      '10r_S10_optimal': true, '10r_S10_fcfs': true,
       '15r_S1_optimal': true,  '15r_S1_fcfs': true,
       '15r_S1_p2_optimal': true,
       '15r_S1_p4_optimal': true,
       '15r_S2_optimal': true,  '15r_S2_fcfs': true,
       '20r_S1_optimal': true,  '20r_S1_fcfs': true,
-      '20r_S2_optimal': true,  '20r_S2_fcfs': true,
       '25r_S1_optimal': true,  '25r_S1_fcfs': true,
       '30r_S1_optimal': true,  '30r_S1_fcfs': true,
     };
@@ -2954,7 +2986,7 @@
     const SCENARIO_GROUPS_TR = {
       '10r': { label:'10 Vehicles', scenes:['S1'] },
       '15r': { label:'15 Vehicles', scenes:['S1','S2','S3'] },
-      '20r': { label:'20 Vehicles', scenes:['S1','S2'] },
+      '20r': { label:'20 Vehicles', scenes:['S1'] },
     };
     const AVAILABLE_TR = {
       // Generated by export_scenario_to_demo_5int.m — files have tr_ prefix on disk.
@@ -2963,8 +2995,7 @@
       '15r_S1_optimal': true, '15r_S1_fcfs': true,  // 5int_seed41403_N15_S1
       '15r_S2_optimal': true, '15r_S2_fcfs': true,  // 5int_seed41405_N15_S2
       '15r_S3_optimal': true, '15r_S3_fcfs': true,  // 5int_seed41406_N15_S3
-      '20r_S1_optimal': true, '20r_S1_fcfs': true,  // 5int_seed41408_N20_S1
-      '20r_S2_optimal': true, '20r_S2_fcfs': true,  // 5int_seed41409_N20_S2
+      '20r_S1_optimal': true, '20r_S1_fcfs': true,  // 5int_seed41409_N20 (原 S2 数据，已重命名为 S1)
     };
 
     // Active set — switched by the Map toggle
@@ -3315,6 +3346,8 @@
     }
 
     function renderLocalZoom() {
+      // Merge-delay demo owns the zoom panel while active — keep sim robots out.
+      if (demoActive) { document.getElementById('zoomRobots').innerHTML = ''; return; }
       const zone = localZones[currentLocal];
       const scale = 1.0; // 1 world-px = 1 SVG-px → robot positions match M1-M5 block boundaries
       const centerX = 140, centerY = 140;
@@ -4257,6 +4290,7 @@
     }
 
     function applySetup(group, scene, policy) {
+      if (demoActive) demoExit();   // picking a real scenario leaves the demo
       const key = schedKey(group, scene, policy);
       console.log('[applySetup]', key, 'available =', !!activeAvailable[key], 'path =', schedPath(group, scene, policy));
       if (!activeAvailable[key]) {
@@ -4314,8 +4348,8 @@
           updateSetupCard();
           updateTreeBtnVisibility();
           resetPlayback();
-          // Auto-play when a new scenario/policy is selected
-          playing = true;
+          // 首屏程序化加载(booting)时停在第 0 帧；用户手动选了车数量/场景/策略后则自动播
+          playing = autoMode || !booting;
           lastTs  = null;
           updatePlayBtnState();
         }
@@ -4331,6 +4365,21 @@
     }
 
     function loop(ts) {
+      if (demoActive) {
+        if (!lastTs) lastTs = ts;
+        const d = ts - lastTs; lastTs = ts;
+        if (playing) {
+          demoT += (d / 1000) * playbackSpeed;
+          const DUR = window.__demoDur();
+          if (demoT >= DUR) {
+            if (loopMode) { demoT = 0; }
+            else { demoT = DUR; playing = false; updatePlayBtnState(); }
+          }
+        }
+        window.__demoRender();
+        requestAnimationFrame(loop);
+        return;
+      }
       if (!lastTs) lastTs = ts;
       const delta = ts - lastTs;
       lastTs = ts;
@@ -4358,6 +4407,7 @@
     }
 
     function setLocalView(name) {
+      if (demoActive && name !== 'P4') demoExit();   // leaving P4 exits the demo
       currentLocal = name;
       localName.textContent = name;
       localSubtitle.textContent = `Showing local view for ${name}`;
@@ -4425,9 +4475,9 @@
         if (firstGroup) {
           const firstScene = SCENARIO_GROUPS_TR[firstGroup].scenes[0];
           applySetup(firstGroup, firstScene, 'optimal');
-          // Fallback: ensure playback starts even if onload fires synchronously
+          // Fallback: 首屏(booting)保持静止；用户切换/连播时兜底续播
           setTimeout(() => {
-            if (!playing && scheduleData) {
+            if ((autoMode || !booting) && !playing && scheduleData) {
               playing = true;
               lastTs = null;
               updatePlayBtnState();
@@ -4459,7 +4509,7 @@
         const defScene = SCENARIO_GROUPS_WH[defGroup].scenes[0];
         applySetup(defGroup, defScene, 'optimal');
         setTimeout(() => {
-          if (!playing && scheduleData) {
+          if ((autoMode || !booting) && !playing && scheduleData) {
             playing = true;
             lastTs = null;
             updatePlayBtnState();
@@ -4541,6 +4591,11 @@
 
     // ── Pause / Play ─────────────────────────────────────────────────────────
     document.getElementById('togglePlay').addEventListener('click', () => {
+      if (demoActive) {
+        if (!playing && demoT >= window.__demoDur()) demoT = 0;
+        playing = !playing; lastTs = null; updatePlayBtnState();
+        return;
+      }
       // If animation has ended, treat Play as Replay
       const atEnd = (playbackDir === 'forward'  && elapsedSec >= animDuration) ||
                     (playbackDir === 'backward' && elapsedSec <= 0);
@@ -4558,6 +4613,7 @@
 
     // ── Replay ───────────────────────────────────────────────────────────────
     document.getElementById('restart').addEventListener('click', () => {
+      if (demoActive) { demoT = 0; playing = true; lastTs = null; updatePlayBtnState(); return; }
       resetPlayback();
       playing = true;
       lastTs = null;
@@ -4622,8 +4678,150 @@
         btn.addEventListener('click',      () => populateSceneLvl2(gid));
         lvl1.appendChild(btn);
       });
+      // ── Merge-delay explainer toggle — placed after the last group (e.g. 30r) ──
+      if (currentMapMode !== 'traffic') {
+        const sep = document.createElement('div');
+        sep.style.cssText = 'height:1px;margin:5px 6px;background:rgba(255,255,255,0.10);';
+        lvl1.appendChild(sep);
+        const demoBtn = document.createElement('button');
+        demoBtn.className = 'drop-item' + (demoActive ? ' selected' : '');
+        demoBtn.textContent = '🎬 Merge-delay demo';
+        demoBtn.title = 'P4 双机器人调度延迟演示 (Optimal vs FCFS)';
+        demoBtn.addEventListener('click', () => { demoToggle(); closeAllDrops(); });
+        lvl1.appendChild(demoBtn);
+      }
       populateSceneLvl2(selectedGroup);
     }
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  P4 MERGE-DELAY EXPLAINER (native) — robots animate inside the Local Zoom SVG,
+    //  the synced Gantt floats just left of it, all driven by the bottom-bar controls.
+    //  R1: horizontal M4→M1 (robot1).  R2: vertical M1→M2 (robot2).  Shared zone M1.
+    //  Yielder slows (never stops) so the two never share green M1; Δt sits at the
+    //  front of the bar so the green M1 blocks just touch.
+    // ═══════════════════════════════════════════════════════════════════════════
+    var demoActive = false, demoT = 0, demoSched = 'optimal';
+    (function(){
+      const V=90, PATH=270, TAIL=0.7;
+      const T0  ={R1:0.20, R2:0.70};
+      const ROT ={R1:-90,  R2:180};
+      const COLR={R1:'#ff5a52', R2:'#33d17a'};
+      const IMG ={R1:'images/robot1.png', R2:'images/robot2.png'};
+      const SP=15;
+      const ZCOL={M1:'#46c93a', M2:'#ffd21e', M3:'#ff8a1e', M4:'#29a3e0', M5:'#ee3b2f'};
+      const SEG ={ R1:[{z:'M4',a:45,b:135},{z:'M1',a:135,b:225}],
+                   R2:[{z:'M1',a:45,b:135},{z:'M2',a:135,b:225}] };
+      const YIELD={ optimal:{robot:'R1',delay:0.5}, fcfs:{robot:'R2',delay:1.5} };
+
+      const isY  =(r)=> YIELD[demoSched].robot===r;
+      const holdAt=(r)=> SEG[r][0].a;
+      function distAt(r,t,ghost){
+        if(t<=T0[r]) return 0;
+        if(ghost||!isY(r)) return Math.min(PATH,V*(t-T0[r]));
+        const dH=holdAt(r), hold=YIELD[demoSched].delay, tA=T0[r]+dH/V+hold;
+        let d; if(t<tA) d=dH*(t-T0[r])/(dH/V+hold); else d=dH+V*(t-tA);
+        return Math.min(PATH,d);
+      }
+      function timeToDist(r,d){
+        if(!isY(r)) return T0[r]+d/V;
+        const dH=holdAt(r), hold=YIELD[demoSched].delay;
+        return d<=dH ? T0[r]+(d/dH)*(dH/V+hold) : T0[r]+dH/V+hold+(d-dH)/V;
+      }
+      function delayOf(r,t){
+        if(!isY(r)) return 0;
+        const dH=holdAt(r), hold=YIELD[demoSched].delay, tA=T0[r]+dH/V+hold;
+        if(t<=T0[r]) return 0; if(t>=tA) return hold;
+        return (t-T0[r])*hold/(dH/V+hold);
+      }
+      const posOf=(r,d)=> r==='R1' ? {x:5+d,y:185} : {x:185,y:275-d};
+      const durOf=()=> Math.max(timeToDist('R1',PATH),timeToDist('R2',PATH))+TAIL;
+      window.__demoDur = durOf;
+
+      function marker(r,d,ghost){
+        const {x,y}=posOf(r,d), s=SP, op=ghost?' opacity=".34"':'';
+        const lab = ghost
+          ? `<text x="${x}" y="${y-s-2}" text-anchor="middle" font-size="8" font-weight="800" font-family="monospace" fill="rgba(255,255,255,.9)">${r}'</text>`
+          : `<text x="${x}" y="${y-s-2}" text-anchor="middle" font-size="9" font-weight="900" font-family="monospace" fill="${COLR[r]}" paint-order="stroke" stroke="rgba(0,0,0,.8)" stroke-width="2.4">${r}</text>`;
+        return `<g${op}><image href="${IMG[r]}" x="${x-s}" y="${y-s}" width="${2*s}" height="${2*s}" transform="rotate(${ROT[r]} ${x} ${y})" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))"/>${lab}</g>`;
+      }
+      function renderArena(){
+        const layer=document.getElementById('zoomScenario'); if(!layer) return;
+        let svg=''; const drag=YIELD[demoSched].robot;
+        ['R2','R1'].forEach(r=>{
+          const dR=distAt(r,demoT,false);
+          if(dR>0 && dR<PATH){
+            if(r===drag){
+              const dG=distAt(r,demoT,true);
+              if(dG>dR+1 && dG<PATH){
+                svg+=marker(r,dG,true);
+                const a=posOf(r,dR), b=posOf(r,dG);
+                svg+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="rgba(255,210,90,.95)" stroke-width="1.6" stroke-dasharray="3 3"/>`;
+                svg+=`<text x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-8}" text-anchor="middle" font-size="8.5" font-weight="900" font-family="monospace" fill="#ffd666" paint-order="stroke" stroke="rgba(0,0,0,.75)" stroke-width="2.4">+${delayOf(r,demoT).toFixed(2)}s</text>`;
+              }
+            }
+            svg+=marker(r,dR,false);
+          }
+        });
+        layer.innerHTML=svg;
+      }
+      function renderGantt(){
+        const g0=document.getElementById('mergeGantt'); if(!g0) return;
+        const W=900,H=210,x0=84,x1=884,DUR=durOf();
+        const X=t=>x0+(x1-x0)*Math.min(1,Math.max(0,t/DUR));
+        const rows={R1:52,R2:128}, bh=48, AX='rgba(20,30,40,.66)';
+        let g=`<defs><pattern id="mdtl" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="rgba(210,150,20,.24)"/><line x1="0" y1="0" x2="0" y2="9" stroke="rgba(180,120,10,.95)" stroke-width="2.4"/></pattern></defs>`;
+        for(let s=0;s<=Math.ceil(DUR);s++){
+          g+=`<line x1="${X(s)}" y1="20" x2="${X(s)}" y2="${H-26}" stroke="rgba(20,30,40,.12)" stroke-width="1"/><text x="${X(s)}" y="${H-5}" text-anchor="middle" font-size="18" fill="${AX}" font-family="monospace">${s}s</text>`;
+        }
+        ['R1','R2'].forEach(r=>{
+          const y=rows[r], yd=isY(r)?YIELD[demoSched].delay:0;
+          g+=`<text x="10" y="${y+bh/2}" dominant-baseline="central" font-size="25" font-weight="900" font-family="monospace" fill="${COLR[r]}" paint-order="stroke" stroke="rgba(255,255,255,.6)" stroke-width="3.5">${r}</text>`;
+          g+=`<line x1="${x0}" y1="${y+bh/2}" x2="${x1}" y2="${y+bh/2}" stroke="rgba(20,30,40,.14)" stroke-width="1"/>`;
+          SEG[r].forEach(seg=>{
+            const a=T0[r]+seg.a/V+yd, b=T0[r]+seg.b/V+yd, dark=(seg.z==='M2');
+            g+=`<rect x="${X(a)}" y="${y}" width="${Math.max(2,X(b)-X(a))}" height="${bh}" rx="5" fill="${ZCOL[seg.z]}" opacity=".96"/><text x="${(X(a)+X(b))/2}" y="${y+bh/2}" text-anchor="middle" dominant-baseline="central" font-size="19" font-weight="800" font-family="monospace" fill="${dark?'#1a1a1a':'#fff'}" paint-order="stroke" stroke="${dark?'none':'rgba(0,0,0,.35)'}" stroke-width="2.4">${seg.z}</text>`;
+          });
+          if(yd){
+            const front=T0[r]+SEG[r][0].a/V;
+            g+=`<rect x="${X(front)}" y="${y}" width="${Math.max(2,X(front+yd)-X(front))}" height="${bh}" rx="5" fill="url(#mdtl)" stroke="rgba(180,120,10,.9)" stroke-width="1.6"/><text x="${(X(front)+X(front+yd))/2}" y="${y-9}" text-anchor="middle" font-size="18" font-weight="800" font-family="monospace" fill="#9a6a05">Δt=${yd.toFixed(1)}s</text>`;
+          }
+        });
+        ['R1','R2'].forEach(r=>{
+          const gx=X(T0[r]+SEG[r][0].a/V);
+          g+=`<line x1="${gx}" y1="28" x2="${gx}" y2="${H-26}" stroke="#2b6fd6" stroke-width="2.4" stroke-dasharray="7 6"/><text x="${gx}" y="18" text-anchor="middle" font-size="17" font-weight="800" font-family="monospace" fill="#2b6fd6">${r} gen</text>`;
+        });
+        g+=`<line x1="${X(demoT)}" y1="24" x2="${X(demoT)}" y2="${H-26}" stroke="#e98a00" stroke-width="3"/><circle cx="${X(demoT)}" cy="24" r="5" fill="#e98a00"/>`;
+        g0.innerHTML=g;
+      }
+      window.__demoRender = function(){ renderArena(); renderGantt(); };
+    })();
+
+    function demoSetSched(s){ demoSched = s; demoT = 0; window.__demoRender(); }
+    function demoEnter(){
+      demoActive = true; demoT = 0;
+      demoSched = (currentPolicy === 'fcfs') ? 'fcfs' : 'optimal';
+      setLocalView('P4');
+      document.getElementById('scene').classList.add('demo-on');
+      document.getElementById('mergeGanttWrap').style.display = 'block';
+      document.getElementById('demoExitBtn').style.display = 'block';
+      document.getElementById('zoomRobots').innerHTML = '';
+      playing = false; updatePlayBtnState();
+      window.__demoRender();
+    }
+    function demoExit(){
+      if (!demoActive) return;
+      demoActive = false; playing = false;
+      document.getElementById('scene').classList.remove('demo-on');
+      document.getElementById('mergeGanttWrap').style.display = 'none';
+      document.getElementById('demoExitBtn').style.display = 'none';
+      document.getElementById('zoomScenario').innerHTML = '';
+      updatePlayBtnState();
+      try { renderLocalZoom(); } catch(e){}
+    }
+    function demoToggle(){ demoActive ? demoExit() : demoEnter(); }
+    document.getElementById('demoExitBtn').addEventListener('click', demoExit);
+    document.addEventListener('keydown', (e) => {
+      if (demoActive && e.key === 'Escape') { e.stopPropagation(); demoExit(); }
+    }, true);   // capture so it fires before menu/modal Esc handlers
     function populateSceneLvl2(gid) {
       const lvl2   = document.getElementById('scenarioLvl2');
       const header = document.getElementById('sceneLvl2Header');
@@ -4708,6 +4906,7 @@
     document.getElementById('policyMenu').addEventListener('click', e => e.stopPropagation());
     document.querySelectorAll('#policyMenu .drop-item[data-policy="optimal"]').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (demoActive) { currentPolicy='optimal'; document.getElementById('policyBtnLabel').textContent='Optimal'; demoSetSched('optimal'); closeAllDrops(); buildPolicyMenu(); return; }
         autoMode = false; updateModeButtons();
         applySetup(robotGroup, baseScene(), 'optimal');
         closeAllDrops(); buildPolicyMenu();
@@ -4715,30 +4914,24 @@
     });
     document.querySelectorAll('#policyMenu .drop-item[data-policy="fcfs"]').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (demoActive) { currentPolicy='fcfs'; document.getElementById('policyBtnLabel').textContent='FCFS'; demoSetSched('fcfs'); closeAllDrops(); buildPolicyMenu(); return; }
         autoMode = false; updateModeButtons();
         applySetup(robotGroup, baseScene(), 'fcfs');
         closeAllDrops(); buildPolicyMenu();
       });
     });
 
-    // ── Keyboard shortcuts ───────────────────────────────────────────────────
+    // ── Keyboard shortcuts (便捷键) ───────────────────────────────────────────
+    // 菜单高亮导航(方向键/WASD + Enter + Esc)见下方 GamepadModule 内的键盘绑定。
     document.addEventListener('keydown', (e) => {
+      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if (paramsOpen || schedViewerOpen || treeExploreOpen) return;  // 弹窗交给各自处理
       if (e.code === 'Space') {
         e.preventDefault();
         document.getElementById('togglePlay').click();
       }
       if (e.key.toLowerCase() === 'r') document.getElementById('restart').click();
       if (e.key.toLowerCase() === 'm') document.getElementById('mapToggleBtn').click();
-      if (e.key === 'ArrowRight') {
-        playbackDir = 'forward';
-        document.getElementById('dirFwd').click();
-      }
-      if (e.key === 'ArrowLeft') {
-        playbackDir = 'backward';
-        document.getElementById('dirBwd').click();
-      }
-      if (e.key === 'Escape') closeAllDrops();
-      if ((e.key === 'b' || e.key === 'B') && paramsOpen) closeParams();
     });
 
     // Bust cache for all static warehouse decoration images
@@ -4766,11 +4959,31 @@
       document.getElementById('setupPolicy').textContent = 'No schedule';
     }
 
+
     requestAnimationFrame(loop);
+
+    // 首屏静止：第一次真实交互(鼠标/键盘)后解除 booting，此后手动选车数量/场景/策略即自动播。
+    // 注意：首屏程序化 .click()(如下方恢复地图)只派发 click、不派发 pointerdown，因此不会误解除。
+    const _endBoot = () => { booting = false; };
+    window.addEventListener('pointerdown', _endBoot, { once: true, capture: true });
+    window.addEventListener('keydown',     _endBoot, { once: true, capture: true });
 
     // Restore last map mode on page load
     if (currentMapMode === 'traffic') {
       document.getElementById('mapToggleBtn').click();
+    }
+
+    // Deep-link: ?demo=1 auto-opens the merge-delay explainer (for screenshots / direct linking)
+    // Optional &sched=fcfs&dt=2.6 bakes a fixed frame (for screenshots).
+    {
+      const _q = new URLSearchParams(location.search);
+      if (_q.get('demo') === '1') {
+        try {
+          demoEnter();
+          if (_q.has('sched')) demoSched = _q.get('sched');
+          if (_q.has('dt')) { demoT = parseFloat(_q.get('dt')); window.__demoRender(); }
+        } catch (e) {}
+      }
     }
   </script>
 
@@ -5220,6 +5433,53 @@
     document.addEventListener('mousedown', () => FM.clearFocus(), { passive: true });
 
     GM.start();
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 键盘菜单导航（录视频用，无需鼠标）— 复用上面手柄的 FM 高亮系统
+    //   ↑↓←→ 或 W/A/S/D  在屏幕控制条与下拉菜单间移动高亮
+    //   Enter            选中（打开下拉 / 选场景·策略 / 触发按钮）
+    //   Esc / Backspace  返回上一层 / 关闭菜单
+    // ════════════════════════════════════════════════════════════════════════
+    let kbNavOn = false;
+    // 首次按导航键只点亮高亮、不移动；返回 true 表示「本次是刚激活」
+    function kbEnsure() { if (!kbNavOn) { FM.init(); kbNavOn = true; return true; } return false; }
+    function kbConfirm() {                         // 等价手柄 A 键：确认/进入
+      const m = FM.mode(), grp = FM.grpId(), el = FM.active();
+      if (m === 'bar') {
+        if (grp === 'scenario') {
+          document.getElementById('scenarioBtn').click();
+          buildScenarioMenu(robotGroup);
+          FM.enterDrop('scenario-l1');
+        } else if (grp === 'policy') {
+          document.getElementById('policyBtn').click();
+          buildPolicyMenu();
+          FM.enterDrop('policy');
+        } else if (el) { el.click(); }
+      } else if (m === 'scenario-l1') {
+        if (el) { el.click(); FM.enterDrop('scenario-l2'); }   // 选车数量 → 进入场景列
+      } else if (m === 'scenario-l2' || m === 'policy') {
+        if (el) { el.click(); FM.toBar(); }                    // 选场景/策略 → 回控制条
+      }
+    }
+    function kbBack() {                             // 等价手柄 B 键：返回/关闭
+      const kept = FM.back();
+      if (!kept || FM.mode() === 'bar') closeAllDrops();
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if (paramsOpen || schedViewerOpen || treeExploreOpen) return;  // 弹窗交给各自处理
+      switch (e.key.toLowerCase()) {
+        case 'arrowup':    case 'w': if (!kbEnsure()) FM.up();   break;
+        case 'arrowdown':  case 's': if (!kbEnsure()) FM.down(); break;
+        case 'arrowleft':  case 'a': if (!kbEnsure()) (FM.mode() === 'bar' ? FM.barLeft()  : FM.dropLeft());  break;
+        case 'arrowright': case 'd': if (!kbEnsure()) (FM.mode() === 'bar' ? FM.barRight() : FM.dropRight()); break;
+        case 'enter':                if (!kbEnsure()) kbConfirm(); break;
+        case 'escape': case 'backspace': kbBack(); break;
+        default: return;
+      }
+      e.preventDefault();
+    });
 
   })(); // end GamepadModule
   </script>

@@ -30,11 +30,13 @@ def get_road_agent(i, j, topology=None):
 # Random config generator
 # ===========================================================================
 
-def generate_random_config(N, seed=None, max_per_int=5,
-                            T_val=2.0, T_ent=0.0, Dt=2.5,
-                            v_max=1.0, detect_range=7.6,
-                            rho1=1.0, rho2=1.0, weight=1.5,
-                            max_iter=200, tol_r=1e-2, tol_s=1e-2,
+from . import defaults as _D
+
+def generate_random_config(N, seed=None, max_per_int=None,
+                            T_val=_D.T_VAL, T_ent=_D.T_ENT, Dt=_D.DT,
+                            v_max=_D.V_MAX, detect_range=_D.DETECT_RANGE,
+                            rho1=_D.RHO1, rho2=_D.RHO2, weight=_D.WEIGHT,
+                            max_iter=_D.MAX_ITER, tol_r=_D.TOL_R, tol_s=_D.TOL_S,
                             topology=None):
     """
     Generate a random N-vehicle scenario.
@@ -78,24 +80,39 @@ def generate_random_config(N, seed=None, max_per_int=5,
     for _ in range(N):
         rng.shuffle(candidates)
         chosen = None
+        chosen_variant = None
         for (ent, ext) in candidates:
-            ints = route_dict[(ent, ext)]['ints']
-            if all(int_load[i] < max_per_int for i in ints):
-                chosen = (ent, ext)
+            entry = route_dict[(ent, ext)]
+            variants = list(entry.get('variants') or [{'ints': entry['ints'],
+                                                       'route_id': entry['route_id']}])
+            # Try equal-length alternative paths in random order before
+            # rejecting this OD pair.
+            order = list(range(len(variants)))
+            rng.shuffle(order)
+            for idx in order:
+                v = variants[idx]
+                if all(int_load[i] < max_per_int for i in v['ints']):
+                    chosen = (ent, ext)
+                    chosen_variant = v
+                    break
+            if chosen is not None:
                 break
         if chosen is None:
             raise ValueError(
-                f'Cannot assign vehicle {len(vehicles)+1}: all routes exceed '
-                f'max_per_int={max_per_int}. Try fewer vehicles or a larger limit.')
+                f'Cannot assign vehicle {len(vehicles)+1}: all routes (incl. '
+                f'equal-length variants) exceed max_per_int={max_per_int}. '
+                f'Try fewer vehicles or a larger limit.')
         ent, ext = chosen
-        ints = route_dict[(ent, ext)]['ints']
+        ints = chosen_variant['ints']
+        rids = chosen_variant['route_id']
         for i in ints:
             int_load[i] += 1
         if ent not in entrance_rank:
             entrance_rank[ent] = 0
         entry_idx = entrance_rank[ent]
         entrance_rank[ent] += 1
-        vehicles.append({'entrance': ent, 'exit': ext, 'entry_idx': entry_idx})
+        vehicles.append({'entrance': ent, 'exit': ext, 'entry_idx': entry_idx,
+                         'ints': ints, 'route_id': rids})
 
     # ── Compute entrance rank offsets (unique entrances, order of first appearance) ──
     seen = {}
@@ -119,9 +136,8 @@ def generate_random_config(N, seed=None, max_per_int=5,
 
     for v in vehicles:
         ent, ext, entry_idx = v['entrance'], v['exit'], v['entry_idx']
-        route = route_dict[(ent, ext)]
-        ints     = route['ints']       # 1-indexed intersections
-        rids     = route['route_id']   # 1-indexed route labels
+        ints = v['ints']         # chosen variant from sampling step
+        rids = v['route_id']
 
         # alpha_tilde
         alpha = base_time + ent_rank_offset[ent] * T_ent + entry_idx * T_val
@@ -196,6 +212,13 @@ def generate_random_config(N, seed=None, max_per_int=5,
         'pathInfo_c':           pathInfo_c,
         'pathInfo':             pathInfo,
         'IntSpaceDB': list(int_db_list),
+        # Per-vehicle config (entrance / exit / entry_idx) — mirrors MATLAB
+        # const.config{n}, used by demo .js exporter to populate vehicle metadata.
+        'config': [
+            {'entrance': v['entrance'], 'exit': v['exit'],
+             'entry_idx': v['entry_idx']}
+            for v in vehicles
+        ],
     }
 
     return const, agent_participation

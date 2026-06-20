@@ -7,17 +7,31 @@ window.ALL_TREE_DATA["tr_20r_S1"] = {
     "1": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
-        {"id":2,"orig":31,"tw":49.361,"f":-0.000,"isPath":true}
+        {"id":2,"orig":18,"tw":27.693,"f":-0.000,"isPath":true},
+        {"id":3,"orig":19,"tw":27.747,"f":-0.000,"isPath":true},
+        {"id":4,"orig":20,"tw":27.962,"f":-0.000,"isPath":false},
+        {"id":5,"orig":21,"tw":28.748,"f":-0.000,"isPath":false},
+        {"id":6,"orig":22,"tw":28.693,"f":0.086,"isPath":false},
+        {"id":7,"orig":32,"tw":31.049,"f":1.743,"isPath":false},
+        {"id":8,"orig":41,"tw":43.073,"f":0.067,"isPath":true},
+        {"id":9,"orig":49,"tw":43.073,"f":2.068,"isPath":false}
       ],
       "edges": [
-        [1,2]
+        [1,2],
+        [2,3],
+        [2,4],
+        [4,5],
+        [4,6],
+        [6,7],
+        [3,8],
+        [5,9]
       ],
-      "path": [1,2]
+      "path": [1,2,3,8]
     },
     "2": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
-        {"id":2,"orig":39,"tw":51.361,"f":-0.000,"isPath":true}
+        {"id":2,"orig":37,"tw":41.361,"f":-0.000,"isPath":true}
       ],
       "edges": [
         [1,2]
@@ -27,93 +41,41 @@ window.ALL_TREE_DATA["tr_20r_S1"] = {
     "3": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
-        {"id":2,"orig":16,"tw":27.750,"f":-0.000,"isPath":true},
-        {"id":3,"orig":17,"tw":28.250,"f":-0.000,"isPath":false},
-        {"id":4,"orig":18,"tw":28.250,"f":-0.000,"isPath":true},
-        {"id":5,"orig":19,"tw":28.750,"f":-0.000,"isPath":false},
-        {"id":6,"orig":20,"tw":29.250,"f":1.000,"isPath":false},
-        {"id":7,"orig":22,"tw":29.750,"f":0.500,"isPath":false},
-        {"id":8,"orig":23,"tw":29.250,"f":-0.000,"isPath":false},
-        {"id":9,"orig":46,"tw":51.503,"f":1.000,"isPath":true},
-        {"id":10,"orig":47,"tw":30.250,"f":1.000,"isPath":false},
-        {"id":11,"orig":48,"tw":30.250,"f":1.000,"isPath":false},
-        {"id":12,"orig":49,"tw":31.250,"f":1.000,"isPath":false},
-        {"id":13,"orig":51,"tw":31.250,"f":4.000,"isPath":false},
-        {"id":14,"orig":52,"tw":31.250,"f":2.000,"isPath":false},
-        {"id":15,"orig":53,"tw":31.250,"f":1.000,"isPath":false},
-        {"id":16,"orig":54,"tw":32.250,"f":4.000,"isPath":false},
-        {"id":17,"orig":55,"tw":32.250,"f":1.000,"isPath":false},
-        {"id":18,"orig":57,"tw":33.250,"f":5.000,"isPath":false},
-        {"id":19,"orig":61,"tw":33.250,"f":2.000,"isPath":false},
-        {"id":20,"orig":62,"tw":33.250,"f":6.000,"isPath":false},
-        {"id":21,"orig":63,"tw":34.035,"f":2.000,"isPath":false},
-        {"id":22,"orig":65,"tw":35.035,"f":7.785,"isPath":false},
-        {"id":23,"orig":83,"tw":51.503,"f":3.500,"isPath":false},
-        {"id":24,"orig":87,"tw":33.250,"f":4.000,"isPath":false},
-        {"id":25,"orig":89,"tw":33.250,"f":4.000,"isPath":false},
-        {"id":26,"orig":90,"tw":34.035,"f":4.000,"isPath":false},
-        {"id":27,"orig":108,"tw":51.503,"f":4.000,"isPath":false},
-        {"id":28,"orig":110,"tw":34.250,"f":5.000,"isPath":false},
-        {"id":29,"orig":126,"tw":51.503,"f":4.500,"isPath":false},
-        {"id":30,"orig":139,"tw":51.503,"f":6.000,"isPath":false},
-        {"id":31,"orig":149,"tw":51.503,"f":6.785,"isPath":false}
-      ],
-      "edges": [
-        [1,2],
-        [2,3],
-        [2,4],
-        [3,5],
-        [3,6],
-        [5,7],
-        [5,8],
-        [4,9],
-        [6,10],
-        [6,11],
-        [10,12],
-        [12,13],
-        [12,14],
-        [11,15],
-        [15,16],
-        [15,17],
-        [17,18],
-        [14,19],
-        [19,20],
-        [19,21],
-        [21,22],
-        [8,23],
-        [16,24],
-        [24,25],
-        [24,26],
-        [13,27],
-        [25,28],
-        [7,29],
-        [20,30],
-        [26,31]
-      ],
-      "path": [1,2,4,9]
-    },
-    "4": {
-      "nodes": [
-        {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
-        {"id":2,"orig":17,"tw":29.243,"f":-0.000,"isPath":true},
-        {"id":3,"orig":18,"tw":29.488,"f":-0.118,"isPath":true},
-        {"id":4,"orig":19,"tw":30.243,"f":0.207,"isPath":false},
-        {"id":5,"orig":21,"tw":31.028,"f":1.629,"isPath":false},
-        {"id":6,"orig":26,"tw":44.354,"f":0.335,"isPath":true}
+        {"id":2,"orig":18,"tw":22.250,"f":-0.000,"isPath":true},
+        {"id":3,"orig":19,"tw":22.606,"f":-0.000,"isPath":true},
+        {"id":4,"orig":20,"tw":23.035,"f":-0.000,"isPath":false},
+        {"id":5,"orig":23,"tw":23.821,"f":1.214,"isPath":false},
+        {"id":6,"orig":24,"tw":23.250,"f":-0.000,"isPath":false},
+        {"id":7,"orig":45,"tw":48.359,"f":0.314,"isPath":true},
+        {"id":8,"orig":65,"tw":48.359,"f":1.387,"isPath":false},
+        {"id":9,"orig":83,"tw":48.359,"f":2.743,"isPath":false}
       ],
       "edges": [
         [1,2],
         [2,3],
         [2,4],
         [4,5],
-        [3,6]
+        [4,6],
+        [3,7],
+        [6,8],
+        [5,9]
       ],
-      "path": [1,2,3,6]
+      "path": [1,2,3,7]
+    },
+    "4": {
+      "nodes": [
+        {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
+        {"id":2,"orig":27,"tw":42.361,"f":-0.000,"isPath":true}
+      ],
+      "edges": [
+        [1,2]
+      ],
+      "path": [1,2]
     },
     "5": {
       "nodes": [
         {"id":1,"orig":1,"tw":0.000,"f":0.000,"isPath":true},
-        {"id":2,"orig":26,"tw":46.361,"f":-0.000,"isPath":true}
+        {"id":2,"orig":21,"tw":40.717,"f":-0.000,"isPath":true}
       ],
       "edges": [
         [1,2]

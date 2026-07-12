@@ -1,0 +1,1227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interactive Coarse Solution</title>
+  <style>
+    body { margin:0; font-family:Arial,sans-serif; background:#f8fafc; color:#111827; }
+    header { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:10px 14px; background:white; border-bottom:1px solid #d1d5db; }
+    h1 { margin:0; font-size:18px; }
+    h2 { margin:10px 12px; font-size:15px; }
+    h3 { margin:0 0 6px; }
+    #meta { font-size:14px; font-weight:700; white-space:nowrap; }
+    .hint { color:#64748b; font-size:12px; margin-left:14px; }
+    .notation { color:#475569; font-size:12px; margin:-4px 12px 8px; }
+    .layout { --left-pane:75%; display:grid; grid-template-columns:minmax(360px,var(--left-pane)) 8px minmax(300px,1fr); gap:8px; padding:12px; height:calc(100vh - 48px); box-sizing:border-box; }
+    .pane { background:white; border:1px solid #d1d5db; border-radius:6px; overflow:auto; }
+    .splitter { cursor:col-resize; border-radius:6px; background:linear-gradient(90deg, transparent 0 2px, #cbd5e1 2px 6px, transparent 6px 8px); }
+    .splitter:hover, .splitter.dragging { background:linear-gradient(90deg, transparent 0 2px, #64748b 2px 6px, transparent 6px 8px); }
+    #treeSvg { width:100%; height:520px; display:block; cursor:default; user-select:none; touch-action:pan-x pan-y; }
+    #basicMapPanel { padding:0 10px 12px; display:grid; justify-items:start; }
+    #basicMapPanel svg { display:block; max-width:100%; height:auto; }
+    #pathSummaryPanel { padding:0 10px 10px; }
+    .path-table { border-collapse:collapse; font-size:11px; min-width:720px; max-width:100%; margin-bottom:8px; }
+    .path-table th, .path-table td { border:1px solid #d1d5db; padding:4px 6px; text-align:left; vertical-align:top; }
+    .path-table th { background:#f1f5f9; font-weight:700; white-space:nowrap; }
+    .path-table td:first-child, .path-table td:nth-child(2), .path-table td:nth-child(3) { white-space:nowrap; font-weight:700; }
+    .path-list { display:flex; flex-wrap:wrap; gap:3px; }
+    .path-pill { border:1px solid #cbd5e1; border-radius:4px; padding:2px 5px; background:#f8fafc; white-space:nowrap; display:inline-flex; gap:5px; align-items:baseline; }
+    .path-pill.selected { border-color:#16a34a; background:#dcfce7; color:#166534; font-weight:700; }
+    .path-cost { color:#475569; font-family:Consolas, monospace; font-size:10px; font-weight:600; }
+    .path-pill.selected .path-cost { color:#166534; }
+    .path-note { color:#475569; font-size:11px; margin:0 0 6px; }
+    #pathTreePanel { padding:0 10px 12px; display:grid; grid-template-columns:1fr; gap:8px; justify-items:start; }
+    .path-card { border:1px solid #d1d5db; border-radius:6px; padding:6px 8px; background:white; width:max-content; max-width:calc(100% - 18px); min-width:0; overflow:auto; }
+    .path-card h3 { font-size:10px; line-height:1.2; margin:0 0 4px; white-space:nowrap; }
+    .path-card svg { display:block; margin:0; max-width:100%; height:auto; }
+    .path-card-visuals { display:grid; grid-template-columns:auto auto; gap:12px; align-items:start; }
+    .path-visual-title { margin:0 0 3px; font-size:9px; font-weight:700; color:#475569; }
+    #schedulePanel { padding:10px; display:grid; grid-template-columns:1fr; gap:10px; }
+    .icard { border:1px solid #d1d5db; border-radius:6px; padding:7px 9px; background:white; }
+    .icard h3 { font-size:14px; }
+    .empty { min-height:90px; display:grid; place-items:center; color:#64748b; border:1px dashed #cbd5e1; }
+    @media (max-width:1000px) { .layout { grid-template-columns:1fr; height:auto; } .splitter { display:none; } #schedulePanel { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>Interactive Coarse Solution</h1><div class="hint">Use Left/Right or Up/Down keys to switch tree paths. Wheel zooms the decision tree; double-click resets.</div></div>
+    <div id="meta"></div>
+  </header>
+  <main class="layout" id="mainLayout">
+    <section class="pane">
+      <h2>Decision Tree</h2>
+      <div class="notation">Notation: z<sub>nq</sub>(i,j)(tw) means vehicle Nn selects path option q from Ii to Ij at time tw; q is displayed from 1, while decision-tree node IDs start from 0. v<sub>in</sub>(tw) means vehicle Nn occupies Ii at time tw.</div>
+      <svg id="treeSvg"></svg>
+      <h2>Basic Map</h2>
+      <div id="basicMapPanel"></div>
+      <h2>Vehicle Path Options</h2>
+      <div id="pathSummaryPanel"></div>
+      <h2>Path Selection Branches</h2>
+      <div id="pathBranchPanel"></div>
+      <h2>Vehicle Path Branch Trees</h2>
+      <div id="pathTreePanel"></div>
+    </section>
+    <div class="splitter" id="splitter" title="Drag to resize panels; double-click to reset"></div>
+    <section class="pane">
+      <h2 id="scheduleTitle">Schedule</h2>
+      <div id="schedulePanel"></div>
+    </section>
+  </main>
+  <script>
+    const DATA = {"nodes": [{"idx": 0, "parent": -1, "tw": 0.0, "g": 0.0, "g_delay": 0.0, "g_path": 0.0, "U_temp": [null], "segments": [], "attempts": [], "route_choices": [], "route_candidates": [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]], "path_decisions": []}, {"idx": 1, "parent": 0, "tw": 2.356194490192345, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [3], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0, 1, 2, 3, 4, 5, 6]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}]}, {"idx": 2, "parent": 0, "tw": 2.0, "g": 0.0, "g_delay": 0.0, "g_path": 0.0, "U_temp": [3], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7, 8, 9, 10]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}]}, {"idx": 3, "parent": 2, "tw": 5.0, "g": 0.0, "g_delay": 0.0, "g_path": 0.0, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7, 8, 9, 10]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}]}, {"idx": 4, "parent": 3, "tw": 7.356194490192345, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [6], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7, 8, 9]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}]}, {"idx": 5, "parent": 3, "tw": 7.0, "g": 0.0, "g_delay": 0.0, "g_path": 0.0, "U_temp": [6], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.0, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[10]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 11, "from": "I6", "to": "I9", "tw": 5.0, "extra": 0.0}]}, {"idx": 6, "parent": 5, "tw": 10.0, "g": 0.0, "g_delay": 0.0, "g_path": 0.0, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.0, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[10]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 11, "from": "I6", "to": "I9", "tw": 5.0, "extra": 0.0}]}, {"idx": 7, "parent": 6, "tw": 12.0, "g": 0.0, "g_delay": 0.0, "g_path": 0.0, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 9, "requested_time": 10.0, "start_time": 10.0, "end_time": 12.0, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[10]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 11, "from": "I6", "to": "I9", "tw": 5.0, "extra": 0.0}]}, {"idx": 8, "parent": 4, "tw": 10.356194490192344, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7, 8, 9]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}]}, {"idx": 9, "parent": 8, "tw": 12.712388980384688, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [5], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 10, "parent": 8, "tw": 12.356194490192344, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [5], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.356194490192344, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[8]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 9, "from": "I5", "to": "I4", "tw": 10.356194490192344, "extra": 10.0}]}, {"idx": 11, "parent": 8, "tw": 11.141592653589793, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [5], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[9]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 10, "from": "I5", "to": "I8", "tw": 10.356194490192344, "extra": 0.0}]}, {"idx": 12, "parent": 11, "tw": 14.141592653589793, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[9]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 10, "from": "I5", "to": "I8", "tw": 10.356194490192344, "extra": 0.0}]}, {"idx": 13, "parent": 12, "tw": 14.926990816987242, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [8], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 8, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[9]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 10, "from": "I5", "to": "I8", "tw": 10.356194490192344, "extra": 0.0}]}, {"idx": 14, "parent": 13, "tw": 17.926990816987242, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 8, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[9]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 10, "from": "I5", "to": "I8", "tw": 10.356194490192344, "extra": 0.0}]}, {"idx": 15, "parent": 14, "tw": 20.283185307179586, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 8, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 9, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 20.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[9]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 10, "from": "I5", "to": "I8", "tw": 10.356194490192344, "extra": 0.0}]}, {"idx": 16, "parent": 10, "tw": 15.356194490192344, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.356194490192344, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[8]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 9, "from": "I5", "to": "I4", "tw": 10.356194490192344, "extra": 10.0}]}, {"idx": 17, "parent": 16, "tw": 16.141592653589793, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [4], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.356194490192344, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 15.356194490192344, "start_time": 15.356194490192344, "end_time": 16.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[8]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 9, "from": "I5", "to": "I4", "tw": 10.356194490192344, "extra": 10.0}]}, {"idx": 18, "parent": 17, "tw": 19.141592653589793, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.356194490192344, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 15.356194490192344, "start_time": 15.356194490192344, "end_time": 16.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[8]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 9, "from": "I5", "to": "I4", "tw": 10.356194490192344, "extra": 10.0}]}, {"idx": 19, "parent": 18, "tw": 19.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [7], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.356194490192344, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 15.356194490192344, "start_time": 15.356194490192344, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[8]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 9, "from": "I5", "to": "I4", "tw": 10.356194490192344, "extra": 10.0}]}, {"idx": 20, "parent": 19, "tw": 22.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.356194490192344, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 15.356194490192344, "start_time": 15.356194490192344, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[8]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 9, "from": "I5", "to": "I4", "tw": 10.356194490192344, "extra": 10.0}]}, {"idx": 21, "parent": 20, "tw": 24.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [8], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.356194490192344, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 15.356194490192344, "start_time": 15.356194490192344, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 24.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[8]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 9, "from": "I5", "to": "I4", "tw": 10.356194490192344, "extra": 10.0}]}, {"idx": 22, "parent": 21, "tw": 27.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.356194490192344, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 15.356194490192344, "start_time": 15.356194490192344, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 24.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[8]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 9, "from": "I5", "to": "I4", "tw": 10.356194490192344, "extra": 10.0}]}, {"idx": 23, "parent": 22, "tw": 30.283185307179586, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.356194490192344, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 15.356194490192344, "start_time": 15.356194490192344, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 24.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 9, "requested_time": 27.926990816987242, "start_time": 27.926990816987242, "end_time": 30.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[8]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 9, "from": "I5", "to": "I4", "tw": 10.356194490192344, "extra": 10.0}]}, {"idx": 24, "parent": 9, "tw": 15.712388980384688, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 25, "parent": 24, "tw": 16.497787143782137, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [2], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 26, "parent": 25, "tw": 19.497787143782137, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 27, "parent": 26, "tw": 20.283185307179586, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [1], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 1, "requested_time": 19.497787143782137, "start_time": 19.497787143782137, "end_time": 20.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 28, "parent": 27, "tw": 23.283185307179586, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 1, "requested_time": 19.497787143782137, "start_time": 19.497787143782137, "end_time": 20.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 29, "parent": 28, "tw": 25.283185307179586, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [4], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 1, "requested_time": 19.497787143782137, "start_time": 19.497787143782137, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 4, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 25.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 30, "parent": 29, "tw": 28.283185307179586, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 1, "requested_time": 19.497787143782137, "start_time": 19.497787143782137, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 4, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 25.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 31, "parent": 30, "tw": 29.068583470577035, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [7], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 1, "requested_time": 19.497787143782137, "start_time": 19.497787143782137, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 4, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 25.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 7, "requested_time": 28.283185307179586, "start_time": 28.283185307179586, "end_time": 29.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 32, "parent": 31, "tw": 32.06858347057704, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 1, "requested_time": 19.497787143782137, "start_time": 19.497787143782137, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 4, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 25.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 7, "requested_time": 28.283185307179586, "start_time": 28.283185307179586, "end_time": 29.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 33, "parent": 32, "tw": 34.06858347057704, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [8], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 1, "requested_time": 19.497787143782137, "start_time": 19.497787143782137, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 4, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 25.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 7, "requested_time": 28.283185307179586, "start_time": 28.283185307179586, "end_time": 29.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 8, "resource": 8, "requested_time": 32.06858347057704, "start_time": 32.06858347057704, "end_time": 34.06858347057704, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 34, "parent": 33, "tw": 37.06858347057704, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 1, "requested_time": 19.497787143782137, "start_time": 19.497787143782137, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 4, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 25.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 7, "requested_time": 28.283185307179586, "start_time": 28.283185307179586, "end_time": 29.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 8, "resource": 8, "requested_time": 32.06858347057704, "start_time": 32.06858347057704, "end_time": 34.06858347057704, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 35, "parent": 34, "tw": 39.42477796076938, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.0, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 6, "requested_time": 5.0, "start_time": 5.0, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 12.712388980384688, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 2, "requested_time": 15.712388980384688, "start_time": 15.712388980384688, "end_time": 16.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 1, "requested_time": 19.497787143782137, "start_time": 19.497787143782137, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 4, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 25.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 7, "requested_time": 28.283185307179586, "start_time": 28.283185307179586, "end_time": 29.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 8, "resource": 8, "requested_time": 32.06858347057704, "start_time": 32.06858347057704, "end_time": 34.06858347057704, "delay": 0.0}, {"vehicle_id": 2, "task_index": 9, "resource": 9, "requested_time": 37.06858347057704, "start_time": 37.06858347057704, "end_time": 39.42477796076938, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[7]], "path_decisions": [{"vehicle": 2, "option": 8, "from": "I3", "to": "I6", "tw": 0.0, "extra": 0.0}, {"vehicle": 2, "option": 8, "from": "I6", "to": "I5", "tw": 5.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 8, "from": "I5", "to": "I2", "tw": 10.356194490192344, "extra": 19.14159265358979}]}, {"idx": 36, "parent": 1, "tw": 5.356194490192345, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0, 1, 2, 3, 4, 5, 6]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}]}, {"idx": 37, "parent": 36, "tw": 7.356194490192345, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [2], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0, 1, 2, 3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}]}, {"idx": 38, "parent": 36, "tw": 6.141592653589793, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [2], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4, 5, 6]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}]}, {"idx": 39, "parent": 38, "tw": 9.141592653589793, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4, 5, 6]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}]}, {"idx": 40, "parent": 39, "tw": 11.497787143782137, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [5], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.497787143782137, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 5, "from": "I5", "to": "I4", "tw": 9.141592653589793, "extra": 9.141592653589793}]}, {"idx": 41, "parent": 39, "tw": 9.926990816987242, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [5], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 9.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[5]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 6, "from": "I5", "to": "I6", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 42, "parent": 39, "tw": 11.141592653589793, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [5], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[6]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 7, "from": "I5", "to": "I8", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 43, "parent": 42, "tw": 14.141592653589793, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[6]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 7, "from": "I5", "to": "I8", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 44, "parent": 43, "tw": 14.926990816987242, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [8], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 8, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[6]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 7, "from": "I5", "to": "I8", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 45, "parent": 44, "tw": 17.926990816987242, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 8, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[6]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 7, "from": "I5", "to": "I8", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 46, "parent": 45, "tw": 20.283185307179586, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 8, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 9, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 20.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[6]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 7, "from": "I5", "to": "I8", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 47, "parent": 41, "tw": 12.926990816987242, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 9.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[5]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 6, "from": "I5", "to": "I6", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 48, "parent": 47, "tw": 15.283185307179586, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [6], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 9.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 6, "requested_time": 12.926990816987242, "start_time": 12.926990816987242, "end_time": 15.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[5]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 6, "from": "I5", "to": "I6", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 49, "parent": 48, "tw": 18.283185307179586, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 9.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 6, "requested_time": 12.926990816987242, "start_time": 12.926990816987242, "end_time": 15.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[5]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 6, "from": "I5", "to": "I6", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 50, "parent": 49, "tw": 20.283185307179586, "g": 8.283185307179586, "g_delay": 0.0, "g_path": 8.283185307179586, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 9.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 6, "requested_time": 12.926990816987242, "start_time": 12.926990816987242, "end_time": 15.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 9, "requested_time": 18.283185307179586, "start_time": 18.283185307179586, "end_time": 20.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[5]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 6, "from": "I5", "to": "I6", "tw": 9.141592653589793, "extra": 0.0}]}, {"idx": 51, "parent": 40, "tw": 14.497787143782137, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.497787143782137, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 5, "from": "I5", "to": "I4", "tw": 9.141592653589793, "extra": 9.141592653589793}]}, {"idx": 52, "parent": 51, "tw": 15.283185307179586, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [4], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.497787143782137, "start_time": 14.497787143782137, "end_time": 15.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 5, "from": "I5", "to": "I4", "tw": 9.141592653589793, "extra": 9.141592653589793}]}, {"idx": 53, "parent": 52, "tw": 18.283185307179586, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.497787143782137, "start_time": 14.497787143782137, "end_time": 15.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 5, "from": "I5", "to": "I4", "tw": 9.141592653589793, "extra": 9.141592653589793}]}, {"idx": 54, "parent": 53, "tw": 19.068583470577035, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [7], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.497787143782137, "start_time": 14.497787143782137, "end_time": 15.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 18.283185307179586, "start_time": 18.283185307179586, "end_time": 19.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 5, "from": "I5", "to": "I4", "tw": 9.141592653589793, "extra": 9.141592653589793}]}, {"idx": 55, "parent": 54, "tw": 22.068583470577035, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.497787143782137, "start_time": 14.497787143782137, "end_time": 15.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 18.283185307179586, "start_time": 18.283185307179586, "end_time": 19.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 5, "from": "I5", "to": "I4", "tw": 9.141592653589793, "extra": 9.141592653589793}]}, {"idx": 56, "parent": 55, "tw": 24.068583470577035, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [8], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.497787143782137, "start_time": 14.497787143782137, "end_time": 15.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 18.283185307179586, "start_time": 18.283185307179586, "end_time": 19.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.068583470577035, "start_time": 22.068583470577035, "end_time": 24.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 5, "from": "I5", "to": "I4", "tw": 9.141592653589793, "extra": 9.141592653589793}]}, {"idx": 57, "parent": 56, "tw": 27.068583470577035, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.497787143782137, "start_time": 14.497787143782137, "end_time": 15.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 18.283185307179586, "start_time": 18.283185307179586, "end_time": 19.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.068583470577035, "start_time": 22.068583470577035, "end_time": 24.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 5, "from": "I5", "to": "I4", "tw": 9.141592653589793, "extra": 9.141592653589793}]}, {"idx": 58, "parent": 57, "tw": 29.42477796076938, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 6.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 5, "requested_time": 9.141592653589793, "start_time": 9.141592653589793, "end_time": 11.497787143782137, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.497787143782137, "start_time": 14.497787143782137, "end_time": 15.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 18.283185307179586, "start_time": 18.283185307179586, "end_time": 19.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.068583470577035, "start_time": 22.068583470577035, "end_time": 24.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 9, "requested_time": 27.068583470577035, "start_time": 27.068583470577035, "end_time": 29.42477796076938, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[4]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 5, "from": "I2", "to": "I5", "tw": 5.356194490192345, "extra": 0.0}, {"vehicle": 2, "option": 5, "from": "I5", "to": "I4", "tw": 9.141592653589793, "extra": 9.141592653589793}]}, {"idx": 59, "parent": 37, "tw": 10.356194490192344, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0, 1, 2, 3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}]}, {"idx": 60, "parent": 59, "tw": 11.141592653589793, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [1], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0, 1, 2, 3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}]}, {"idx": 61, "parent": 60, "tw": 14.141592653589793, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0, 1, 2, 3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}]}, {"idx": 62, "parent": 61, "tw": 16.141592653589793, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [4], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2, 3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}]}, {"idx": 63, "parent": 61, "tw": 14.926990816987242, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [4], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0, 1]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}]}, {"idx": 64, "parent": 63, "tw": 17.926990816987242, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0, 1]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}]}, {"idx": 65, "parent": 64, "tw": 19.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [5], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 19.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 1, "from": "I5", "to": "I6", "tw": 17.926990816987242, "extra": 0.8584073464102069}]}, {"idx": 66, "parent": 64, "tw": 20.283185307179586, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [5], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 20.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[1]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 2, "from": "I5", "to": "I8", "tw": 17.926990816987242, "extra": 0.0}]}, {"idx": 67, "parent": 66, "tw": 23.283185307179586, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 20.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[1]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 2, "from": "I5", "to": "I8", "tw": 17.926990816987242, "extra": 0.0}]}, {"idx": 68, "parent": 67, "tw": 24.068583470577035, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [8], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 24.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[1]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 2, "from": "I5", "to": "I8", "tw": 17.926990816987242, "extra": 0.0}]}, {"idx": 69, "parent": 68, "tw": 27.068583470577035, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 24.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[1]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 2, "from": "I5", "to": "I8", "tw": 17.926990816987242, "extra": 0.0}]}, {"idx": 70, "parent": 69, "tw": 29.42477796076938, "g": 17.42477796076938, "g_delay": 0.0, "g_path": 17.42477796076938, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 20.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 23.283185307179586, "start_time": 23.283185307179586, "end_time": 24.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 9, "requested_time": 27.068583470577035, "start_time": 27.068583470577035, "end_time": 29.42477796076938, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[1]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 2, "from": "I5", "to": "I8", "tw": 17.926990816987242, "extra": 0.0}]}, {"idx": 71, "parent": 65, "tw": 22.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 19.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 1, "from": "I5", "to": "I6", "tw": 17.926990816987242, "extra": 0.8584073464102069}]}, {"idx": 72, "parent": 71, "tw": 25.283185307179586, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [6], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 6, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 25.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 1, "from": "I5", "to": "I6", "tw": 17.926990816987242, "extra": 0.8584073464102069}]}, {"idx": 73, "parent": 72, "tw": 28.283185307179586, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 6, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 25.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 1, "from": "I5", "to": "I6", "tw": 17.926990816987242, "extra": 0.8584073464102069}]}, {"idx": 74, "parent": 73, "tw": 30.283185307179586, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 14.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 5, "requested_time": 17.926990816987242, "start_time": 17.926990816987242, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 6, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 25.283185307179586, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 9, "requested_time": 28.283185307179586, "start_time": 28.283185307179586, "end_time": 30.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[0]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 1, "from": "I4", "to": "I5", "tw": 14.141592653589793, "extra": 0.0}, {"vehicle": 2, "option": 1, "from": "I5", "to": "I6", "tw": 17.926990816987242, "extra": 0.8584073464102069}]}, {"idx": 75, "parent": 62, "tw": 19.141592653589793, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2, 3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}]}, {"idx": 76, "parent": 75, "tw": 19.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [7], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2, 3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}]}, {"idx": 77, "parent": 76, "tw": 22.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2, 3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}]}, {"idx": 78, "parent": 77, "tw": 23.71238898038469, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [8], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 23.71238898038469, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 3, "from": "I8", "to": "I5", "tw": 22.926990816987242, "extra": 9.14159265358979}]}, {"idx": 79, "parent": 77, "tw": 24.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [8], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 24.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 4, "from": "I8", "to": "I9", "tw": 22.926990816987242, "extra": 0.0}]}, {"idx": 80, "parent": 79, "tw": 27.926990816987242, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 24.926990816987242, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 4, "from": "I8", "to": "I9", "tw": 22.926990816987242, "extra": 0.0}]}, {"idx": 81, "parent": 80, "tw": 30.283185307179586, "g": 18.283185307179586, "g_delay": 0.0, "g_path": 18.283185307179586, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 24.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 9, "requested_time": 27.926990816987242, "start_time": 27.926990816987242, "end_time": 30.283185307179586, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[3]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 4, "from": "I8", "to": "I9", "tw": 22.926990816987242, "extra": 0.0}]}, {"idx": 82, "parent": 78, "tw": 26.71238898038469, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 23.71238898038469, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 3, "from": "I8", "to": "I5", "tw": 22.926990816987242, "extra": 9.14159265358979}]}, {"idx": 83, "parent": 82, "tw": 29.068583470577035, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [5], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 23.71238898038469, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 5, "requested_time": 26.71238898038469, "start_time": 26.71238898038469, "end_time": 29.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 3, "from": "I8", "to": "I5", "tw": 22.926990816987242, "extra": 9.14159265358979}]}, {"idx": 84, "parent": 83, "tw": 32.06858347057704, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 23.71238898038469, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 5, "requested_time": 26.71238898038469, "start_time": 26.71238898038469, "end_time": 29.068583470577035, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 3, "from": "I8", "to": "I5", "tw": 22.926990816987242, "extra": 9.14159265358979}]}, {"idx": 85, "parent": 84, "tw": 34.42477796076938, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [6], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 23.71238898038469, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 5, "requested_time": 26.71238898038469, "start_time": 26.71238898038469, "end_time": 29.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 8, "resource": 6, "requested_time": 32.06858347057704, "start_time": 32.06858347057704, "end_time": 34.42477796076938, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 3, "from": "I8", "to": "I5", "tw": 22.926990816987242, "extra": 9.14159265358979}]}, {"idx": 86, "parent": 85, "tw": 37.42477796076938, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [null], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 23.71238898038469, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 5, "requested_time": 26.71238898038469, "start_time": 26.71238898038469, "end_time": 29.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 8, "resource": 6, "requested_time": 32.06858347057704, "start_time": 32.06858347057704, "end_time": 34.42477796076938, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 3, "from": "I8", "to": "I5", "tw": 22.926990816987242, "extra": 9.14159265358979}]}, {"idx": 87, "parent": 86, "tw": 39.42477796076938, "g": 27.424777960769376, "g_delay": 0.0, "g_path": 27.424777960769376, "U_temp": [9], "segments": [{"vehicle_id": 2, "task_index": 1, "resource": 3, "requested_time": 0.0, "start_time": 0.0, "end_time": 2.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 2, "resource": 2, "requested_time": 5.356194490192345, "start_time": 5.356194490192345, "end_time": 7.356194490192345, "delay": 0.0}, {"vehicle_id": 2, "task_index": 3, "resource": 1, "requested_time": 10.356194490192344, "start_time": 10.356194490192344, "end_time": 11.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 4, "resource": 4, "requested_time": 14.141592653589793, "start_time": 14.141592653589793, "end_time": 16.141592653589793, "delay": 0.0}, {"vehicle_id": 2, "task_index": 5, "resource": 7, "requested_time": 19.141592653589793, "start_time": 19.141592653589793, "end_time": 19.926990816987242, "delay": 0.0}, {"vehicle_id": 2, "task_index": 6, "resource": 8, "requested_time": 22.926990816987242, "start_time": 22.926990816987242, "end_time": 23.71238898038469, "delay": 0.0}, {"vehicle_id": 2, "task_index": 7, "resource": 5, "requested_time": 26.71238898038469, "start_time": 26.71238898038469, "end_time": 29.068583470577035, "delay": 0.0}, {"vehicle_id": 2, "task_index": 8, "resource": 6, "requested_time": 32.06858347057704, "start_time": 32.06858347057704, "end_time": 34.42477796076938, "delay": 0.0}, {"vehicle_id": 2, "task_index": 9, "resource": 9, "requested_time": 37.42477796076938, "start_time": 37.42477796076938, "end_time": 39.42477796076938, "delay": 0.0}], "attempts": [], "route_choices": [], "route_candidates": [[2]], "path_decisions": [{"vehicle": 2, "option": 1, "from": "I3", "to": "I2", "tw": 0.0, "extra": 8.283185307179586}, {"vehicle": 2, "option": 1, "from": "I2", "to": "I1", "tw": 5.356194490192345, "extra": 9.141592653589793}, {"vehicle": 2, "option": 3, "from": "I4", "to": "I7", "tw": 14.141592653589793, "extra": 0.8584073464102069}, {"vehicle": 2, "option": 3, "from": "I8", "to": "I5", "tw": 22.926990816987242, "extra": 9.14159265358979}]}], "terminals": [7, 15, 23, 35, 46, 50, 58, 70, 74, 81, 87], "terminal_count_total": 11, "terminal_count_shown": 11, "node_count_total": 88, "node_count_shown": 88, "best_idx": 7, "plans": [{"vehicle_id": 2, "entrance": 4, "exit": 8, "turns_by_option": [["left", "straight", "right", "right", "straight", "left", "straight"], ["left", "straight", "right", "right", "left", "right", "left"], ["left", "straight", "right", "straight", "right", "right", "left", "left", "straight"], ["left", "straight", "right", "straight", "right", "straight", "left"], ["left", "right", "left", "right", "right", "straight", "left"], ["left", "right", "right", "left", "straight"], ["left", "right", "straight", "right", "left"], ["straight", "left", "left", "right", "right", "straight", "right", "straight", "left"], ["straight", "left", "straight", "right", "right", "straight", "left"], ["straight", "left", "right", "right", "left"], ["straight", "straight", "straight"]], "resources_by_option": [[3, 2, 1, 4, 5, 6, 9], [3, 2, 1, 4, 5, 8, 9], [3, 2, 1, 4, 7, 8, 5, 6, 9], [3, 2, 1, 4, 7, 8, 9], [3, 2, 5, 4, 7, 8, 9], [3, 2, 5, 6, 9], [3, 2, 5, 8, 9], [3, 6, 5, 2, 1, 4, 7, 8, 9], [3, 6, 5, 4, 7, 8, 9], [3, 6, 5, 8, 9], [3, 6, 9]]}], "path_trees": [{"plan_index": 0, "vehicle_id": 2, "entrance": 4, "exit": 8, "options": [{"candidate_index": 0, "intersections": [3, 2, 1, 4, 5, 6, 9], "execution_times": [2.356194490192345, 2.0, 0.7853981633974483, 0.7853981633974483, 2.0, 2.356194490192345, 2.0], "movements": [{"prev": "P4", "node": "I3", "next": "I2", "edge": "I3->I2", "movement": "P4->I3->I2", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 0}, {"prev": "I3", "node": "I2", "next": "I1", "edge": "I2->I1", "movement": "I3->I2->I1", "entry_dir": "R", "exit_dir": "L", "turn": "straight", "route_id": 5, "execution_time": 2.0, "path_index": 1}, {"prev": "I2", "node": "I1", "next": "I4", "edge": "I1->I4", "movement": "I2->I1->I4", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 2}, {"prev": "I1", "node": "I4", "next": "I5", "edge": "I4->I5", "movement": "I1->I4->I5", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 3}, {"prev": "I4", "node": "I5", "next": "I6", "edge": "I5->I6", "movement": "I4->I5->I6", "entry_dir": "L", "exit_dir": "R", "turn": "straight", "route_id": 11, "execution_time": 2.0, "path_index": 4}, {"prev": "I5", "node": "I6", "next": "I9", "edge": "I6->I9", "movement": "I5->I6->I9", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 5}, {"prev": "I6", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I6->I9->P8", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 6}], "free_time": 30.283185307179586, "extra_time": 18.283185307179586}, {"candidate_index": 1, "intersections": [3, 2, 1, 4, 5, 8, 9], "execution_times": [2.356194490192345, 2.0, 0.7853981633974483, 0.7853981633974483, 2.356194490192345, 0.7853981633974483, 2.356194490192345], "movements": [{"prev": "P4", "node": "I3", "next": "I2", "edge": "I3->I2", "movement": "P4->I3->I2", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 0}, {"prev": "I3", "node": "I2", "next": "I1", "edge": "I2->I1", "movement": "I3->I2->I1", "entry_dir": "R", "exit_dir": "L", "turn": "straight", "route_id": 5, "execution_time": 2.0, "path_index": 1}, {"prev": "I2", "node": "I1", "next": "I4", "edge": "I1->I4", "movement": "I2->I1->I4", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 2}, {"prev": "I1", "node": "I4", "next": "I5", "edge": "I4->I5", "movement": "I1->I4->I5", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 3}, {"prev": "I4", "node": "I5", "next": "I8", "edge": "I5->I8", "movement": "I4->I5->I8", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 4}, {"prev": "I5", "node": "I8", "next": "I9", "edge": "I8->I9", "movement": "I5->I8->I9", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 5}, {"prev": "I8", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I8->I9->P8", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 6}], "free_time": 29.42477796076938, "extra_time": 17.42477796076938}, {"candidate_index": 2, "intersections": [3, 2, 1, 4, 7, 8, 5, 6, 9], "execution_times": [2.356194490192345, 2.0, 0.7853981633974483, 2.0, 0.7853981633974483, 0.7853981633974483, 2.356194490192345, 2.356194490192345, 2.0], "movements": [{"prev": "P4", "node": "I3", "next": "I2", "edge": "I3->I2", "movement": "P4->I3->I2", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 0}, {"prev": "I3", "node": "I2", "next": "I1", "edge": "I2->I1", "movement": "I3->I2->I1", "entry_dir": "R", "exit_dir": "L", "turn": "straight", "route_id": 5, "execution_time": 2.0, "path_index": 1}, {"prev": "I2", "node": "I1", "next": "I4", "edge": "I1->I4", "movement": "I2->I1->I4", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 2}, {"prev": "I1", "node": "I4", "next": "I7", "edge": "I4->I7", "movement": "I1->I4->I7", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 3}, {"prev": "I4", "node": "I7", "next": "I8", "edge": "I7->I8", "movement": "I4->I7->I8", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 4}, {"prev": "I7", "node": "I8", "next": "I5", "edge": "I8->I5", "movement": "I7->I8->I5", "entry_dir": "L", "exit_dir": "D", "turn": "right", "route_id": 12, "execution_time": 0.7853981633974483, "path_index": 5}, {"prev": "I8", "node": "I5", "next": "I6", "edge": "I5->I6", "movement": "I8->I5->I6", "entry_dir": "U", "exit_dir": "R", "turn": "left", "route_id": 7, "execution_time": 2.356194490192345, "path_index": 6}, {"prev": "I5", "node": "I6", "next": "I9", "edge": "I6->I9", "movement": "I5->I6->I9", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 7}, {"prev": "I6", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I6->I9->P8", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 8}], "free_time": 39.424777960769376, "extra_time": 27.424777960769376}, {"candidate_index": 3, "intersections": [3, 2, 1, 4, 7, 8, 9], "execution_times": [2.356194490192345, 2.0, 0.7853981633974483, 2.0, 0.7853981633974483, 2.0, 2.356194490192345], "movements": [{"prev": "P4", "node": "I3", "next": "I2", "edge": "I3->I2", "movement": "P4->I3->I2", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 0}, {"prev": "I3", "node": "I2", "next": "I1", "edge": "I2->I1", "movement": "I3->I2->I1", "entry_dir": "R", "exit_dir": "L", "turn": "straight", "route_id": 5, "execution_time": 2.0, "path_index": 1}, {"prev": "I2", "node": "I1", "next": "I4", "edge": "I1->I4", "movement": "I2->I1->I4", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 2}, {"prev": "I1", "node": "I4", "next": "I7", "edge": "I4->I7", "movement": "I1->I4->I7", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 3}, {"prev": "I4", "node": "I7", "next": "I8", "edge": "I7->I8", "movement": "I4->I7->I8", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 4}, {"prev": "I7", "node": "I8", "next": "I9", "edge": "I8->I9", "movement": "I7->I8->I9", "entry_dir": "L", "exit_dir": "R", "turn": "straight", "route_id": 11, "execution_time": 2.0, "path_index": 5}, {"prev": "I8", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I8->I9->P8", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 6}], "free_time": 30.283185307179586, "extra_time": 18.283185307179586}, {"candidate_index": 4, "intersections": [3, 2, 5, 4, 7, 8, 9], "execution_times": [2.356194490192345, 0.7853981633974483, 2.356194490192345, 0.7853981633974483, 0.7853981633974483, 2.0, 2.356194490192345], "movements": [{"prev": "P4", "node": "I3", "next": "I2", "edge": "I3->I2", "movement": "P4->I3->I2", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 0}, {"prev": "I3", "node": "I2", "next": "I5", "edge": "I2->I5", "movement": "I3->I2->I5", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 1}, {"prev": "I2", "node": "I5", "next": "I4", "edge": "I5->I4", "movement": "I2->I5->I4", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 2}, {"prev": "I5", "node": "I4", "next": "I7", "edge": "I4->I7", "movement": "I5->I4->I7", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 3}, {"prev": "I4", "node": "I7", "next": "I8", "edge": "I7->I8", "movement": "I4->I7->I8", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 4}, {"prev": "I7", "node": "I8", "next": "I9", "edge": "I8->I9", "movement": "I7->I8->I9", "entry_dir": "L", "exit_dir": "R", "turn": "straight", "route_id": 11, "execution_time": 2.0, "path_index": 5}, {"prev": "I8", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I8->I9->P8", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 6}], "free_time": 29.42477796076938, "extra_time": 17.42477796076938}, {"candidate_index": 5, "intersections": [3, 2, 5, 6, 9], "execution_times": [2.356194490192345, 0.7853981633974483, 0.7853981633974483, 2.356194490192345, 2.0], "movements": [{"prev": "P4", "node": "I3", "next": "I2", "edge": "I3->I2", "movement": "P4->I3->I2", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 0}, {"prev": "I3", "node": "I2", "next": "I5", "edge": "I2->I5", "movement": "I3->I2->I5", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 1}, {"prev": "I2", "node": "I5", "next": "I6", "edge": "I5->I6", "movement": "I2->I5->I6", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 2}, {"prev": "I5", "node": "I6", "next": "I9", "edge": "I6->I9", "movement": "I5->I6->I9", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 3}, {"prev": "I6", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I6->I9->P8", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 4}], "free_time": 20.283185307179586, "extra_time": 8.283185307179586}, {"candidate_index": 6, "intersections": [3, 2, 5, 8, 9], "execution_times": [2.356194490192345, 0.7853981633974483, 2.0, 0.7853981633974483, 2.356194490192345], "movements": [{"prev": "P4", "node": "I3", "next": "I2", "edge": "I3->I2", "movement": "P4->I3->I2", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 0}, {"prev": "I3", "node": "I2", "next": "I5", "edge": "I2->I5", "movement": "I3->I2->I5", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 1}, {"prev": "I2", "node": "I5", "next": "I8", "edge": "I5->I8", "movement": "I2->I5->I8", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 2}, {"prev": "I5", "node": "I8", "next": "I9", "edge": "I8->I9", "movement": "I5->I8->I9", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 3}, {"prev": "I8", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I8->I9->P8", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 4}], "free_time": 20.283185307179586, "extra_time": 8.283185307179586}, {"candidate_index": 7, "intersections": [3, 6, 5, 2, 1, 4, 7, 8, 9], "execution_times": [2.0, 2.356194490192345, 2.356194490192345, 0.7853981633974483, 0.7853981633974483, 2.0, 0.7853981633974483, 2.0, 2.356194490192345], "movements": [{"prev": "P4", "node": "I3", "next": "I6", "edge": "I3->I6", "movement": "P4->I3->I6", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 0}, {"prev": "I3", "node": "I6", "next": "I5", "edge": "I6->I5", "movement": "I3->I6->I5", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 1}, {"prev": "I6", "node": "I5", "next": "I2", "edge": "I5->I2", "movement": "I6->I5->I2", "entry_dir": "R", "exit_dir": "D", "turn": "left", "route_id": 4, "execution_time": 2.356194490192345, "path_index": 2}, {"prev": "I5", "node": "I2", "next": "I1", "edge": "I2->I1", "movement": "I5->I2->I1", "entry_dir": "U", "exit_dir": "L", "turn": "right", "route_id": 9, "execution_time": 0.7853981633974483, "path_index": 3}, {"prev": "I2", "node": "I1", "next": "I4", "edge": "I1->I4", "movement": "I2->I1->I4", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 4}, {"prev": "I1", "node": "I4", "next": "I7", "edge": "I4->I7", "movement": "I1->I4->I7", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 5}, {"prev": "I4", "node": "I7", "next": "I8", "edge": "I7->I8", "movement": "I4->I7->I8", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 6}, {"prev": "I7", "node": "I8", "next": "I9", "edge": "I8->I9", "movement": "I7->I8->I9", "entry_dir": "L", "exit_dir": "R", "turn": "straight", "route_id": 11, "execution_time": 2.0, "path_index": 7}, {"prev": "I8", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I8->I9->P8", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 8}], "free_time": 39.424777960769376, "extra_time": 27.424777960769376}, {"candidate_index": 8, "intersections": [3, 6, 5, 4, 7, 8, 9], "execution_times": [2.0, 2.356194490192345, 2.0, 0.7853981633974483, 0.7853981633974483, 2.0, 2.356194490192345], "movements": [{"prev": "P4", "node": "I3", "next": "I6", "edge": "I3->I6", "movement": "P4->I3->I6", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 0}, {"prev": "I3", "node": "I6", "next": "I5", "edge": "I6->I5", "movement": "I3->I6->I5", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 1}, {"prev": "I6", "node": "I5", "next": "I4", "edge": "I5->I4", "movement": "I6->I5->I4", "entry_dir": "R", "exit_dir": "L", "turn": "straight", "route_id": 5, "execution_time": 2.0, "path_index": 2}, {"prev": "I5", "node": "I4", "next": "I7", "edge": "I4->I7", "movement": "I5->I4->I7", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 3}, {"prev": "I4", "node": "I7", "next": "I8", "edge": "I7->I8", "movement": "I4->I7->I8", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 4}, {"prev": "I7", "node": "I8", "next": "I9", "edge": "I8->I9", "movement": "I7->I8->I9", "entry_dir": "L", "exit_dir": "R", "turn": "straight", "route_id": 11, "execution_time": 2.0, "path_index": 5}, {"prev": "I8", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I8->I9->P8", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 6}], "free_time": 30.283185307179586, "extra_time": 18.283185307179586}, {"candidate_index": 9, "intersections": [3, 6, 5, 8, 9], "execution_times": [2.0, 2.356194490192345, 0.7853981633974483, 0.7853981633974483, 2.356194490192345], "movements": [{"prev": "P4", "node": "I3", "next": "I6", "edge": "I3->I6", "movement": "P4->I3->I6", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 0}, {"prev": "I3", "node": "I6", "next": "I5", "edge": "I6->I5", "movement": "I3->I6->I5", "entry_dir": "D", "exit_dir": "L", "turn": "left", "route_id": 1, "execution_time": 2.356194490192345, "path_index": 1}, {"prev": "I6", "node": "I5", "next": "I8", "edge": "I5->I8", "movement": "I6->I5->I8", "entry_dir": "R", "exit_dir": "U", "turn": "right", "route_id": 6, "execution_time": 0.7853981633974483, "path_index": 2}, {"prev": "I5", "node": "I8", "next": "I9", "edge": "I8->I9", "movement": "I5->I8->I9", "entry_dir": "D", "exit_dir": "R", "turn": "right", "route_id": 3, "execution_time": 0.7853981633974483, "path_index": 3}, {"prev": "I8", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I8->I9->P8", "entry_dir": "L", "exit_dir": "U", "turn": "left", "route_id": 10, "execution_time": 2.356194490192345, "path_index": 4}], "free_time": 20.283185307179586, "extra_time": 8.283185307179586}, {"candidate_index": 10, "intersections": [3, 6, 9], "execution_times": [2.0, 2.0, 2.0], "movements": [{"prev": "P4", "node": "I3", "next": "I6", "edge": "I3->I6", "movement": "P4->I3->I6", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 0}, {"prev": "I3", "node": "I6", "next": "I9", "edge": "I6->I9", "movement": "I3->I6->I9", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 1}, {"prev": "I6", "node": "I9", "next": "P8", "edge": "I9->P8", "movement": "I6->I9->P8", "entry_dir": "D", "exit_dir": "U", "turn": "straight", "route_id": 2, "execution_time": 2.0, "path_index": 2}], "free_time": 12.0, "extra_time": 0.0}]}], "coords": {"1": [0, 0], "2": [1, 0], "3": [2, 0], "4": [0, 1], "5": [1, 1], "6": [2, 1], "7": [0, 2], "8": [1, 2], "9": [2, 2]}, "ports": [{"id": 1, "intersection": 1, "direction": "L"}, {"id": 2, "intersection": 1, "direction": "D"}, {"id": 3, "intersection": 2, "direction": "D"}, {"id": 4, "intersection": 3, "direction": "D"}, {"id": 5, "intersection": 3, "direction": "R"}, {"id": 6, "intersection": 6, "direction": "R"}, {"id": 7, "intersection": 9, "direction": "R"}, {"id": 8, "intersection": 9, "direction": "U"}, {"id": 9, "intersection": 8, "direction": "U"}, {"id": 10, "intersection": 7, "direction": "U"}, {"id": 11, "intersection": 7, "direction": "L"}, {"id": 12, "intersection": 4, "direction": "L"}], "roads": [{"id": 10, "a": 1, "b": 2}, {"id": 11, "a": 2, "b": 3}, {"id": 12, "a": 4, "b": 5}, {"id": 13, "a": 5, "b": 6}, {"id": 14, "a": 7, "b": 8}, {"id": 15, "a": 8, "b": 9}, {"id": 16, "a": 1, "b": 4}, {"id": 17, "a": 4, "b": 7}, {"id": 18, "a": 2, "b": 5}, {"id": 19, "a": 5, "b": 8}, {"id": 20, "a": 3, "b": 6}, {"id": 21, "a": 6, "b": 9}], "resources": [1, 2, 3, 4, 5, 6, 7, 8, 9], "lambda_path": 1.0};
+    const NS = "http://www.w3.org/2000/svg";
+    const nodeById = new Map(DATA.nodes.map(n => [n.idx, n]));
+    const terminals = DATA.terminals.length ? DATA.terminals : [DATA.best_idx];
+    let cursor = Math.max(0, terminals.indexOf(DATA.best_idx));
+    let treeBaseViewBox = null;
+    let treeViewBox = null;
+    let treeDrag = null;
+    let splitterDrag = null;
+
+    function el(name, attrs={}, text=null) {
+      const e = document.createElementNS(NS, name);
+      for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v);
+      if (text !== null) e.textContent = text;
+      return e;
+    }
+
+    function pathTo(idx) {
+      const out = [];
+      let cur = idx;
+      while (cur >= 0 && nodeById.has(cur)) {
+        out.push(cur);
+        cur = nodeById.get(cur).parent;
+      }
+      return out.reverse();
+    }
+
+    function sameTreeBox(a, b) {
+      return a && b && a.length === b.length && a.every((item, index) => Math.abs(item - b[index]) < 1e-9);
+    }
+
+    function applyTreeViewBox() {
+      const svg = document.getElementById("treeSvg");
+      if (treeViewBox) svg.setAttribute("viewBox", treeViewBox.join(" "));
+    }
+
+    function resetTreeZoom() {
+      if (!treeBaseViewBox) return;
+      treeViewBox = treeBaseViewBox.slice();
+      applyTreeViewBox();
+    }
+
+    function treeSvgPoint(event) {
+      const svg = document.getElementById("treeSvg");
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      return point.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    function fmtTime(t) {
+      return Number(t || 0).toFixed(2);
+    }
+
+    function segmentKey(s) {
+      return `${s.vehicle_id}|${s.task_index}|${s.resource}|${s.start_time}|${s.end_time}`;
+    }
+
+    function newSegments(parent, child) {
+      const oldKeys = new Set((parent.segments || []).map(segmentKey));
+      return (child.segments || []).filter(s => !oldKeys.has(segmentKey(s)));
+    }
+
+    function optionLabelsForDecision(pathTree, option) {
+      return (option ? option.intersections : []).map(m => `I${m}`);
+    }
+
+    function firstBranchEdge(pathTree, option) {
+      if (!pathTree || !option) return null;
+      const selectedLabels = optionLabelsForDecision(pathTree, option);
+      for (let k = 0; k < selectedLabels.length - 1; k++) {
+        const prefix = selectedLabels.slice(0, k + 1);
+        const nextChoices = new Set();
+        for (const candidate of pathTree.options || []) {
+          const labels = optionLabelsForDecision(pathTree, candidate);
+          const ok = prefix.every((label, index) => labels[index] === label);
+          if (ok && labels.length > k + 1) nextChoices.add(labels[k + 1]);
+        }
+        if (nextChoices.size > 1) {
+          return {from: selectedLabels[k], to: selectedLabels[k + 1]};
+        }
+      }
+      if (selectedLabels.length >= 2) {
+        return {from: selectedLabels[0], to: selectedLabels[1]};
+      }
+      return null;
+    }
+
+    function edgeDecisionLabels(parent, child) {
+      const labels = [];
+      const parentZ = new Set((parent.path_decisions || []).map(item => `${item.vehicle}|${item.option}|${item.from}|${item.to}|${Number(item.tw).toFixed(9)}`));
+      for (const decision of (child.path_decisions || [])) {
+        const key = `${decision.vehicle}|${decision.option}|${decision.from}|${decision.to}|${Number(decision.tw).toFixed(9)}`;
+        if (parentZ.has(key)) continue;
+        labels.push({
+          type: "z",
+          vehicle: decision.vehicle,
+          option: decision.option,
+          from: decision.from,
+          to: decision.to,
+          tw: decision.tw,
+          extra: decision.extra
+        });
+      }
+      if (
+        labels.length === 0 &&
+        child.route_choices && child.route_choices.length &&
+        (!parent.route_choices || !parent.route_choices.length)
+      ) {
+        child.route_choices.forEach((choice, planIndex) => {
+          const pathTree = DATA.path_trees.find(item => item.plan_index === planIndex);
+          if (!pathTree || !pathTree.options || pathTree.options.length <= 1) return;
+          const option = pathTree.options[choice] || pathTree.options[0];
+          const edge = firstBranchEdge(pathTree, option);
+          labels.push({
+            type: "z",
+            vehicle: pathTree.vehicle_id,
+            option: Number(choice) + 1,
+            from: edge ? edge.from : "",
+            to: edge ? edge.to : "",
+            tw: parent.tw
+          });
+        });
+      }
+      for (const seg of newSegments(parent, child)) {
+        labels.push({
+          type: "v",
+          resource: seg.resource,
+          vehicle: seg.vehicle_id,
+          tw: parent.tw
+        });
+      }
+      return labels;
+    }
+
+    function compactNode(value) {
+      return String(value || "").replace(/^I/, "");
+    }
+
+    function compactLabelText(label) {
+      if (label.type === "more") return `+${label.count} more`;
+      if (label.type === "v") return `v${label.resource}${label.vehicle}(${fmtTime(label.tw)})`;
+      if (label.type === "z") {
+        const extra = Number.isFinite(Number(label.extra)) ? `,+${Number(label.extra).toFixed(2)}` : "";
+        return `z${label.vehicle}${label.option}(${compactNode(label.from)},${compactNode(label.to)})(${fmtTime(label.tw)}${extra})`;
+      }
+      return String(label);
+    }
+
+    function estimatedEdgeLabelWidth(labels) {
+      if (!labels.length) return 0;
+      const shown = labels.slice(0, 3);
+      if (labels.length > shown.length) shown.push({type:"more", count:labels.length - shown.length});
+      return Math.max(...shown.map(label => compactLabelText(label).length)) * 4.4;
+    }
+
+    function appendMathPieces(text, label) {
+      const baseSize = 6.5;
+      const scriptSize = 5;
+      if (label.type === "v") {
+        text.appendChild(el("tspan", {}, `v${label.resource}${label.vehicle}(${fmtTime(label.tw)})`));
+        return;
+      } else if (label.type === "z") {
+        text.appendChild(el("tspan", {}, compactLabelText(label)));
+        return;
+      } else {
+        text.appendChild(el("tspan", {}, String(label)));
+        return;
+      }
+      text.appendChild(el("tspan", {"baseline-shift":"baseline", "font-size":baseSize}, " (t"));
+      text.appendChild(el("tspan", {"baseline-shift":"sub", "font-size":scriptSize}, "w"));
+      text.appendChild(el("tspan", {"baseline-shift":"baseline", "font-size":baseSize}, `=${fmtTime(label.tw)})=1`));
+    }
+
+    function boxesOverlap(a, b) {
+      return !(a.x2 < b.x1 || b.x2 < a.x1 || a.y2 < b.y1 || b.y2 < a.y1);
+    }
+
+    function labelBox(cx, cy, shown) {
+      const width = Math.max(24, estimatedEdgeLabelWidth(shown)) + 8;
+      const height = shown.length * 9 + 8;
+      return {
+        x1: cx - width / 2,
+        x2: cx + width / 2,
+        y1: cy - height / 2,
+        y2: cy + height / 2
+      };
+    }
+
+    function drawEdgeLabel(svg, labels, x1, y1, x2, y2, strong, occupiedLabels) {
+      if (!labels.length) return;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.max(1, Math.hypot(dx, dy));
+      const nx = -dy / len;
+      const ny = dx / len;
+      const side = dy >= 0 ? -1 : 1;
+      const shown = labels.slice(0, 3);
+      if (labels.length > shown.length) shown.push({type:"more", count:labels.length - shown.length});
+      const baseOffset = Math.abs(dy) < 1e-6 ? -10 : 15 * side;
+      const offsetOptions = [baseOffset, baseOffset + 16 * side, baseOffset - 16 * side, baseOffset + 32 * side, baseOffset - 32 * side];
+      const alongOptions = [0, 14, -14, 28, -28];
+      let lx = (x1 + x2) / 2 + nx * baseOffset;
+      let ly = (y1 + y2) / 2 + ny * baseOffset;
+      let chosenBox = labelBox(lx, ly, shown);
+      let found = false;
+      for (const off of offsetOptions) {
+        for (const along of alongOptions) {
+          const cx = (x1 + x2) / 2 + nx * off + (dx / len) * along;
+          const cy = (y1 + y2) / 2 + ny * off + (dy / len) * along;
+          const box = labelBox(cx, cy, shown);
+          if (!occupiedLabels.some(existing => boxesOverlap(existing, box))) {
+            lx = cx;
+            ly = cy;
+            chosenBox = box;
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+      occupiedLabels.push(chosenBox);
+      shown.forEach((label, index) => {
+        const text = el("text", {
+          x:lx,
+          y:ly - (shown.length - 1) * 4 + index * 9,
+          "text-anchor":"middle",
+          "font-family":"Arial",
+          "font-size":6.5,
+          "font-weight":strong ? 700 : 500,
+          fill:strong ? "#111827" : "#475569",
+          stroke:"#ffffff",
+          "stroke-width":2.5,
+          "paint-order":"stroke fill",
+          "stroke-linejoin":"round"
+        });
+        if (label.type === "more") {
+          text.appendChild(el("tspan", {}, `+${label.count} more`));
+        } else {
+          appendMathPieces(text, label);
+        }
+        svg.appendChild(text);
+      });
+    }
+
+    function renderTree() {
+      const selected = terminals[cursor];
+      const selectedPath = new Set(pathTo(selected));
+      const bestPath = new Set(pathTo(DATA.best_idx));
+      const levels = new Map();
+      const depths = new Map();
+      for (const n of DATA.nodes) {
+        const d = n.parent < 0 ? 0 : (depths.get(n.parent) || 0) + 1;
+        depths.set(n.idx, d);
+        if (!levels.has(d)) levels.set(d, []);
+        levels.get(d).push(n.idx);
+      }
+      const maxDepth = Math.max(...Array.from(levels.keys()), 0);
+      const maxRows = Math.max(...Array.from(levels.values()).map(v => v.length), 1);
+      const minXGap = 70, maxXGap = 150, yGap = 56, margin = 46;
+      const xGaps = Array.from({length:Math.max(1, maxDepth)}, () => minXGap);
+      for (const n of DATA.nodes) {
+        if (n.parent < 0) continue;
+        const parent = nodeById.get(n.parent);
+        const parentDepth = depths.get(n.parent) || 0;
+        const labelWidth = estimatedEdgeLabelWidth(edgeDecisionLabels(parent, n));
+        const needed = Math.min(maxXGap, Math.max(minXGap, labelWidth + 44));
+        xGaps[parentDepth] = Math.max(xGaps[parentDepth], needed);
+      }
+      const xByDepth = [0];
+      for (let d = 0; d < maxDepth; d++) {
+        xByDepth[d + 1] = xByDepth[d] + (xGaps[d] || minXGap);
+      }
+      const width = margin * 2 + Math.max(1, xByDepth[maxDepth] || 0);
+      const height = margin * 2 + Math.max(1, maxRows - 1) * yGap;
+      const pos = new Map();
+      for (const [d, ids] of levels.entries()) {
+        const startY = height / 2 - (ids.length - 1) * yGap / 2;
+        ids.forEach((id, r) => pos.set(id, [margin + (xByDepth[d] || 0), startY + r * yGap]));
+      }
+      const svg = document.getElementById("treeSvg");
+      svg.innerHTML = "";
+      const nextBaseViewBox = [0, 0, width, height];
+      if (!sameTreeBox(treeBaseViewBox, nextBaseViewBox)) {
+        treeBaseViewBox = nextBaseViewBox;
+        treeViewBox = nextBaseViewBox.slice();
+      }
+      applyTreeViewBox();
+      const occupiedLabels = [];
+      for (const n of DATA.nodes) {
+        const [x,y] = pos.get(n.idx);
+        occupiedLabels.push({x1:x-20, x2:x+20, y1:y-34, y2:y+18});
+      }
+      for (const n of DATA.nodes) {
+        if (n.parent < 0) continue;
+        const parent = nodeById.get(n.parent);
+        const [x1,y1] = pos.get(n.parent);
+        const [x2,y2] = pos.get(n.idx);
+        const onSelected = selectedPath.has(n.idx) && selectedPath.has(n.parent);
+        const onBest = bestPath.has(n.idx) && bestPath.has(n.parent);
+        svg.appendChild(el("line", {
+          x1,y1,x2,y2,
+          stroke: onSelected ? (selected === DATA.best_idx ? "#16a34a" : "#f59e0b") : (onBest ? "#86efac" : "#cbd5e1"),
+          "stroke-width": onSelected ? 3 : 1.2
+        }));
+        drawEdgeLabel(svg, edgeDecisionLabels(parent, n), x1, y1, x2, y2, onSelected, occupiedLabels);
+      }
+      for (const n of DATA.nodes) {
+        const [x,y] = pos.get(n.idx);
+        const onSelected = selectedPath.has(n.idx);
+        const isBestPath = bestPath.has(n.idx);
+        const fill = onSelected ? (selected === DATA.best_idx ? "#dcfce7" : "#fffbeb") : "#f8fafc";
+        const stroke = onSelected ? (selected === DATA.best_idx ? "#16a34a" : "#f59e0b") : (isBestPath ? "#86efac" : "#cbd5e1");
+        svg.appendChild(el("circle", {cx:x, cy:y, r:13, fill, stroke, "stroke-width":onSelected ? 2.5 : 1}));
+        svg.appendChild(el("text", {x, y:y-23, "text-anchor":"middle", "font-family":"Arial", "font-size":7}, `J=${n.g.toFixed(2)}`));
+        svg.appendChild(el("text", {x, y:y-14, "text-anchor":"middle", "font-family":"Arial", "font-size":7}, `tw=${n.tw.toFixed(2)}`));
+        svg.appendChild(el("text", {x, y:y+3, "text-anchor":"middle", "font-family":"Arial", "font-size":9, "font-weight":700}, `${n.idx}${n.idx===DATA.best_idx ? "*" : ""}`));
+      }
+    }
+
+    function selectedOptionIndex(pathTree) {
+      const node = nodeById.get(terminals[cursor]);
+      if (node && node.route_choices && node.route_choices.length > pathTree.plan_index) return node.route_choices[pathTree.plan_index];
+      if (node && node.route_candidates && node.route_candidates[pathTree.plan_index] && node.route_candidates[pathTree.plan_index].length) {
+        return node.route_candidates[pathTree.plan_index][0];
+      }
+      if (Object.prototype.hasOwnProperty.call(pathTree, "selected_index")) return pathTree.selected_index;
+      return 0;
+    }
+
+    function buildTrie(pathTree) {
+      const root = {id:0, label:`P${pathTree.entrance}`, depth:0, children:new Map(), terminal:false, parent:null};
+      let nextId = 1;
+      for (const option of pathTree.options) {
+        let cur = root;
+        for (const m of option.intersections) {
+          if (!cur.children.has(m)) {
+            cur.children.set(m, {id:nextId++, label:`I${m}`, intersection:m, depth:cur.depth+1, children:new Map(), terminal:false, parent:cur});
+          }
+          cur = cur.children.get(m);
+        }
+        cur.terminal = true;
+      }
+      return root;
+    }
+
+    function flattenTrie(root) {
+      const nodes = [], edges = [];
+      function walk(n) {
+        nodes.push(n);
+        for (const child of n.children.values()) {
+          edges.push([n, child]);
+          walk(child);
+        }
+      }
+      walk(root);
+      return {nodes, edges};
+    }
+
+    function selectedEdges(pathTree, optionIndex) {
+      const option = pathTree.options[optionIndex] || pathTree.options[0];
+      const selected = new Set();
+      let prev = null;
+      for (const m of option.intersections) {
+        const cur = `I${m}`;
+        if (prev !== null) selected.add(`${prev}->${cur}`);
+        prev = cur;
+      }
+      return selected;
+    }
+
+    function activeDecisionEdges() {
+      const selected = terminals[cursor];
+      const ids = pathTo(selected);
+      const active = new Set();
+      for (let k = 1; k < ids.length; k++) {
+        const parent = nodeById.get(ids[k - 1]);
+        const child = nodeById.get(ids[k]);
+        if (!parent || !child) continue;
+        for (const label of edgeDecisionLabels(parent, child)) {
+          if (label.type !== "z" || !label.from || !label.to) continue;
+          active.add(`${label.vehicle}|${label.from}->${label.to}`);
+        }
+      }
+      return active;
+    }
+
+    function activeDecisionExtraByEdge() {
+      const selected = terminals[cursor];
+      const ids = pathTo(selected);
+      const out = new Map();
+      for (let k = 1; k < ids.length; k++) {
+        const parent = nodeById.get(ids[k - 1]);
+        const child = nodeById.get(ids[k]);
+        if (!parent || !child) continue;
+        for (const label of edgeDecisionLabels(parent, child)) {
+          if (label.type !== "z" || !label.from || !label.to) continue;
+          const key = `${label.vehicle}|${label.from}->${label.to}`;
+          if (Number.isFinite(Number(label.extra))) out.set(key, Number(label.extra));
+        }
+      }
+      return out;
+    }
+
+    function optionLabels(pathTree, option) {
+      return option.intersections.map(m => `I${m}`);
+    }
+
+    function branchExtraForEdge(pathTree, a, b) {
+      if (a.children.size <= 1) return null;
+      const prefix = [];
+      let cur = a;
+      while (cur) {
+        prefix.unshift(cur.label);
+        cur = cur.parent || null;
+      }
+      const branchOptions = [];
+      const edgeOptions = [];
+      for (const option of pathTree.options) {
+        const labels = optionLabels(pathTree, option);
+        const prefixOk = prefix.every((label, index) => labels[index] === label);
+        if (!prefixOk || labels.length <= prefix.length) continue;
+        branchOptions.push(option);
+        if (labels[prefix.length] === b.label) edgeOptions.push(option);
+      }
+      if (!branchOptions.length || !edgeOptions.length) return null;
+      const branchBest = Math.min(...branchOptions.map(option => option.free_time));
+      const edgeBest = Math.min(...edgeOptions.map(option => option.free_time));
+      return Math.max(0, edgeBest - branchBest);
+    }
+
+    function pathTreeSvg(pathTree, optionIndex) {
+      const nodeLabels = new Set();
+      const edgeMap = new Map();
+      const outTargets = new Map();
+      for (const option of pathTree.options) {
+        const labels = optionLabels(pathTree, option);
+        labels.forEach(label => nodeLabels.add(label));
+        for (let k = 0; k < labels.length - 1; k++) {
+          const key = `${labels[k]}->${labels[k+1]}`;
+          edgeMap.set(key, [labels[k], labels[k+1]]);
+          if (!outTargets.has(labels[k])) outTargets.set(labels[k], new Set());
+          outTargets.get(labels[k]).add(labels[k+1]);
+        }
+      }
+
+      const selectedOption = pathTree.options[optionIndex] || pathTree.options[0];
+      const selectedLabels = optionLabels(pathTree, selectedOption);
+
+      function selectedPrefixEdgeExtra(from, to) {
+        const k = selectedLabels.findIndex((label, index) =>
+          label === from && selectedLabels[index + 1] === to
+        );
+        if (k < 0) return null;
+        const prefix = selectedLabels.slice(0, k + 1);
+        const branchOptions = [];
+        const edgeOptions = [];
+        for (const option of pathTree.options) {
+          const labels = optionLabels(pathTree, option);
+          const prefixOk = prefix.every((label, index) => labels[index] === label);
+          if (!prefixOk || labels.length <= k + 1) continue;
+          branchOptions.push(option);
+          if (labels[k + 1] === to) edgeOptions.push(option);
+        }
+        if (!branchOptions.length || !edgeOptions.length) return null;
+        const nextChoices = new Set(branchOptions.map(option => optionLabels(pathTree, option)[k + 1]));
+        if (nextChoices.size <= 1) return null;
+        const branchBest = Math.min(...branchOptions.map(option => option.free_time));
+        const edgeBest = Math.min(...edgeOptions.map(option => option.free_time));
+        return Math.max(0, edgeBest - branchBest);
+      }
+
+      const usedIntersections = [...nodeLabels]
+        .filter(label => label.startsWith("I"))
+        .map(label => Number(label.slice(1)))
+        .filter(id => DATA.coords && DATA.coords[String(id)]);
+      const xs = usedIntersections.map(id => DATA.coords[String(id)][0]);
+      const ys = usedIntersections.map(id => DATA.coords[String(id)][1]);
+      const minX = Math.min(...xs, 0), maxX = Math.max(...xs, 1);
+      const minY = Math.min(...ys, 0), maxY = Math.max(...ys, 1);
+      const scale = 48, pad = 24;
+      const rawPos = new Map();
+      for (const id of usedIntersections) {
+        const [gx, gy] = DATA.coords[String(id)];
+        rawPos.set(`I${id}`, [pad + (gx - minX) * scale, pad + (maxY - gy) * scale]);
+      }
+      const allPoints = [...rawPos.values()];
+      const minPx = Math.min(...allPoints.map(p => p[0])) - 14;
+      const minPy = Math.min(...allPoints.map(p => p[1])) - 16;
+      const maxPx = Math.max(...allPoints.map(p => p[0])) + 22;
+      const maxPy = Math.max(...allPoints.map(p => p[1])) + 30;
+      const w = maxPx - minPx;
+      const h = maxPy - minPy;
+      const pos = new Map([...rawPos.entries()].map(([label, p]) => [label, [p[0] - minPx, p[1] - minPy]]));
+      const selected = selectedEdges(pathTree, optionIndex);
+      const displayW = Math.max(220, Math.min(420, w * 2.8));
+      const displayH = Math.max(110, Math.min(240, displayW * h / Math.max(1, w)));
+      const svg = el("svg", {viewBox:`0 0 ${w} ${h}`, width:displayW, height:displayH});
+      const markerSelected = `pathArrowSelected${pathTree.vehicle_id}`;
+      const defs = el("defs");
+      const selectedMarker = el("marker", {
+        id:markerSelected,
+        viewBox:"0 0 10 10",
+        refX:"8.5",
+        refY:"5",
+        markerWidth:"4.5",
+        markerHeight:"4.5",
+        orient:"auto-start-reverse"
+      });
+      selectedMarker.appendChild(el("path", {d:"M 0 0 L 10 5 L 0 10 z", fill:"#16a34a"}));
+      defs.appendChild(selectedMarker);
+      svg.appendChild(defs);
+      for (const [key, [from, to]] of edgeMap.entries()) {
+        const [x1,y1] = pos.get(from);
+        const [x2,y2] = pos.get(to);
+        const lineLen = Math.max(1, Math.hypot(x2 - x1, y2 - y1));
+        const ux = (x2 - x1) / lineLen;
+        const uy = (y2 - y1) / lineLen;
+        const selectedEdge = selected.has(key);
+        svg.appendChild(el("line", {
+          x1:x1 + ux * 9,
+          y1:y1 + uy * 9,
+          x2:x2 - ux * 10,
+          y2:y2 - uy * 10,
+          stroke:selectedEdge ? "#16a34a" : "#94a3b8",
+          "stroke-width":selectedEdge ? 2 : 1,
+          "marker-end":selectedEdge ? `url(#${markerSelected})` : "none"
+        }));
+        const extra = selectedPrefixEdgeExtra(from, to);
+        if (selectedEdge && extra !== null) {
+          const lx = (x1 + x2) / 2;
+          const ly = (y1 + y2) / 2 - 6;
+          svg.appendChild(el("rect", {
+            x:lx-18, y:ly-8, width:36, height:11, rx:2,
+            fill:"#ffffff",
+            stroke: extra > 1e-8 ? "#f59e0b" : "#16a34a",
+            "stroke-width":1
+          }));
+          svg.appendChild(el("text", {
+            x:lx, y:ly,
+            "text-anchor":"middle",
+            "dominant-baseline":"middle",
+            "font-family":"Arial",
+            "font-size":7,
+            "font-weight":700,
+            fill: extra > 1e-8 ? "#92400e" : "#166534"
+          }, `+${extra.toFixed(2)}s`));
+        }
+      }
+      for (const label of nodeLabels) {
+        if (!pos.has(label)) continue;
+        const [x,y] = pos.get(label);
+        const isBranch = outTargets.has(label) && outTargets.get(label).size > 1;
+        const isTerminal = !outTargets.has(label) && label.startsWith("I");
+        svg.appendChild(el("circle", {cx:x, cy:y, r:isBranch ? 9 : 8, fill:isTerminal ? "#fef3c7" : "#f8fafc", stroke:isBranch ? "#2563eb" : "#64748b", "stroke-width":isBranch ? 2 : 1}));
+        svg.appendChild(el("text", {x, y:y+2, "text-anchor":"middle", "font-family":"Arial", "font-size":7, "font-weight":700}, label));
+      }
+      return svg;
+    }
+
+    function expandedPathTreeSvg(pathTree, optionIndex, activeEdges=new Set(), activeExtraByEdge=new Map()) {
+      const root = buildTrie(pathTree);
+      const flat = flattenTrie(root);
+      const selectedOption = pathTree.options[optionIndex] || pathTree.options[0];
+      const selectedLabels = selectedOption ? optionLabels(pathTree, selectedOption) : [];
+      const selected = new Set();
+      let previous = `P${pathTree.entrance}`;
+      for (const label of selectedLabels) {
+        selected.add(`${previous}->${label}`);
+        previous = label;
+      }
+
+      const leafOrder = new Map();
+      let leafIndex = 0;
+      function assignY(node) {
+        if (!node.children.size) {
+          leafOrder.set(node.id, leafIndex++);
+          return leafOrder.get(node.id);
+        }
+        const childYs = [...node.children.values()].map(assignY);
+        const y = childYs.reduce((sum, item) => sum + item, 0) / childYs.length;
+        leafOrder.set(node.id, y);
+        return y;
+      }
+      assignY(root);
+
+      const maxDepth = Math.max(...flat.nodes.map(node => node.depth), 1);
+      const xGap = 46;
+      const yGap = 24;
+      const margin = 18;
+      const width = margin * 2 + maxDepth * xGap;
+      const height = margin * 2 + Math.max(1, leafIndex - 1) * yGap;
+      const pos = new Map(flat.nodes.map(node => [
+        node.id,
+        [margin + node.depth * xGap, margin + (leafOrder.get(node.id) || 0) * yGap]
+      ]));
+      const displayW = Math.max(260, Math.min(520, width * 1.6));
+      const displayH = Math.max(130, Math.min(360, displayW * height / Math.max(1, width)));
+      const svg = el("svg", {viewBox:`0 0 ${width} ${height}`, width:displayW, height:displayH});
+
+      for (const [a, b] of flat.edges) {
+        const [x1, y1] = pos.get(a.id);
+        const [x2, y2] = pos.get(b.id);
+        const edgeKey = `${a.label}->${b.label}`;
+        const activeKey = `${pathTree.vehicle_id}|${edgeKey}`;
+        const activeEdge = activeEdges.has(activeKey);
+        const selectedEdge = selected.has(edgeKey);
+        svg.appendChild(el("line", {
+          x1:x1 + 8,
+          y1,
+          x2:x2 - 9,
+          y2,
+          stroke:activeEdge ? "#f97316" : (selectedEdge ? "#16a34a" : "#cbd5e1"),
+          "stroke-width":activeEdge ? 3.2 : (selectedEdge ? 2 : 1.1)
+        }));
+        const extra = activeExtraByEdge.get(activeKey);
+        if (activeEdge && Number.isFinite(extra)) {
+          const lx = (x1 + x2) / 2;
+          const ly = (y1 + y2) / 2 - 7;
+          svg.appendChild(el("rect", {
+            x:lx-18, y:ly-8, width:36, height:11, rx:2,
+            fill:"#ffffff",
+            stroke:"#f97316",
+            "stroke-width":1
+          }));
+          svg.appendChild(el("text", {
+            x:lx, y:ly,
+            "text-anchor":"middle",
+            "dominant-baseline":"middle",
+            "font-family":"Arial",
+            "font-size":7,
+            "font-weight":700,
+            fill:"#9a3412"
+          }, `+${extra.toFixed(2)}s`));
+        }
+      }
+
+      for (const node of flat.nodes) {
+        const [x, y] = pos.get(node.id);
+        const selectedNode = node.label === `P${pathTree.entrance}` || selectedLabels.includes(node.label);
+        const fill = selectedNode ? "#dcfce7" : "#f8fafc";
+        const stroke = node.children.size > 1 ? "#2563eb" : "#64748b";
+        svg.appendChild(el("circle", {cx:x, cy:y, r:7.5, fill, stroke, "stroke-width":1.2}));
+        svg.appendChild(el("text", {x, y:y+2, "text-anchor":"middle", "font-family":"Arial", "font-size":6.5, "font-weight":700}, node.label));
+      }
+      return svg;
+    }
+
+    function renderBasicMap() {
+      const panel = document.getElementById("basicMapPanel");
+      panel.innerHTML = "";
+      const coordEntries = Object.entries(DATA.coords || {});
+      if (!coordEntries.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No map geometry";
+        panel.appendChild(empty);
+        return;
+      }
+
+      const xs = coordEntries.map(([, xy]) => xy[0]);
+      const ys = coordEntries.map(([, xy]) => xy[1]);
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+      const scale = 48;
+      const margin = 30;
+      const width = (maxX - minX) * scale + margin * 2;
+      const height = (maxY - minY) * scale + margin * 2;
+      const point = (x, y) => [margin + (x - minX) * scale, margin + (maxY - y) * scale];
+      const delta = {L:[-1,0], D:[0,-1], R:[1,0], U:[0,1]};
+      const entrancePorts = new Set((DATA.plans || []).map(plan => Number(plan.entrance)));
+      const exitPorts = new Set((DATA.plans || []).map(plan => Number(plan.exit)));
+      const displayW = Math.max(220, Math.min(420, width * 2.8));
+      const displayH = Math.max(110, Math.min(300, displayW * height / Math.max(1, width)));
+      const svg = el("svg", {viewBox:`0 0 ${width} ${height}`, width:displayW, height:displayH});
+      svg.appendChild(el("rect", {x:0, y:0, width, height, fill:"#ffffff"}));
+
+      for (const road of DATA.roads || []) {
+        const a = DATA.coords[String(road.a)];
+        const b = DATA.coords[String(road.b)];
+        if (!a || !b) continue;
+        const [x1, y1] = point(a[0], a[1]);
+        const [x2, y2] = point(b[0], b[1]);
+        svg.appendChild(el("line", {
+          x1, y1, x2, y2,
+          stroke:"#94a3b8",
+          "stroke-width":4,
+          "stroke-linecap":"round"
+        }));
+      }
+
+      for (const item of coordEntries) {
+        const id = Number(item[0]);
+        const [gx, gy] = item[1];
+        const [x, y] = point(gx, gy);
+        svg.appendChild(el("circle", {cx:x, cy:y, r:9, fill:"#2563eb", stroke:"#1e3a8a", "stroke-width":1.8}));
+        svg.appendChild(el("text", {
+          x, y:y+1,
+          "text-anchor":"middle",
+          "dominant-baseline":"middle",
+          "font-family":"Arial",
+          "font-size":7,
+          "font-weight":700,
+          fill:"#ffffff"
+        }, `I${id}`));
+      }
+
+      for (const port of DATA.ports || []) {
+        const xy = DATA.coords[String(port.intersection)];
+        const d = delta[port.direction] || [0, 0];
+        if (!xy) continue;
+        const [px, py] = point(xy[0] + d[0] * 0.50, xy[1] + d[1] * 0.50);
+        const isEntrance = entrancePorts.has(Number(port.id));
+        const isExit = exitPorts.has(Number(port.id));
+        const fill = isEntrance && isExit ? "#ede9fe" : (isEntrance ? "#dcfce7" : (isExit ? "#ffedd5" : "#fef3c7"));
+        const stroke = isEntrance && isExit ? "#7c3aed" : (isEntrance ? "#16a34a" : (isExit ? "#f97316" : "#b77900"));
+        svg.appendChild(el("rect", {
+          x:px-12, y:py-9,
+          width:24,
+          height:18,
+          rx:3,
+          fill,
+          stroke,
+          "stroke-width":1.5
+        }));
+        svg.appendChild(el("text", {
+          x:px, y:py+1,
+          "text-anchor":"middle",
+          "dominant-baseline":"middle",
+          "font-family":"Arial",
+          "font-size":7,
+          "font-weight":700
+        }, `P${port.id}`));
+        if (isEntrance || isExit) {
+          const tag = isEntrance && isExit ? "Ent/Ext" : (isEntrance ? "Ent" : "Ext");
+          svg.appendChild(el("text", {
+            x:px,
+            y:py+16,
+            "text-anchor":"middle",
+            "font-family":"Arial",
+            "font-size":5.8,
+            "font-weight":700,
+            fill:stroke
+          }, tag));
+        }
+      }
+      panel.appendChild(svg);
+    }
+
+    function pathCostText(option) {
+      if (!option) return "";
+      const free = Number(option.free_time || 0);
+      const extra = Number(option.extra_time || 0);
+      const lambda = Number(DATA.lambda_path || 1);
+      return `free=${free.toFixed(3)}s, extra=${extra.toFixed(3)}s, obj=${(lambda * extra).toFixed(3)}`;
+    }
+
+    function pathText(option, includeCost=false) {
+      if (!option) return "";
+      const base = `[${option.intersections.map(m => `I${m}`).join(",")}]`;
+      return includeCost ? `${base} (${pathCostText(option)})` : base;
+    }
+
+    function renderPathSummary() {
+      const panel = document.getElementById("pathSummaryPanel");
+      panel.innerHTML = "";
+      if (!DATA.path_trees || !DATA.path_trees.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No route options";
+        panel.appendChild(empty);
+        return;
+      }
+
+      const table = document.createElement("table");
+      table.className = "path-table";
+      table.innerHTML = "<thead><tr><th>Vehicle</th><th>Ent</th><th>Ext</th><th>Selected Path</th><th>Candidate Paths with Path Cost</th></tr></thead>";
+      const tbody = document.createElement("tbody");
+      for (const pathTree of DATA.path_trees) {
+        const optionIndex = selectedOptionIndex(pathTree);
+        const selected = pathTree.options[optionIndex] || pathTree.options[0];
+        const tr = document.createElement("tr");
+        const candidateList = pathTree.options.map((option, index) => {
+          const cls = index === optionIndex ? "path-pill selected" : "path-pill";
+          return `<span class="${cls}"><span>${index + 1}: ${pathText(option)}</span><span class="path-cost">${pathCostText(option)}</span></span>`;
+        }).join("");
+        tr.innerHTML = `
+          <td>N${pathTree.vehicle_id}</td>
+          <td>P${pathTree.entrance}</td>
+          <td>P${pathTree.exit}</td>
+          <td>${selected ? pathText(selected, true) : ""}</td>
+          <td><div class="path-list">${candidateList}</div></td>
+        `;
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      panel.appendChild(table);
+    }
+
+    function branchChoices(pathTree) {
+      const byPrefix = new Map();
+      for (const option of pathTree.options || []) {
+        const labels = option.intersections.map(m => `I${m}`);
+        for (let k = 0; k < labels.length - 1; k++) {
+          const prefix = labels.slice(0, k + 1);
+          const key = prefix.join("|");
+          if (!byPrefix.has(key)) byPrefix.set(key, {prefix, choices:new Set()});
+          byPrefix.get(key).choices.add(labels[k + 1]);
+        }
+      }
+      return [...byPrefix.values()]
+        .filter(item => item.choices.size > 1)
+        .sort((a, b) => a.prefix.length - b.prefix.length || a.prefix.join(",").localeCompare(b.prefix.join(",")));
+    }
+
+    function renderPathBranches() {
+      const panel = document.getElementById("pathBranchPanel");
+      panel.innerHTML = "";
+      if (!DATA.path_trees || !DATA.path_trees.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No path-selection branches";
+        panel.appendChild(empty);
+        return;
+      }
+
+      const note = document.createElement("div");
+      note.className = "path-note";
+      note.textContent = "Each row is one actual route-choice point. The green choice is the next intersection used by the currently selected path.";
+      panel.appendChild(note);
+
+      const table = document.createElement("table");
+      table.className = "path-table";
+      table.innerHTML = "<thead><tr><th>Vehicle</th><th>Ent</th><th>Ext</th><th>Reached Prefix</th><th>Next Choices</th></tr></thead>";
+      const tbody = document.createElement("tbody");
+      for (const pathTree of DATA.path_trees) {
+        const optionIndex = selectedOptionIndex(pathTree);
+        const selected = pathTree.options[optionIndex] || pathTree.options[0];
+        const selectedLabels = selected ? selected.intersections.map(m => `I${m}`) : [];
+        for (const item of branchChoices(pathTree)) {
+          const selectedNext = selectedLabels.length > item.prefix.length &&
+            item.prefix.every((label, index) => selectedLabels[index] === label)
+              ? selectedLabels[item.prefix.length]
+              : "";
+          const choices = [...item.choices].sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
+          const choiceText = choices.map(choice => {
+            const cls = choice === selectedNext ? "path-pill selected" : "path-pill";
+            return `<span class="${cls}">${choice}</span>`;
+          }).join("");
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>N${pathTree.vehicle_id}</td>
+            <td>P${pathTree.entrance}</td>
+            <td>P${pathTree.exit}</td>
+            <td>[${item.prefix.join(",")}]</td>
+            <td><div class="path-list">${choiceText}</div></td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+      table.appendChild(tbody);
+      panel.appendChild(table);
+    }
+
+    function renderPathTrees() {
+      const panel = document.getElementById("pathTreePanel");
+      panel.innerHTML = "";
+      const activeEdges = activeDecisionEdges();
+      const activeExtra = activeDecisionExtraByEdge();
+      for (const pathTree of DATA.path_trees) {
+        const optionIndex = selectedOptionIndex(pathTree);
+        const option = pathTree.options[optionIndex] || pathTree.options[0];
+        const activeText = [...activeEdges]
+          .filter(key => key.startsWith(`${pathTree.vehicle_id}|`))
+          .map(key => {
+            const edge = key.split("|")[1];
+            const extra = activeExtra.get(key);
+            return Number.isFinite(extra) ? `${edge}(+${extra.toFixed(2)}s)` : edge;
+          })
+          .join(", ");
+        const card = document.createElement("section");
+        card.className = "path-card";
+        card.innerHTML = `<h3>N${pathTree.vehicle_id} selected: ${option ? pathText(option) : ""}${activeText ? ` | z edge: ${activeText}` : ""}</h3>`;
+        const visuals = document.createElement("div");
+        visuals.className = "path-card-visuals";
+        const dagWrap = document.createElement("div");
+        dagWrap.innerHTML = '<div class="path-visual-title">System DAG</div>';
+        dagWrap.appendChild(pathTreeSvg(pathTree, optionIndex));
+        const treeWrap = document.createElement("div");
+        treeWrap.innerHTML = '<div class="path-visual-title">Expanded Path Selection Tree</div>';
+        treeWrap.appendChild(expandedPathTreeSvg(pathTree, optionIndex, activeEdges, activeExtra));
+        visuals.appendChild(dagWrap);
+        visuals.appendChild(treeWrap);
+        card.appendChild(visuals);
+        panel.appendChild(card);
+      }
+    }
+
+    function turnLabel(planIndex, taskIndex, node) {
+      const plan = DATA.plans[planIndex];
+      if (!plan) return "";
+      if (plan.turns && plan.turns.length) return plan.turns[Math.max(0, taskIndex - 1)] || "";
+      if (plan.turns_by_option && node.route_candidates && node.route_candidates[planIndex]) {
+        const optionIndex = node.route_candidates[planIndex].length ? node.route_candidates[planIndex][0] : 0;
+        const turns = plan.turns_by_option[optionIndex] || [];
+        return turns[Math.max(0, taskIndex - 1)] || "";
+      }
+      return "";
+    }
+
+    function turnCode(turn) {
+      const key = String(turn || "").toLowerCase();
+      if (key === "left") return "1";
+      if (key === "straight") return "2";
+      if (key === "right") return "3";
+      return "?";
+    }
+
+    function niceTickStep(maxT, targetTicks) {
+      const raw = Math.max(maxT / Math.max(1, targetTicks), 1e-9);
+      const power = Math.pow(10, Math.floor(Math.log10(raw)));
+      const scaled = raw / power;
+      let nice = 10;
+      if (scaled <= 1) nice = 1;
+      else if (scaled <= 2) nice = 2;
+      else if (scaled <= 5) nice = 5;
+      return nice * power;
+    }
+
+    function timeTickText(t) {
+      if (Math.abs(t - Math.round(t)) < 1e-8) return String(Math.round(t));
+      return t.toFixed(1);
+    }
+
+    function timeEventTicks(segs, maxT, step) {
+      const ticks = [];
+      for (let t = 0; t <= maxT + 1e-9; t += step) {
+        ticks.push({t, kind:"base", label:timeTickText(t)});
+      }
+      for (const s of segs) {
+        ticks.push({t:s.requested_time, kind:"alpha", label:fmtTime(s.requested_time)});
+        ticks.push({t:s.start_time, kind:"beta", label:fmtTime(s.start_time)});
+        ticks.push({t:s.end_time, kind:"gamma", label:fmtTime(s.end_time)});
+      }
+      if (!ticks.some(item => Math.abs(item.t - maxT) < 1e-8)) {
+        ticks.push({t:maxT, kind:"base", label:timeTickText(maxT)});
+      }
+      ticks.sort((a,b) => a.t - b.t || a.kind.localeCompare(b.kind));
+      const out = [];
+      for (const tick of ticks) {
+        const previous = out[out.length - 1];
+        if (previous && Math.abs(previous.t - tick.t) < 1e-7 && previous.kind === tick.kind) continue;
+        out.push(tick);
+      }
+      return out;
+    }
+
+    function localScheduleSvg(resource, segs, attempts, node, globalMaxT) {
+      const width = 520;
+      const rowH = 26;
+      const rows = [...new Set([...segs.map(s => s.vehicle_id), ...attempts.map(a => a.vehicle_id)])].sort((a,b)=>a-b);
+      const height = 74 + Math.max(1, rows.length + 1) * rowH;
+      const maxT = Math.max(1, globalMaxT || 1);
+      const x0 = 58, x1 = width - 14;
+      const xOf = t => x0 + t / maxT * (x1 - x0);
+      const svg = el("svg", {viewBox:`0 0 ${width} ${height}`, width:"100%"});
+      rows.forEach((vehicleId, row) => {
+        const y = 20 + row * rowH;
+        svg.appendChild(el("text", {x:12, y:y+15, "font-family":"Arial", "font-size":9, "font-weight":700}, `N${vehicleId}`));
+        svg.appendChild(el("rect", {x:x0, y:y, width:x1-x0, height:18, fill:"#f8fafc", stroke:"#dbe3ef"}));
+      });
+      const resourceY = 20 + rows.length * rowH;
+      svg.appendChild(el("text", {x:12, y:resourceY+15, "font-family":"Arial", "font-size":9, "font-weight":700}, `I${resource}`));
+      svg.appendChild(el("rect", {x:x0, y:resourceY, width:x1-x0, height:18, fill:"#f8fafc", stroke:"#dbe3ef"}));
+      segs.forEach(s => {
+        const row = rows.indexOf(s.vehicle_id);
+        const y = 20 + row * rowH;
+        const xs = xOf(s.start_time);
+        const xe = xOf(s.end_time);
+        const xa = xOf(s.requested_time);
+        if (s.start_time > s.requested_time + 1e-9) {
+          svg.appendChild(el("rect", {x:xa, y:y, width:Math.max(1, xs-xa), height:18, fill:"#e5e7eb", stroke:"#94a3b8"}));
+        }
+        svg.appendChild(el("rect", {x:xs, y:y, width:Math.max(2, xe-xs), height:18, fill:"#4ade80"}));
+        const turn = turnLabel(DATA.plans.findIndex(p => p.vehicle_id === s.vehicle_id), s.task_index, node);
+        svg.appendChild(el("text", {x:(xs+xe)/2, y:y+12, "text-anchor":"middle", "font-family":"Arial", "font-size":8, "font-weight":700}, `C${turnCode(turn)}, K${s.task_index}`));
+        svg.appendChild(el("rect", {x:xs, y:resourceY, width:Math.max(2, xe-xs), height:18, fill:"none", stroke:"#22c55e", "stroke-width":1.5}));
+        svg.appendChild(el("text", {x:(xs+xe)/2, y:resourceY+12, "text-anchor":"middle", "font-family":"Arial", "font-size":8, "font-weight":700}, `N${s.vehicle_id}`));
+      });
+      attempts.forEach(a => {
+        const row = rows.indexOf(a.vehicle_id);
+        if (row < 0) return;
+        const y = 20 + row * rowH;
+        const xs = xOf(a.start_time);
+        const xe = xOf(a.end_time);
+        svg.appendChild(el("rect", {
+          x:xs,
+          y:y,
+          width:Math.max(2, xe-xs),
+          height:18,
+          fill:"rgba(251,146,60,0.26)",
+          stroke:"#f97316",
+          "stroke-width":1.4,
+          "stroke-dasharray":"4 2"
+        }));
+      });
+      segs.forEach(s => {
+        const row = rows.indexOf(s.vehicle_id);
+        const y = 20 + row * rowH;
+        const xa = xOf(s.requested_time);
+        svg.appendChild(el("line", {x1:xa, y1:y-1, x2:xa, y2:y+19, stroke:"#0000ff", "stroke-width":1.6, "stroke-dasharray":"3 2"}));
+      });
+      const axisY = height - 24;
+      svg.appendChild(el("line", {x1:x0, y1:axisY, x2:x1, y2:axisY, stroke:"#111827"}));
+      const step = niceTickStep(maxT, 5);
+      const tickRows = new Map();
+      for (const tick of timeEventTicks(segs, maxT, step)) {
+        const x = xOf(tick.t);
+        const color = tick.kind === "alpha" ? "#0000ff" : (tick.kind === "beta" ? "#d97706" : (tick.kind === "gamma" ? "#15803d" : "#111827"));
+        const len = tick.kind === "base" ? 4 : 7;
+        const recent = [...tickRows.entries()].filter(([px]) => Math.abs(px - x) < 34);
+        const row = recent.length ? (Math.max(...recent.map(([,r]) => r)) + 1) % 3 : 0;
+        tickRows.set(x, row);
+        svg.appendChild(el("line", {x1:x, y1:axisY, x2:x, y2:axisY+len, stroke:color, "stroke-width":tick.kind === "base" ? 1 : 1.25}));
+        svg.appendChild(el("text", {
+          x,
+          y:axisY + 14 + row * 10,
+          "text-anchor":"middle",
+          "font-family":"Arial",
+          "font-size":tick.kind === "base" ? 7 : 6,
+          "font-weight":tick.kind === "base" ? 400 : 700,
+          fill:color
+        }, tick.label));
+      }
+      svg.appendChild(el("text", {x:(x0+x1)/2, y:height-2, "text-anchor":"middle", "font-family":"Arial", "font-size":8, "font-weight":700}, "Time (seconds)"));
+      return svg;
+    }
+
+    function orderedResources() {
+      if (!DATA.coords || !Object.keys(DATA.coords).length) {
+        return DATA.resources.slice().sort((a,b) => a-b);
+      }
+      return Object.keys(DATA.coords).map(Number).sort((a,b) => a-b);
+    }
+
+    function renderSchedule() {
+      const selected = terminals[cursor];
+      const node = nodeById.get(selected);
+      const isBest = selected === DATA.best_idx;
+      document.getElementById("meta").textContent = `Path ${cursor+1}/${terminals.length}: node ${selected}${isBest ? " * optimal" : ""} | J = ${node.g.toFixed(3)} | shown paths ${DATA.terminal_count_shown}/${DATA.terminal_count_total}, nodes ${DATA.node_count_shown}/${DATA.node_count_total}`;
+      document.getElementById("scheduleTitle").textContent = `Schedule for node ${selected}${isBest ? " *" : ""}`;
+      const panel = document.getElementById("schedulePanel");
+      panel.innerHTML = "";
+      const globalMaxT = Math.max(
+        1,
+        ...node.segments.flatMap(s => [s.requested_time, s.end_time]),
+        ...(node.attempts || []).flatMap(a => [a.start_time, a.end_time])
+      );
+      for (const resource of orderedResources()) {
+        const card = document.createElement("section");
+        card.className = "icard";
+        card.innerHTML = `<h3>I${resource}</h3>`;
+        const segs = node.segments.filter(s => s.resource === resource);
+        const attempts = (node.attempts || []).filter(a => a.resource === resource);
+        if (segs.length || attempts.length) card.appendChild(localScheduleSvg(resource, segs, attempts, node, globalMaxT));
+        else {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = "No scheduled local task";
+          card.appendChild(empty);
+        }
+        panel.appendChild(card);
+      }
+    }
+
+    function renderAll() {
+      renderTree();
+      renderBasicMap();
+      renderPathSummary();
+      renderPathBranches();
+      renderPathTrees();
+      renderSchedule();
+    }
+
+    document.addEventListener("keydown", event => {
+      if (!["ArrowRight","ArrowDown","ArrowLeft","ArrowUp"].includes(event.key)) return;
+      event.preventDefault();
+      const step = (event.key === "ArrowRight" || event.key === "ArrowDown") ? 1 : -1;
+      cursor = (cursor + step + terminals.length) % terminals.length;
+      renderAll();
+    });
+
+    const treeSvg = document.getElementById("treeSvg");
+    treeSvg.addEventListener("wheel", event => {
+      event.preventDefault();
+      if (!treeViewBox || !treeBaseViewBox) return;
+      const pointer = treeSvgPoint(event);
+      const zoom = event.deltaY < 0 ? 0.85 : 1.18;
+      const minW = treeBaseViewBox[2] * 0.08;
+      const maxW = treeBaseViewBox[2] * 6;
+      const nextW = Math.min(maxW, Math.max(minW, treeViewBox[2] * zoom));
+      const factor = nextW / treeViewBox[2];
+      const nextH = treeViewBox[3] * factor;
+      treeViewBox = [
+        pointer.x - (pointer.x - treeViewBox[0]) * factor,
+        pointer.y - (pointer.y - treeViewBox[1]) * factor,
+        nextW,
+        nextH
+      ];
+      applyTreeViewBox();
+    }, {passive:false});
+
+    treeSvg.addEventListener("dblclick", event => {
+      event.preventDefault();
+      resetTreeZoom();
+    });
+
+    const mainLayout = document.getElementById("mainLayout");
+    const splitter = document.getElementById("splitter");
+    splitter.addEventListener("pointerdown", event => {
+      if (event.button !== 0) return;
+      splitter.setPointerCapture(event.pointerId);
+      splitter.classList.add("dragging");
+      const rect = mainLayout.getBoundingClientRect();
+      splitterDrag = {
+        pointerId:event.pointerId,
+        left:rect.left,
+        width:rect.width
+      };
+    });
+
+    splitter.addEventListener("pointermove", event => {
+      if (!splitterDrag) return;
+      const raw = (event.clientX - splitterDrag.left) / Math.max(1, splitterDrag.width) * 100;
+      const pct = Math.min(84, Math.max(25, raw));
+      mainLayout.style.setProperty("--left-pane", `${pct.toFixed(1)}%`);
+    });
+
+    function finishSplitterDrag() {
+      if (!splitterDrag) return;
+      try { splitter.releasePointerCapture(splitterDrag.pointerId); } catch (_) {}
+      splitter.classList.remove("dragging");
+      splitterDrag = null;
+    }
+
+    splitter.addEventListener("pointerup", finishSplitterDrag);
+    splitter.addEventListener("pointercancel", finishSplitterDrag);
+    splitter.addEventListener("dblclick", event => {
+      event.preventDefault();
+      mainLayout.style.setProperty("--left-pane", "75%");
+    });
+    renderAll();
+  </script>
+</body>
+</html>

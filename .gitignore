@@ -1,0 +1,22 @@
+# Local editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# MATLAB editor and temporary files
+*.asv
+*.m~
+
+# Zip archives
+*.zip
+
+# MATLAB checkpoint / generated batch files
+matlab/**/admm_checkpoint.mat
+matlab/**/BatchRuns/**/*.mat
+matlab/**/BatchRuns/**/*.fig

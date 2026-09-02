@@ -7,7 +7,14 @@ demo and representative experiment outputs.
 Given robot routes, the scheduler determines conflict-free crossing sequences
 and arrival/departure times across multiple intersections.
 
-## Representative result
+## Multi-intersection overview
+
+The interactive demo provides a top-down view of the five-intersection traffic
+network used to visualize scheduled vehicle movements.
+
+![Top-down view of the five-intersection traffic network](traffic-demo/screenshots/multi-intersection-top-view.png)
+
+## Representative schedule
 
 The figure below shows a representative multi-intersection schedule generated
 by the distributed MATLAB implementation.

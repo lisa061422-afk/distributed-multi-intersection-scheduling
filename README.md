@@ -9,17 +9,17 @@ and arrival/departure times across multiple intersections.
 
 ## Multi-intersection overview
 
-The interactive demo provides a top-down view of the five-intersection traffic
-network used to visualize scheduled vehicle movements.
+The diagram shows the multi-intersection traffic network, example vehicle
+routes, and a detailed view of the merging zones within one intersection.
 
-![Top-down view of the five-intersection traffic network](traffic-demo/screenshots/multi-intersection-top-view.png)
+![Top-down view of the multi-intersection traffic network](traffic-demo/screenshots/multi-intersection-top-view.png)
 
 ## Representative schedule
 
-The figure below shows a representative multi-intersection schedule generated
-by the distributed MATLAB implementation.
+The figure below summarizes the schedules generated at four connected
+intersections and includes an FCFS comparison.
 
-![Representative distributed schedule](traffic-demo/schedules/images/10r_S1_optimal_macro.png)
+![Distributed schedules at four intersections](traffic-demo/screenshots/four-intersection-schedules.png)
 
 ## Repository layout
 
